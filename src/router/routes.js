@@ -1,0 +1,1 @@
+const routes = [ { path: '/', component: () => import('layouts/MainLayout.vue'), children: [ { path: '', redirect: '/dashboard' }, { path: 'dashboard', component: () => import('pages/DashboardPage.vue') }, { path: 'clientes', component: () => import('pages/ClientesPage.vue') },

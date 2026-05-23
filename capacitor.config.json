@@ -1,0 +1,5 @@
+{
+  "appId": "com.glamur.app",
+  "appName": "Glamur",
+  "webDir": "dist/spa"
+}
