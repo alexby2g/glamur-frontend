@@ -49,11 +49,7 @@
 
       <template #body-cell-estado="props">
         <q-td :props="props" class="text-center">
-          <q-badge
-            rounded
-            class="estado-badge"
-            :color="colorEstado(props.row.estado)"
-          >
+          <q-badge rounded class="estado-badge" :color="colorEstado(props.row.estado)">
             {{ props.row.estado || 'pendiente' }}
           </q-badge>
         </q-td>
@@ -137,7 +133,6 @@
               outlined
               dense
               rounded
-              :rules="[v => !!v || 'Seleccione un cliente']"
             />
 
             <q-input
@@ -146,7 +141,6 @@
               outlined
               dense
               rounded
-              :rules="[v => !!v || 'Ingrese el servicio']"
             />
 
             <q-input
