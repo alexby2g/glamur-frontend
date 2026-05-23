@@ -2,7 +2,7 @@ import { boot } from 'quasar/wrappers'
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: 'http://192.168.1.165:8000/api',
+  baseURL: 'https://glamur-backend-2.onrender.com/api',
   headers: {
     Accept: 'application/json',
     'Content-Type': 'application/json'
