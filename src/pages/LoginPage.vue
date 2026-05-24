@@ -1,80 +1,84 @@
 <template>
-  <q-page class="login-page">
+  <q-layout view="lHh Lpr lFf" class="login-layout">
+    <q-page-container>
+      <q-page class="login-page">
 
-    <q-card class="login-card">
+        <q-card class="login-card">
 
-      <q-card-section class="login-header">
-        <q-avatar class="login-logo" size="78px">
-          <q-icon name="spa" color="white" size="44px" />
-        </q-avatar>
+          <q-card-section class="login-header">
+            <q-avatar class="login-logo" size="78px">
+              <q-icon name="spa" color="white" size="44px" />
+            </q-avatar>
 
-        <div class="login-title">
-          Glamur
-        </div>
+            <div class="login-title">
+              Glamur
+            </div>
 
-        <div class="login-subtitle">
-          Iniciar sesión en el sistema
-        </div>
-      </q-card-section>
+            <div class="login-subtitle">
+              Iniciar sesión en el sistema
+            </div>
+          </q-card-section>
 
-      <q-card-section class="login-body">
-        <q-form class="q-gutter-md" @submit.prevent="login">
+          <q-card-section class="login-body">
+            <q-form class="q-gutter-md" @submit.prevent="login">
 
-          <q-input
-            v-model.trim="form.usuario"
-            label="Usuario"
-            outlined
-            rounded
-            bg-color="white"
-            autocomplete="username"
-          >
-            <template #prepend>
-              <q-icon name="person" color="pink" />
-            </template>
-          </q-input>
+              <q-input
+                v-model.trim="form.usuario"
+                label="Usuario"
+                outlined
+                rounded
+                bg-color="white"
+                autocomplete="username"
+              >
+                <template #prepend>
+                  <q-icon name="person" color="pink" />
+                </template>
+              </q-input>
 
-          <q-input
-            v-model="form.password"
-            :type="showPassword ? 'text' : 'password'"
-            label="Contraseña"
-            outlined
-            rounded
-            bg-color="white"
-            autocomplete="current-password"
-          >
-            <template #prepend>
-              <q-icon name="lock" color="pink" />
-            </template>
+              <q-input
+                v-model="form.password"
+                :type="showPassword ? 'text' : 'password'"
+                label="Contraseña"
+                outlined
+                rounded
+                bg-color="white"
+                autocomplete="current-password"
+              >
+                <template #prepend>
+                  <q-icon name="lock" color="pink" />
+                </template>
 
-            <template #append>
-              <q-icon
-                :name="showPassword ? 'visibility_off' : 'visibility'"
-                class="cursor-pointer"
-                color="grey-7"
-                @click="showPassword = !showPassword"
+                <template #append>
+                  <q-icon
+                    :name="showPassword ? 'visibility_off' : 'visibility'"
+                    class="cursor-pointer"
+                    color="grey-7"
+                    @click="showPassword = !showPassword"
+                  />
+                </template>
+              </q-input>
+
+              <q-btn
+                type="submit"
+                label="Iniciar sesión"
+                icon="login"
+                class="btn-login full-width"
+                unelevated
+                :loading="loading"
               />
-            </template>
-          </q-input>
 
-          <q-btn
-            type="submit"
-            label="Iniciar sesión"
-            icon="login"
-            class="btn-login full-width"
-            unelevated
-            :loading="loading"
-          />
+            </q-form>
+          </q-card-section>
 
-        </q-form>
-      </q-card-section>
+          <q-card-section class="login-footer">
+            Usuario inicial: <b>admin</b> · Contraseña: <b>admin123</b>
+          </q-card-section>
 
-      <q-card-section class="login-footer">
-        Usuario inicial: <b>admin</b> · Contraseña: <b>admin123</b>
-      </q-card-section>
+        </q-card>
 
-    </q-card>
-
-  </q-page>
+      </q-page>
+    </q-page-container>
+  </q-layout>
 </template>
 
 <script setup>
@@ -170,6 +174,10 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.login-layout {
+  min-height: 100vh;
+}
+
 .login-page {
   min-height: 100vh;
   display: grid;
