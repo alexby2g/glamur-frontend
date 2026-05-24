@@ -15,7 +15,7 @@
         class="btn-glamur-white"
         label="Nueva Cita"
         icon="add"
-        @click="openDialog"
+        @click="openDialog()"
       />
     </div>
 
@@ -69,7 +69,7 @@
             class="estado-badge"
             :color="colorEstado(props.row.estado)"
           >
-            {{ props.row.estado || 'pendiente' }}
+            {{ mostrarEstado(props.row.estado) }}
           </q-badge>
         </q-td>
       </template>
@@ -288,7 +288,11 @@
 
             <q-select
               v-model="form.estado"
-              :options="['pendiente', 'concluida', 'cancelada']"
+              :options="estadosCita"
+              option-label="label"
+              option-value="value"
+              emit-value
+              map-options
               label="Estado"
               outlined
               dense
@@ -495,7 +499,8 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { api } from 'boot/axios'
 
@@ -504,6 +509,7 @@ defineOptions({
 })
 
 const $q = useQuasar()
+const route = useRoute()
 
 const citas = ref([])
 const clientes = ref([])
@@ -534,6 +540,21 @@ const metodosPago = [
   {
     label: 'Transferencia',
     value: 'transferencia'
+  }
+]
+
+const estadosCita = [
+  {
+    label: 'Pendiente',
+    value: 'pendiente'
+  },
+  {
+    label: 'Finalizada',
+    value: 'concluida'
+  },
+  {
+    label: 'Cancelada',
+    value: 'cancelada'
   }
 ]
 
@@ -729,6 +750,13 @@ function mostrarMetodo(value) {
   return value || 'No definido'
 }
 
+function mostrarEstado(value) {
+  if (value === 'concluida') return 'Finalizada'
+  if (value === 'cancelada') return 'Cancelada'
+
+  return 'Pendiente'
+}
+
 function getErrorMessage(error) {
   const data = error?.response?.data
 
@@ -745,6 +773,17 @@ function normalizarLista(data, key) {
   if (Array.isArray(data?.[key])) return data[key]
 
   return []
+}
+
+function normalizarFechaQuery(value) {
+  const fechaQuery = Array.isArray(value) ? value[0] : value
+  const texto = String(fechaQuery || '').trim()
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(texto)) {
+    return texto
+  }
+
+  return ''
 }
 
 function colorEstado(estado) {
@@ -864,7 +903,9 @@ function buscarComboPorNombre(nombre) {
   }) || null
 }
 
-function openDialog() {
+function openDialog(fechaSeleccionada = '') {
+  const fechaFinal = normalizarFechaQuery(fechaSeleccionada) || hoy()
+
   form.value = {
     id: null,
     cliente_id: null,
@@ -872,7 +913,7 @@ function openDialog() {
     servicio: '',
     detalle_servicio: '',
     precio: 0,
-    fecha: hoy(),
+    fecha: fechaFinal,
     hora: '',
     estado: 'pendiente'
   }
@@ -1088,12 +1129,29 @@ function removeDesdeDialog() {
   remove(form.value.id)
 }
 
+watch(
+  () => route.query.fecha,
+  nuevaFecha => {
+    const fechaCalendario = normalizarFechaQuery(nuevaFecha)
+
+    if (fechaCalendario) {
+      openDialog(fechaCalendario)
+    }
+  }
+)
+
 onMounted(async () => {
   await Promise.all([
     load(),
     loadClientes(),
     loadServicios()
   ])
+
+  const fechaCalendario = normalizarFechaQuery(route.query.fecha)
+
+  if (fechaCalendario) {
+    openDialog(fechaCalendario)
+  }
 })
 </script>
 
