@@ -1,5 +1,7 @@
 <template>
   <q-page class="q-pa-md citas-page">
+
+    <!-- HERO -->
     <div class="page-hero q-mb-lg">
       <div>
         <div class="text-h4 text-weight-bold text-white">
@@ -19,6 +21,7 @@
       />
     </div>
 
+    <!-- TABLA -->
     <q-table
       class="tabla-glamur"
       :rows="citas"
@@ -30,6 +33,8 @@
       bordered
       :rows-per-page-options="[5, 10, 20, 50]"
     >
+
+      <!-- CLIENTE -->
       <template #body-cell-cliente="props">
         <q-td :props="props">
           <div class="text-weight-bold text-pink-7">
@@ -42,6 +47,7 @@
         </q-td>
       </template>
 
+      <!-- SERVICIO -->
       <template #body-cell-servicio="props">
         <q-td :props="props">
           <div class="text-weight-bold">
@@ -49,11 +55,12 @@
           </div>
 
           <div class="text-caption text-grey-7">
-            CEJAS Y PESTAÑAS
+            {{ descripcionCombo(props.row.servicio) }}
           </div>
         </q-td>
       </template>
 
+      <!-- PRECIO -->
       <template #body-cell-precio="props">
         <q-td :props="props">
           <div class="text-weight-bold text-green-8">
@@ -62,6 +69,7 @@
         </q-td>
       </template>
 
+      <!-- ESTADO -->
       <template #body-cell-estado="props">
         <q-td :props="props" class="text-center">
           <q-badge
@@ -74,6 +82,7 @@
         </q-td>
       </template>
 
+      <!-- ESTADO PAGO -->
       <template #body-cell-estado_pago="props">
         <q-td :props="props" class="text-center">
           <q-badge
@@ -86,9 +95,11 @@
         </q-td>
       </template>
 
+      <!-- ACCIONES -->
       <template #body-cell-actions="props">
         <q-td :props="props" class="text-center">
           <div class="acciones">
+
             <q-btn
               round
               unelevated
@@ -145,17 +156,21 @@
             >
               <q-tooltip>Eliminar</q-tooltip>
             </q-btn>
+
           </div>
         </q-td>
       </template>
     </q-table>
 
+    <!-- DIALOG NUEVA / EDITAR CITA -->
     <q-dialog
       v-model="dialog"
       persistent
-      :maximized="$q.screen.lt.sm"
+      :maximized="$q.screen.lt.md"
     >
-      <q-card class="dialog-card column no-wrap">
+      <q-card class="dialog-card dialog-flex">
+
+        <!-- HEADER -->
         <q-card-section class="dialog-header row items-center">
           <div class="text-h6 text-weight-bold">
             {{ form.id ? '✏️ Editar cita' : '📅 Nueva cita' }}
@@ -173,8 +188,11 @@
           />
         </q-card-section>
 
-        <q-card-section class="dialog-body col">
+        <!-- BODY -->
+        <q-card-section class="dialog-body">
           <div class="q-gutter-md">
+
+            <!-- CLIENTE -->
             <q-select
               v-model="form.cliente_id"
               :options="clientesFiltrados"
@@ -183,6 +201,7 @@
               emit-value
               map-options
               use-input
+              clearable
               input-debounce="0"
               label="Cliente *"
               outlined
@@ -190,25 +209,54 @@
               rounded
               bg-color="white"
               @filter="filtrarClientes"
-            />
+            >
+              <template #option="scope">
+                <q-item v-bind="scope.itemProps">
+                  <q-item-section avatar>
+                    <q-avatar color="pink" text-color="white" icon="person" />
+                  </q-item-section>
 
+                  <q-item-section>
+                    <q-item-label class="text-weight-bold">
+                      {{ scope.opt.nombre }}
+                    </q-item-label>
+
+                    <q-item-label caption>
+                      {{ scope.opt.telefono || 'Sin teléfono' }}
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
+              </template>
+
+              <template #no-option>
+                <q-item>
+                  <q-item-section class="text-grey">
+                    No se encontraron clientes
+                  </q-item-section>
+                </q-item>
+              </template>
+            </q-select>
+
+            <!-- SERVICIO GENERAL -->
             <q-input
               v-model="form.categoria_servicio"
               label="Servicio"
-              readonly
               outlined
               dense
               rounded
+              readonly
               bg-color="white"
             />
 
+            <!-- COMBO -->
             <q-select
               v-model="comboSeleccionado"
               :options="serviciosFiltrados"
               option-label="label"
+              option-value="value"
               use-input
-              input-debounce="0"
               clearable
+              input-debounce="0"
               label="Combo *"
               outlined
               dense
@@ -220,7 +268,7 @@
               <template #option="scope">
                 <q-item v-bind="scope.itemProps">
                   <q-item-section>
-                    <q-item-label class="text-weight-bold">
+                    <q-item-label class="text-weight-bold text-pink-8">
                       {{ scope.opt.servicio.nombre }}
                     </q-item-label>
 
@@ -230,24 +278,34 @@
                   </q-item-section>
 
                   <q-item-section side>
-                    <q-badge color="pink" rounded>
+                    <q-badge color="green" rounded>
                       Bs {{ money(scope.opt.servicio.precio) }}
                     </q-badge>
                   </q-item-section>
                 </q-item>
               </template>
+
+              <template #no-option>
+                <q-item>
+                  <q-item-section class="text-grey">
+                    No se encontraron combos
+                  </q-item-section>
+                </q-item>
+              </template>
             </q-select>
 
+            <!-- DETALLE DEL COMBO -->
             <q-input
               v-model="form.detalle_servicio"
               label="Detalle del combo"
-              readonly
               outlined
               dense
               rounded
+              readonly
               bg-color="white"
             />
 
+            <!-- PRECIO -->
             <q-input
               v-model.number="form.precio"
               type="number"
@@ -255,10 +313,11 @@
               outlined
               dense
               rounded
-              readonly
+              min="0"
               bg-color="white"
             />
 
+            <!-- FECHA Y HORA -->
             <div class="row q-col-gutter-md">
               <div class="col-12 col-sm-6">
                 <q-input
@@ -285,6 +344,7 @@
               </div>
             </div>
 
+            <!-- ESTADO -->
             <q-select
               v-model="form.estado"
               :options="['pendiente', 'concluida', 'cancelada']"
@@ -294,29 +354,12 @@
               rounded
               bg-color="white"
             />
+
           </div>
         </q-card-section>
 
+        <!-- ACTIONS FIJAS -->
         <q-card-actions align="right" class="dialog-actions">
-          <q-btn
-            v-if="form.id"
-            flat
-            label="Eliminar"
-            icon="delete"
-            color="negative"
-            @click="removeDesdeDialog"
-          />
-
-          <q-btn
-            v-if="form.id && form.estado !== 'concluida'"
-            flat
-            label="Finalizar"
-            icon="check"
-            color="positive"
-            @click="finalizarDesdeDialog"
-          />
-
-          <q-space class="desktop-space" />
 
           <q-btn
             flat
@@ -326,21 +369,47 @@
           />
 
           <q-btn
+            v-if="form.id && form.estado !== 'concluida'"
+            label="Finalizar"
+            icon="check"
+            color="positive"
+            unelevated
+            rounded
+            :disable="saving"
+            @click="finalizarDesdeDialog"
+          />
+
+          <q-btn
+            v-if="form.id"
+            label="Eliminar"
+            icon="delete"
+            color="negative"
+            unelevated
+            rounded
+            :disable="saving"
+            @click="removeDesdeDialog"
+          />
+
+          <q-btn
             class="btn-glamur"
             label="Guardar"
             :loading="saving"
             @click="save"
           />
+
         </q-card-actions>
+
       </q-card>
     </q-dialog>
 
+    <!-- DIALOG PAGO -->
     <q-dialog
       v-model="dialogPago"
       persistent
       :maximized="$q.screen.lt.sm"
     >
-      <q-card class="dialog-card-small column no-wrap">
+      <q-card class="dialog-card-small dialog-flex">
+
         <q-card-section class="dialog-header row items-center">
           <div class="text-h6 text-weight-bold">
             💰 Realizar pago
@@ -358,8 +427,9 @@
           />
         </q-card-section>
 
-        <q-card-section class="dialog-body col">
+        <q-card-section class="dialog-body">
           <div class="q-gutter-md">
+
             <q-input
               v-model.number="pago.monto"
               type="number"
@@ -385,10 +455,7 @@
               bg-color="white"
             />
 
-            <div
-              v-if="pago.metodo === 'qr'"
-              class="qr-box"
-            >
+            <div v-if="pago.metodo === 'qr'" class="qr-box">
               <q-img
                 src="~assets/qr.jpg"
                 class="qr-img"
@@ -399,6 +466,7 @@
                 Escanea el QR para realizar el pago.
               </div>
             </div>
+
           </div>
         </q-card-section>
 
@@ -417,11 +485,17 @@
             @click="confirmarPago"
           />
         </q-card-actions>
+
       </q-card>
     </q-dialog>
 
-    <q-dialog v-model="dialogHistorial">
-      <q-card class="dialog-card-historial column no-wrap">
+    <!-- DIALOG HISTORIAL -->
+    <q-dialog
+      v-model="dialogHistorial"
+      :maximized="$q.screen.lt.sm"
+    >
+      <q-card class="dialog-card-historial dialog-flex">
+
         <q-card-section class="dialog-header row items-center">
           <div class="text-h6 text-weight-bold">
             📜 Historial de pagos
@@ -439,7 +513,7 @@
           />
         </q-card-section>
 
-        <q-card-section class="dialog-body col">
+        <q-card-section class="dialog-body">
           <q-table
             class="tabla-glamur tabla-historial"
             :rows="historial"
@@ -455,6 +529,12 @@
                 <b class="text-green-8">
                   Bs {{ money(props.row.monto) }}
                 </b>
+              </q-td>
+            </template>
+
+            <template #body-cell-metodo="props">
+              <q-td :props="props">
+                {{ mostrarMetodo(props.row.metodo) }}
               </q-td>
             </template>
 
@@ -476,8 +556,10 @@
             v-close-popup
           />
         </q-card-actions>
+
       </q-card>
     </q-dialog>
+
   </q-page>
 </template>
 
@@ -632,7 +714,8 @@ const columns = [
     name: 'servicio',
     label: 'Servicio / Combo',
     field: 'servicio',
-    align: 'left'
+    align: 'left',
+    sortable: true
   },
   {
     name: 'precio',
@@ -650,7 +733,7 @@ const columns = [
   {
     name: 'hora',
     label: 'Hora',
-    field: 'hora',
+    field: row => formatearHora(row.hora),
     align: 'left'
   },
   {
@@ -716,6 +799,12 @@ function mostrarMetodo(value) {
   return value || 'No definido'
 }
 
+function formatearHora(value) {
+  if (!value) return ''
+
+  return String(value).slice(0, 5)
+}
+
 function getErrorMessage(error) {
   const data = error?.response?.data
 
@@ -734,6 +823,13 @@ function normalizarLista(data, key) {
   return []
 }
 
+function normalizarTexto(value) {
+  return String(value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+}
+
 function colorEstado(estado) {
   if (estado === 'concluida') return 'green'
   if (estado === 'cancelada') return 'red'
@@ -741,42 +837,12 @@ function colorEstado(estado) {
   return 'orange'
 }
 
-function filtrarClientes(value, update) {
-  update(() => {
-    const texto = String(value || '').toLowerCase()
-
-    if (!texto) {
-      clientesFiltrados.value = clientes.value
-      return
-    }
-
-    clientesFiltrados.value = clientes.value.filter(cliente => {
-      const nombre = String(cliente.nombre || '').toLowerCase()
-      const telefono = String(cliente.telefono || '').toLowerCase()
-
-      return nombre.includes(texto) || telefono.includes(texto)
-    })
+function descripcionCombo(nombre) {
+  const combo = servicios.value.find(item => {
+    return normalizarTexto(item.nombre) === normalizarTexto(nombre)
   })
-}
 
-function filtrarServicios(value, update) {
-  update(() => {
-    const texto = String(value || '').toLowerCase()
-
-    if (!texto) {
-      serviciosFiltrados.value = serviciosOptions.value
-      return
-    }
-
-    serviciosFiltrados.value = serviciosOptions.value.filter(option => {
-      const item = option.servicio
-      const nombre = String(item.nombre || '').toLowerCase()
-      const categoria = String(item.categoria || '').toLowerCase()
-      const descripcion = String(item.descripcion || item.detalle || '').toLowerCase()
-
-      return nombre.includes(texto) || categoria.includes(texto) || descripcion.includes(texto)
-    })
-  })
+  return combo?.descripcion || 'Combo Glamur'
 }
 
 async function load() {
@@ -784,6 +850,7 @@ async function load() {
 
   try {
     const { data } = await api.get('/citas')
+
     citas.value = normalizarLista(data, 'citas')
   } catch (error) {
     $q.notify({
@@ -798,6 +865,7 @@ async function load() {
 async function loadClientes() {
   try {
     const { data } = await api.get('/clientes')
+
     clientes.value = normalizarLista(data, 'clientes')
     clientesFiltrados.value = clientes.value
   } catch (error) {
@@ -817,12 +885,52 @@ async function loadServicios() {
     if (!servicios.value.length) {
       servicios.value = combosBase
     }
-
-    serviciosFiltrados.value = serviciosOptions.value
   } catch {
     servicios.value = combosBase
+  } finally {
     serviciosFiltrados.value = serviciosOptions.value
   }
+}
+
+function filtrarClientes(val, update) {
+  update(() => {
+    const texto = normalizarTexto(val)
+
+    if (!texto) {
+      clientesFiltrados.value = clientes.value
+      return
+    }
+
+    clientesFiltrados.value = clientes.value.filter(cliente => {
+      const nombre = normalizarTexto(cliente.nombre)
+      const telefono = normalizarTexto(cliente.telefono)
+
+      return nombre.includes(texto) || telefono.includes(texto)
+    })
+  })
+}
+
+function filtrarServicios(val, update) {
+  update(() => {
+    const texto = normalizarTexto(val)
+
+    if (!texto) {
+      serviciosFiltrados.value = serviciosOptions.value
+      return
+    }
+
+    serviciosFiltrados.value = serviciosOptions.value.filter(option => {
+      const nombre = normalizarTexto(option.servicio.nombre)
+      const descripcion = normalizarTexto(option.servicio.descripcion)
+      const categoria = normalizarTexto(option.servicio.categoria)
+
+      return (
+        nombre.includes(texto) ||
+        descripcion.includes(texto) ||
+        categoria.includes(texto)
+      )
+    })
+  })
 }
 
 function seleccionarServicio(option) {
@@ -844,10 +952,10 @@ function seleccionarServicio(option) {
 }
 
 function buscarComboPorNombre(nombre) {
-  const texto = String(nombre || '').toLowerCase()
+  const texto = normalizarTexto(nombre)
 
   return serviciosOptions.value.find(option => {
-    return String(option.servicio.nombre || '').toLowerCase() === texto
+    return normalizarTexto(option.servicio.nombre) === texto
   }) || null
 }
 
@@ -865,16 +973,18 @@ function openDialog() {
   }
 
   comboSeleccionado.value = null
+  clientesFiltrados.value = clientes.value
+  serviciosFiltrados.value = serviciosOptions.value
   dialog.value = true
 }
 
 function edit(row) {
   form.value = {
     id: row.id,
-    cliente_id: row.cliente_id,
+    cliente_id: row.cliente_id || row.cliente?.id || null,
     categoria_servicio: 'CEJAS Y PESTAÑAS',
     servicio: row.servicio || '',
-    detalle_servicio: '',
+    detalle_servicio: descripcionCombo(row.servicio),
     precio: Number(row.precio || 0),
     fecha: row.fecha || hoy(),
     hora: row.hora ? String(row.hora).slice(0, 5) : '',
@@ -890,6 +1000,8 @@ function edit(row) {
     comboSeleccionado.value = null
   }
 
+  clientesFiltrados.value = clientes.value
+  serviciosFiltrados.value = serviciosOptions.value
   dialog.value = true
 }
 
@@ -1022,6 +1134,7 @@ async function verHistorial(id) {
     const { data } = await api.get(`/pagos/historial/${id}`)
 
     historial.value = normalizarLista(data, 'pagos')
+
     dialogHistorial.value = true
   } catch (error) {
     $q.notify({
@@ -1031,7 +1144,7 @@ async function verHistorial(id) {
   }
 }
 
-function remove(id) {
+function remove(id, cerrarDialog = false) {
   $q.dialog({
     title: 'Eliminar cita',
     message: '¿Seguro que deseas eliminar esta cita?',
@@ -1055,7 +1168,7 @@ function remove(id) {
         message: 'Cita eliminada correctamente'
       })
 
-      if (form.value.id === id) {
+      if (cerrarDialog) {
         dialog.value = false
       }
 
@@ -1072,7 +1185,7 @@ function remove(id) {
 function removeDesdeDialog() {
   if (!form.value.id) return
 
-  remove(form.value.id)
+  remove(form.value.id, true)
 }
 
 onMounted(async () => {
@@ -1090,6 +1203,8 @@ onMounted(async () => {
   background: #faf7fb;
 }
 
+/* HERO */
+
 .page-hero {
   background: linear-gradient(135deg, #e91e63, #9c27b0);
   border-radius: 28px;
@@ -1099,6 +1214,8 @@ onMounted(async () => {
   align-items: center;
   box-shadow: 0 16px 40px rgba(233, 30, 99, 0.25);
 }
+
+/* BUTTONS */
 
 .btn-glamur-white {
   background: white;
@@ -1114,6 +1231,8 @@ onMounted(async () => {
   font-weight: 800;
   border-radius: 16px;
 }
+
+/* TABLE */
 
 .tabla-glamur {
   border-radius: 24px;
@@ -1149,6 +1268,8 @@ onMounted(async () => {
   flex-wrap: wrap;
 }
 
+/* DIALOGS */
+
 .dialog-card,
 .dialog-card-small,
 .dialog-card-historial {
@@ -1156,10 +1277,14 @@ onMounted(async () => {
   overflow: hidden;
 }
 
+.dialog-flex {
+  display: flex;
+  flex-direction: column;
+}
+
 .dialog-card {
   width: 560px;
   max-width: 96vw;
-  height: auto;
   max-height: 92vh;
 }
 
@@ -1185,6 +1310,8 @@ onMounted(async () => {
   background: #ffffff;
   padding: 24px;
   overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -1212,6 +1339,38 @@ onMounted(async () => {
   border-radius: 14px;
 }
 
+/* TABLET Y CELULAR */
+
+@media (max-width: 1024px) {
+  .dialog-card,
+  .dialog-card-small,
+  .dialog-card-historial {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    border-radius: 0;
+  }
+
+  .dialog-body {
+    max-height: none;
+    padding: 20px;
+    padding-bottom: 120px;
+  }
+
+  .dialog-actions {
+    padding: 14px;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .dialog-actions .q-btn {
+    flex: 1 1 auto;
+  }
+}
+
+/* MOBILE */
+
 @media (max-width: 600px) {
   .citas-page {
     padding: 10px;
@@ -1233,33 +1392,14 @@ onMounted(async () => {
     width: 100%;
   }
 
-  .dialog-card,
-  .dialog-card-small,
-  .dialog-card-historial {
-    width: 100%;
-    max-width: 100%;
-    height: 100%;
-    max-height: 100%;
-    border-radius: 0;
-  }
-
   .dialog-body {
-    padding: 18px;
-    min-height: 0;
-  }
-
-  .dialog-actions {
-    flex-wrap: wrap;
-    gap: 10px;
-    padding: 12px;
+    padding: 16px;
+    padding-bottom: 150px;
   }
 
   .dialog-actions .q-btn {
     width: 100%;
-  }
-
-  .desktop-space {
-    display: none;
+    flex: 1 1 100%;
   }
 
   .acciones .q-btn {
