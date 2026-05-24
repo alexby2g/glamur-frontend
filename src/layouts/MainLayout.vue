@@ -40,7 +40,7 @@
     <q-drawer
       v-model="drawer"
       show-if-above
-      :width="285"
+      :width="245"
       class="premium-drawer"
     >
 
@@ -71,7 +71,7 @@
         >
           <q-item-section avatar>
             <div class="menu-icon-box">
-              <q-icon :name="item.icon" size="21px" />
+              <q-icon :name="item.icon" size="22px" />
             </div>
           </q-item-section>
 
@@ -110,41 +110,13 @@ export default {
     return {
       drawer: false,
       menu: [
-        {
-          label: 'Dashboard',
-          icon: 'dashboard',
-          to: '/dashboard'
-        },
-        {
-          label: 'Clientes',
-          icon: 'people',
-          to: '/clientes'
-        },
-        {
-          label: 'Citas',
-          icon: 'event',
-          to: '/citas'
-        },
-        {
-          label: 'Calendario',
-          icon: 'calendar_month',
-          to: '/calendario'
-        },
-        {
-          label: 'Pagos',
-          icon: 'payments',
-          to: '/pagos'
-        },
-        {
-          label: 'Historial',
-          icon: 'history',
-          to: '/historial'
-        },
-        {
-          label: 'Historial Clientes',
-          icon: 'manage_search',
-          to: '/historial-clientes'
-        }
+        { label: 'Dashboard', icon: 'dashboard', to: '/dashboard' },
+        { label: 'Clientes', icon: 'people', to: '/clientes' },
+        { label: 'Citas', icon: 'event', to: '/citas' },
+        { label: 'Calendario', icon: 'calendar_month', to: '/calendario' },
+        { label: 'Pagos', icon: 'payments', to: '/pagos' },
+        { label: 'Historial', icon: 'history', to: '/historial' },
+        { label: 'Historial Clientes', icon: 'manage_search', to: '/historial-clientes' }
       ]
     }
   }
@@ -214,7 +186,7 @@ export default {
 .drawer-brand {
   position: relative;
   z-index: 1;
-  padding: 32px 22px 22px;
+  padding: 28px 18px 18px;
   text-align: center;
 }
 
@@ -227,7 +199,6 @@ export default {
   margin-top: 14px;
   font-size: 27px;
   font-weight: 900;
-  letter-spacing: 0.4px;
 }
 
 .drawer-subtitle {
@@ -239,7 +210,7 @@ export default {
 .menu-list {
   position: relative;
   z-index: 1;
-  padding: 0 14px 110px;
+  padding: 0 12px 110px;
 }
 
 .menu-header {
@@ -250,31 +221,38 @@ export default {
   padding-left: 10px;
 }
 
-..menu-item {
+.menu-item {
   width: 100%;
   min-height: 62px;
   margin-bottom: 12px;
   border-radius: 20px;
-  color: rgba(255, 255, 255, 0.78);
+  color: rgba(255, 255, 255, 0.82);
   font-weight: 800;
   transition: all 0.25s ease;
-  padding-left: 10px;
-  padding-right: 10px;
+  padding-left: 8px;
+  padding-right: 8px;
 }
 
 .menu-item:hover {
   color: white;
   background: rgba(255, 255, 255, 0.08);
   transform: translateX(4px);
+  box-shadow: 0 10px 24px rgba(233, 30, 99, 0.18);
 }
 
 .menu-icon-box {
-  width: 44px;
-  height: 44px;
+  width: 46px;
+  height: 46px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.08);
+}
 
-..menu-label {
+.menu-label {
   font-size: 15px;
   font-weight: 800;
+  letter-spacing: 0.2px;
 }
 
 .menu-active {
@@ -289,10 +267,10 @@ export default {
 
 .drawer-footer {
   position: absolute;
-  left: 16px;
-  right: 16px;
+  left: 14px;
+  right: 14px;
   bottom: 18px;
-  padding: 14px;
+  padding: 13px;
   border-radius: 18px;
   display: flex;
   align-items: center;
@@ -335,10 +313,6 @@ export default {
 
   .top-subtitle {
     display: none;
-  }
-
-  .premium-drawer {
-    width: 270px;
   }
 }
 </style>
