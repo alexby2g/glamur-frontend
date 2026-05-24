@@ -303,7 +303,11 @@
 
             <q-select
               v-model="pago.metodo"
-              :options="['efectivo', 'qr', 'transferencia']"
+              :options="metodosPago"
+              option-label="label"
+              option-value="value"
+              emit-value
+              map-options
               label="Método de pago"
               outlined
               dense
@@ -385,6 +389,14 @@
               </q-td>
             </template>
 
+            <template #body-cell-metodo="props">
+              <q-td :props="props">
+                <q-badge color="blue" rounded>
+                  {{ formatMetodo(props.row.metodo) }}
+                </q-badge>
+              </q-td>
+            </template>
+
             <template #body-cell-estado="props">
               <q-td :props="props">
                 <q-badge color="green" rounded>
@@ -449,6 +461,21 @@ const pago = ref({
   metodo: 'efectivo'
 })
 
+const metodosPago = [
+  {
+    label: 'Efectivo',
+    value: 'efectivo'
+  },
+  {
+    label: 'QR',
+    value: 'qr'
+  },
+  {
+    label: 'Transferencia',
+    value: 'transferencia'
+  }
+]
+
 const columns = [
   {
     name: 'cliente',
@@ -512,7 +539,7 @@ const columnsHistorial = [
   {
     name: 'metodo',
     label: 'Método',
-    field: row => row.metodo || 'No definido',
+    field: row => formatMetodo(row.metodo),
     align: 'left'
   },
   {
@@ -535,6 +562,16 @@ function money(value) {
 
 function hoy() {
   return new Date().toISOString().slice(0, 10)
+}
+
+function formatMetodo(value) {
+  const metodo = String(value || '').toLowerCase()
+
+  if (metodo === 'qr') return 'QR'
+  if (metodo === 'efectivo') return 'Efectivo'
+  if (metodo === 'transferencia') return 'Transferencia'
+
+  return value || 'No definido'
 }
 
 function getErrorMessage(error) {
