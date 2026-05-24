@@ -9,6 +9,15 @@ const routes = [
   },
 
   {
+    path: '/register',
+    name: 'register',
+    component: () => import('pages/RegisterPage.vue'),
+    meta: {
+      guestOnly: true
+    }
+  },
+
+  {
     path: '/',
     component: () => import('layouts/MainLayout.vue'),
     meta: {

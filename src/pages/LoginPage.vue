@@ -5,6 +5,7 @@
 
         <q-card class="login-card">
 
+          <!-- HEADER -->
           <q-card-section class="login-header">
             <q-avatar class="login-logo" size="78px">
               <q-icon name="spa" color="white" size="44px" />
@@ -19,12 +20,13 @@
             </div>
           </q-card-section>
 
+          <!-- BODY -->
           <q-card-section class="login-body">
             <q-form class="q-gutter-md" @submit.prevent="login">
 
               <q-input
                 v-model.trim="form.usuario"
-                label="Usuario"
+                label="Gmail o usuario"
                 outlined
                 rounded
                 bg-color="white"
@@ -67,11 +69,20 @@
                 :loading="loading"
               />
 
+              <q-btn
+                label="Crear cuenta con Gmail"
+                icon="person_add"
+                flat
+                class="btn-register full-width"
+                to="/register"
+              />
+
             </q-form>
           </q-card-section>
 
+          <!-- FOOTER -->
           <q-card-section class="login-footer">
-            Usuario inicial: <b></b> · Contraseña: <b></b>
+            Accede con tu cuenta registrada en Glamur
           </q-card-section>
 
         </q-card>
@@ -116,7 +127,7 @@ async function login() {
   if (!form.value.usuario.trim()) {
     $q.notify({
       type: 'warning',
-      message: 'Ingrese su usuario'
+      message: 'Ingrese su Gmail o usuario'
     })
 
     return
@@ -164,7 +175,12 @@ onMounted(async () => {
   if (!token) return
 
   try {
-    await api.get('/me')
+    await api.get('/me', {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    })
+
     router.replace('/dashboard')
   } catch {
     localStorage.removeItem('glamur_token')
@@ -200,7 +216,7 @@ onMounted(async () => {
 
 .login-header {
   text-align: center;
-  padding: 34px 26px 20px;
+  padding: 34px 26px 22px;
   background: linear-gradient(135deg, #15111f, #241329 45%, #e91e63);
   color: white;
 }
@@ -214,21 +230,22 @@ onMounted(async () => {
   margin-top: 16px;
   font-size: 34px;
   font-weight: 900;
+  line-height: 1;
 }
 
 .login-subtitle {
-  margin-top: 4px;
+  margin-top: 10px;
   font-size: 14px;
-  opacity: 0.8;
+  opacity: 0.85;
 }
 
 .login-body {
-  padding: 28px;
+  padding: 28px 28px 12px;
 }
 
 .btn-login {
   margin-top: 8px;
-  min-height: 48px;
+  min-height: 50px;
   border-radius: 18px;
   background: linear-gradient(135deg, #e91e63, #9c27b0);
   color: white;
@@ -236,14 +253,29 @@ onMounted(async () => {
   box-shadow: 0 14px 30px rgba(233, 30, 99, 0.28);
 }
 
+.btn-register {
+  min-height: 44px;
+  border-radius: 16px;
+  color: #c2185b;
+  font-weight: 900;
+}
+
+.btn-register:hover {
+  background: #fff0f6;
+}
+
 .login-footer {
-  padding: 0 28px 24px;
+  padding: 4px 28px 24px;
   text-align: center;
   font-size: 12px;
   color: #777;
 }
 
 @media (max-width: 600px) {
+  .login-page {
+    padding: 14px;
+  }
+
   .login-card {
     border-radius: 24px;
   }
@@ -253,7 +285,11 @@ onMounted(async () => {
   }
 
   .login-body {
-    padding: 22px;
+    padding: 22px 22px 10px;
+  }
+
+  .login-footer {
+    padding: 4px 22px 22px;
   }
 }
 </style>
