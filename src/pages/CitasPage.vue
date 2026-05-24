@@ -9,7 +9,7 @@
         </div>
 
         <div class="text-subtitle2 text-white">
-          Gestión de reservas, pagos y estados
+          Gestión de reservas, pagos, combos y estados
         </div>
       </div>
 
@@ -43,6 +43,19 @@
 
           <div class="text-caption text-grey-7">
             Cliente Glamur
+          </div>
+        </q-td>
+      </template>
+
+      <!-- SERVICIO -->
+      <template #body-cell-servicio="props">
+        <q-td :props="props">
+          <div class="text-weight-bold">
+            {{ props.row.servicio || 'Sin servicio' }}
+          </div>
+
+          <div class="text-caption text-grey-7">
+            CEJAS Y PESTAÑAS
           </div>
         </q-td>
       </template>
@@ -174,9 +187,10 @@
         <q-card-section class="dialog-body">
           <div class="q-gutter-md">
 
+            <!-- CLIENTE -->
             <q-select
               v-model="form.cliente_id"
-              :options="clientes"
+              :options="clientesFiltrados"
               option-label="nombre"
               option-value="id"
               emit-value
@@ -188,30 +202,13 @@
               dense
               rounded
               bg-color="white"
-            />
-
-            <!-- SERVICIOS PREDETERMINADOS -->
-            <q-select
-              v-model="servicioSeleccionado"
-              :options="serviciosFiltrados"
-              option-label="label"
-              label="Servicio / combo *"
-              outlined
-              dense
-              rounded
-              bg-color="white"
-              use-input
-              input-debounce="0"
               clearable
-              @filter="filtrarServicios"
-              @update:model-value="seleccionarServicio"
+              @filter="filterClientes"
             >
               <template #option="scope">
                 <q-item v-bind="scope.itemProps">
                   <q-item-section avatar>
-                    <q-avatar class="service-avatar" size="42px">
-                      <q-icon :name="scope.opt.icono" color="white" size="22px" />
-                    </q-avatar>
+                    <q-avatar color="pink-6" text-color="white" icon="person" />
                   </q-item-section>
 
                   <q-item-section>
@@ -220,12 +217,64 @@
                     </q-item-label>
 
                     <q-item-label caption>
-                      {{ scope.opt.categoria }} · {{ scope.opt.descripcion }}
+                      {{ scope.opt.telefono || 'Sin teléfono' }}
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
+              </template>
+            </q-select>
+
+            <!-- SERVICIO GENERAL -->
+            <q-input
+              v-model="form.categoria"
+              label="Servicio"
+              outlined
+              dense
+              rounded
+              readonly
+              bg-color="white"
+            />
+
+            <!-- COMBO -->
+            <q-select
+              v-model="comboSeleccionado"
+              :options="serviciosFiltrados"
+              option-label="nombre"
+              use-input
+              input-debounce="0"
+              label="Combo *"
+              outlined
+              dense
+              rounded
+              bg-color="white"
+              clearable
+              @filter="filterServicios"
+              @update:model-value="seleccionarServicio"
+            >
+              <template #selected>
+                <span v-if="comboSeleccionado">
+                  {{ comboSeleccionado.nombre }}
+                </span>
+
+                <span v-else class="text-grey-6">
+                  Selecciona un combo
+                </span>
+              </template>
+
+              <template #option="scope">
+                <q-item v-bind="scope.itemProps">
+                  <q-item-section>
+                    <q-item-label class="text-weight-bold">
+                      {{ scope.opt.nombre }}
+                    </q-item-label>
+
+                    <q-item-label caption>
+                      {{ scope.opt.descripcion }}
                     </q-item-label>
                   </q-item-section>
 
                   <q-item-section side>
-                    <q-badge color="pink" rounded>
+                    <q-badge color="pink-7" rounded>
                       Bs {{ money(scope.opt.precio) }}
                     </q-badge>
                   </q-item-section>
@@ -233,15 +282,31 @@
               </template>
             </q-select>
 
+            <!-- NOMBRE DEL COMBO SELECCIONADO -->
             <q-input
-              v-model.trim="form.servicio"
-              label="Nombre del servicio seleccionado *"
+              v-model="form.servicio"
+              label="Nombre del combo seleccionado *"
               outlined
               dense
               rounded
+              readonly
               bg-color="white"
             />
 
+            <!-- DESCRIPCIÓN DEL COMBO -->
+            <q-input
+              v-model="form.descripcion"
+              label="Detalle del combo"
+              type="textarea"
+              outlined
+              dense
+              rounded
+              readonly
+              bg-color="white"
+              autogrow
+            />
+
+            <!-- PRECIO -->
             <q-input
               v-model.number="form.precio"
               type="number"
@@ -436,7 +501,7 @@
 
             <template #body-cell-metodo="props">
               <q-td :props="props">
-                {{ formatMetodo(props.row.metodo) }}
+                {{ formatMetodoPago(props.row.metodo) }}
               </q-td>
             </template>
 
@@ -478,6 +543,7 @@ const $q = useQuasar()
 
 const citas = ref([])
 const clientes = ref([])
+const clientesFiltrados = ref([])
 const historial = ref([])
 
 const dialog = ref(false)
@@ -488,21 +554,8 @@ const loading = ref(false)
 const saving = ref(false)
 const savingPago = ref(false)
 
-const form = ref({
-  id: null,
-  cliente_id: null,
-  servicio: '',
-  precio: 0,
-  fecha: '',
-  hora: '',
-  estado: 'pendiente'
-})
-
-const pago = ref({
-  cita_id: null,
-  monto: 0,
-  metodo: 'efectivo'
-})
+const comboSeleccionado = ref(null)
+const serviciosFiltrados = ref([])
 
 const metodosPago = [
   {
@@ -519,92 +572,80 @@ const metodosPago = [
   }
 ]
 
-const serviciosBase = [
+const combosServicios = [
   {
-    id: 1,
-    categoria: 'Maquillaje y Cabello',
-    nombre: 'Maquillaje y Peinado',
-    descripcion: 'Maquillaje y peinado a elección',
-    precio: 150,
-    icono: 'face_retouching_natural',
-    label: 'Maquillaje y Peinado - Bs 150.00'
+    categoria: 'CEJAS Y PESTAÑAS',
+    nombre: 'CLEAN BROWS',
+    descripcion: 'Depilación + Visagismo',
+    precio: 25
   },
   {
-    id: 2,
-    categoria: 'Maquillaje y Cabello',
-    nombre: 'Servicio VIP',
-    descripcion: 'Maquillaje con productos VIP',
-    precio: 200,
-    icono: 'workspace_premium',
-    label: 'Servicio VIP - Bs 200.00'
+    categoria: 'CEJAS Y PESTAÑAS',
+    nombre: 'BROWS PRO',
+    descripcion: 'Henna + Depilación y Visagismo',
+    precio: 80
   },
   {
-    id: 3,
-    categoria: 'Cabello',
-    nombre: 'Cabello - Planchado o bucles',
-    descripcion: 'Peinado, planchado o bucles',
-    precio: 80,
-    icono: 'content_cut',
-    label: 'Cabello - Planchado o bucles - Bs 80.00'
+    categoria: 'CEJAS Y PESTAÑAS',
+    nombre: 'LAMI BROWS',
+    descripcion: 'Laminado + Vitaminas + Depilación y Visagismo',
+    precio: 80
   },
   {
-    id: 4,
-    categoria: 'Cejas Perfectas',
-    nombre: 'Laminado de cejas - Henna',
-    descripcion: 'Laminado de cejas con henna',
-    precio: 135,
-    icono: 'auto_awesome',
-    label: 'Laminado de cejas - Henna - Bs 135.00'
+    categoria: 'CEJAS Y PESTAÑAS',
+    nombre: 'LASH PERFECT',
+    descripcion: 'Lifting + Tinte efecto rimel',
+    precio: 85
   },
   {
-    id: 5,
-    categoria: 'Cejas Perfectas',
-    nombre: 'Laminado de cejas - Diseño',
-    descripcion: 'Diseño y laminado de cejas',
-    precio: 80,
-    icono: 'auto_fix_high',
-    label: 'Laminado de cejas - Diseño - Bs 80.00'
+    categoria: 'CEJAS Y PESTAÑAS',
+    nombre: 'PERFECT BROWS',
+    descripcion: 'Laminado + Henna + Depilación + Visagismo',
+    precio: 135
   },
   {
-    id: 6,
-    categoria: 'Cejas Perfectas',
-    nombre: 'Henna y depilación de cejas',
-    descripcion: 'Henna con depilación de cejas',
-    precio: 80,
-    icono: 'spa',
-    label: 'Henna y depilación de cejas - Bs 80.00'
+    categoria: 'CEJAS Y PESTAÑAS',
+    nombre: 'GLOW UP EXPRESS',
+    descripcion: 'Laminado + Henna + Depilación y Visagismo + Lifting + Tinte efecto rimel',
+    precio: 220
   },
   {
-    id: 7,
-    categoria: 'Uñas',
-    nombre: 'Uñas',
-    descripcion: 'Servicio básico de uñas',
-    precio: 50,
-    icono: 'back_hand',
-    label: 'Uñas - Bs 50.00'
+    categoria: 'CEJAS Y PESTAÑAS',
+    nombre: 'PERFECT EXPRESS',
+    descripcion: 'Henna + Depilación y Visagismo + Lifting + Tinte efecto rimel',
+    precio: 165
   },
   {
-    id: 8,
-    categoria: 'Combo',
-    nombre: 'Combo Glamur Básico',
-    descripcion: 'Cejas + cabello',
-    precio: 130,
-    icono: 'local_offer',
-    label: 'Combo Glamur Básico - Bs 130.00'
+    categoria: 'CEJAS Y PESTAÑAS',
+    nombre: 'LASH & BROWS EXPRESS',
+    descripcion: 'Laminado + Lifting + Tinte efecto rimel + Vitaminas + Depilación y Visagismo',
+    precio: 165
   },
   {
-    id: 9,
-    categoria: 'Combo',
-    nombre: 'Combo Glamur Completo',
-    descripcion: 'Maquillaje + peinado + cejas',
-    precio: 250,
-    icono: 'redeem',
-    label: 'Combo Glamur Completo - Bs 250.00'
+    categoria: 'CEJAS Y PESTAÑAS',
+    nombre: 'RETOQUE BROWS PRO',
+    descripcion: 'Henna',
+    precio: 40
   }
 ]
 
-const serviciosFiltrados = ref([...serviciosBase])
-const servicioSeleccionado = ref(null)
+const form = ref({
+  id: null,
+  cliente_id: null,
+  categoria: 'CEJAS Y PESTAÑAS',
+  servicio: '',
+  descripcion: '',
+  precio: 0,
+  fecha: '',
+  hora: '',
+  estado: 'pendiente'
+})
+
+const pago = ref({
+  cita_id: null,
+  monto: 0,
+  metodo: 'efectivo'
+})
 
 const columns = [
   {
@@ -616,9 +657,10 @@ const columns = [
   },
   {
     name: 'servicio',
-    label: 'Servicio',
+    label: 'Combo',
     field: 'servicio',
-    align: 'left'
+    align: 'left',
+    sortable: true
   },
   {
     name: 'precio',
@@ -701,13 +743,6 @@ function normalizar(texto) {
     .replace(/[\u0300-\u036f]/g, '')
 }
 
-function formatMetodo(metodo) {
-  if (metodo === 'qr') return 'QR'
-  if (metodo === 'efectivo') return 'Efectivo'
-  if (metodo === 'transferencia') return 'Transferencia'
-  return metodo || 'No definido'
-}
-
 function getErrorMessage(error) {
   const data = error?.response?.data
 
@@ -724,20 +759,42 @@ function colorEstado(estado) {
   return 'orange'
 }
 
-function filtrarServicios(val, update) {
-  update(() => {
-    const texto = normalizar(val)
+function formatMetodoPago(metodo) {
+  if (metodo === 'qr') return 'QR'
+  if (metodo === 'efectivo') return 'Efectivo'
+  if (metodo === 'transferencia') return 'Transferencia'
+  return metodo || 'No definido'
+}
 
-    if (!texto) {
-      serviciosFiltrados.value = [...serviciosBase]
+function filterClientes(val, update) {
+  update(() => {
+    const buscar = normalizar(val)
+
+    if (!buscar) {
+      clientesFiltrados.value = clientes.value
       return
     }
 
-    serviciosFiltrados.value = serviciosBase.filter(servicio => {
-      return normalizar(servicio.nombre).includes(texto) ||
-        normalizar(servicio.categoria).includes(texto) ||
-        normalizar(servicio.descripcion).includes(texto) ||
-        normalizar(servicio.label).includes(texto)
+    clientesFiltrados.value = clientes.value.filter(cliente => {
+      return normalizar(cliente.nombre).includes(buscar) ||
+        normalizar(cliente.telefono).includes(buscar)
+    })
+  })
+}
+
+function filterServicios(val, update) {
+  update(() => {
+    const buscar = normalizar(val)
+
+    if (!buscar) {
+      serviciosFiltrados.value = combosServicios
+      return
+    }
+
+    serviciosFiltrados.value = combosServicios.filter(servicio => {
+      return normalizar(servicio.nombre).includes(buscar) ||
+        normalizar(servicio.descripcion).includes(buscar) ||
+        normalizar(servicio.categoria).includes(buscar)
     })
   })
 }
@@ -745,18 +802,15 @@ function filtrarServicios(val, update) {
 function seleccionarServicio(servicio) {
   if (!servicio) {
     form.value.servicio = ''
+    form.value.descripcion = ''
     form.value.precio = 0
     return
   }
 
+  form.value.categoria = servicio.categoria
   form.value.servicio = servicio.nombre
-  form.value.precio = Number(servicio.precio || 0)
-}
-
-function buscarServicio(nombre) {
-  return serviciosBase.find(servicio => {
-    return normalizar(servicio.nombre) === normalizar(nombre)
-  }) || null
+  form.value.descripcion = servicio.descripcion
+  form.value.precio = servicio.precio
 }
 
 async function load() {
@@ -785,6 +839,8 @@ async function loadClientes() {
     clientes.value = Array.isArray(data)
       ? data
       : (data?.data || [])
+
+    clientesFiltrados.value = clientes.value
   } catch (error) {
     $q.notify({
       type: 'negative',
@@ -794,13 +850,15 @@ async function loadClientes() {
 }
 
 function openDialog() {
-  servicioSeleccionado.value = null
-  serviciosFiltrados.value = [...serviciosBase]
+  comboSeleccionado.value = null
+  serviciosFiltrados.value = combosServicios
 
   form.value = {
     id: null,
     cliente_id: null,
+    categoria: 'CEJAS Y PESTAÑAS',
     servicio: '',
+    descripcion: '',
     precio: 0,
     fecha: hoy(),
     hora: '',
@@ -811,15 +869,20 @@ function openDialog() {
 }
 
 function edit(row) {
-  const servicioEncontrado = buscarServicio(row.servicio)
+  const comboEncontrado = combosServicios.find(combo => {
+    return normalizar(combo.nombre) === normalizar(row.servicio)
+  })
 
-  servicioSeleccionado.value = servicioEncontrado
+  comboSeleccionado.value = comboEncontrado || null
+  serviciosFiltrados.value = combosServicios
 
   form.value = {
     id: row.id,
     cliente_id: row.cliente_id,
-    servicio: row.servicio || '',
-    precio: Number(row.precio || 0),
+    categoria: comboEncontrado?.categoria || 'CEJAS Y PESTAÑAS',
+    servicio: row.servicio || comboEncontrado?.nombre || '',
+    descripcion: comboEncontrado?.descripcion || '',
+    precio: Number(row.precio || comboEncontrado?.precio || 0),
     fecha: row.fecha || hoy(),
     hora: row.hora ? String(row.hora).slice(0, 5) : '',
     estado: row.estado || 'pendiente'
@@ -832,7 +895,7 @@ async function save() {
   if (!form.value.cliente_id || !form.value.servicio || !form.value.fecha || !form.value.hora) {
     $q.notify({
       type: 'warning',
-      message: 'Completa cliente, servicio, fecha y hora'
+      message: 'Completa cliente, combo, fecha y hora'
     })
 
     return
@@ -966,11 +1029,13 @@ function remove(id) {
     title: 'Eliminar cita',
     message: '¿Seguro que deseas eliminar esta cita?',
     persistent: true,
+
     ok: {
       label: 'Eliminar',
       color: 'negative',
       unelevated: true
     },
+
     cancel: {
       label: 'Cancelar',
       color: 'grey-7',
@@ -996,6 +1061,8 @@ function remove(id) {
 }
 
 onMounted(async () => {
+  serviciosFiltrados.value = combosServicios
+
   await Promise.all([
     load(),
     loadClientes()
@@ -1027,10 +1094,10 @@ onMounted(async () => {
   align-items: center;
 
   box-shadow:
-    0 16px 40px rgba(233,30,99,0.25);
+    0 16px 40px rgba(233, 30, 99, 0.25);
 }
 
-/* BUTTONS */
+/* BOTONES */
 
 .btn-glamur-white {
   background: white;
@@ -1053,7 +1120,7 @@ onMounted(async () => {
   border-radius: 16px;
 }
 
-/* TABLE */
+/* TABLA */
 
 .tabla-glamur {
   border-radius: 24px;
@@ -1061,7 +1128,7 @@ onMounted(async () => {
   background: white;
 
   box-shadow:
-    0 14px 35px rgba(156,39,176,0.12);
+    0 14px 35px rgba(156, 39, 176, 0.12);
 }
 
 .tabla-glamur :deep(.q-table thead tr) {
@@ -1095,20 +1162,6 @@ onMounted(async () => {
   justify-content: center;
   gap: 6px;
   flex-wrap: wrap;
-}
-
-/* SERVICE SELECT */
-
-.service-avatar {
-  background:
-    linear-gradient(
-      135deg,
-      #e91e63,
-      #9c27b0
-    );
-
-  box-shadow:
-    0 8px 18px rgba(233,30,99,0.25);
 }
 
 /* DIALOGS */
@@ -1157,7 +1210,7 @@ onMounted(async () => {
 .dialog-actions {
   padding: 16px 22px;
   background: white;
-  border-top: 1px solid #eee;
+  border-top: 1px solid #eeeeee;
 }
 
 .qr-box {
