@@ -13,7 +13,7 @@
         </div>
 
         <div class="hero-subtitle">
-          Control mensual de citas pendientes, concluidas y canceladas
+          Control mensual de citas pendientes, concluidas, canceladas y extracto PDF
         </div>
       </div>
 
@@ -46,17 +46,26 @@
         </div>
       </div>
 
-      <q-btn
-        class="btn-glamur"
-        icon="today"
-        label="Hoy"
-        @click="irHoy"
-      />
+      <div class="month-actions">
+        <q-btn
+          class="btn-glamur"
+          icon="today"
+          label="Hoy"
+          @click="irHoy"
+        />
+
+        <q-btn
+          class="btn-pdf"
+          icon="picture_as_pdf"
+          label="Generar PDF"
+          @click="generarPDF"
+        />
+      </div>
     </div>
 
     <!-- RESUMEN -->
     <div class="row q-col-gutter-md q-mb-lg">
-      <div class="col-12 col-sm-6 col-md-3">
+      <div class="col-12 col-sm-6 col-md-2">
         <q-card class="summary-card">
           <q-card-section>
             <div class="summary-label">Total citas</div>
@@ -66,7 +75,7 @@
         </q-card>
       </div>
 
-      <div class="col-12 col-sm-6 col-md-3">
+      <div class="col-12 col-sm-6 col-md-2">
         <q-card class="summary-card pending">
           <q-card-section>
             <div class="summary-label">Pendientes</div>
@@ -76,7 +85,7 @@
         </q-card>
       </div>
 
-      <div class="col-12 col-sm-6 col-md-3">
+      <div class="col-12 col-sm-6 col-md-2">
         <q-card class="summary-card done">
           <q-card-section>
             <div class="summary-label">Concluidas</div>
@@ -86,12 +95,32 @@
         </q-card>
       </div>
 
-      <div class="col-12 col-sm-6 col-md-3">
+      <div class="col-12 col-sm-6 col-md-2">
         <q-card class="summary-card cancelled">
           <q-card-section>
             <div class="summary-label">Canceladas</div>
             <div class="summary-number">{{ resumenMes.canceladas }}</div>
             <div class="summary-caption">No realizadas</div>
+          </q-card-section>
+        </q-card>
+      </div>
+
+      <div class="col-12 col-sm-6 col-md-2">
+        <q-card class="summary-card generated">
+          <q-card-section>
+            <div class="summary-label">Generado</div>
+            <div class="summary-money">Bs {{ money(totalGeneradoMes) }}</div>
+            <div class="summary-caption">Según citas</div>
+          </q-card-section>
+        </q-card>
+      </div>
+
+      <div class="col-12 col-sm-6 col-md-2">
+        <q-card class="summary-card paid">
+          <q-card-section>
+            <div class="summary-label">Pagado</div>
+            <div class="summary-money">Bs {{ money(ingresoPagadoMes) }}</div>
+            <div class="summary-caption">Pagos confirmados</div>
           </q-card-section>
         </q-card>
       </div>
@@ -112,6 +141,13 @@
       <div class="legend-item">
         <span class="dot dot-cancelled"></span>
         Cancelada
+      </div>
+
+      <div class="legend-spacer"></div>
+
+      <div class="legend-item text-pdf">
+        <q-icon name="picture_as_pdf" />
+        Extracto mensual disponible
       </div>
     </div>
 
@@ -301,6 +337,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
+import { jsPDF } from 'jspdf'
+import { autoTable } from 'jspdf-autotable'
 import { api } from 'boot/axios'
 
 defineOptions({
@@ -359,6 +397,14 @@ const espaciosVacios = computed(() => {
   return primerDia === 0 ? 6 : primerDia - 1
 })
 
+const citasMes = computed(() => {
+  const year = fecha.value.getFullYear()
+  const month = String(fecha.value.getMonth() + 1).padStart(2, '0')
+  const prefijo = `${year}-${month}`
+
+  return citas.value.filter((cita) => String(cita.fecha || '').startsWith(prefijo))
+})
+
 const diasDelMes = computed(() => {
   const year = fecha.value.getFullYear()
   const month = fecha.value.getMonth()
@@ -382,18 +428,52 @@ const diasDelMes = computed(() => {
 })
 
 const resumenMes = computed(() => {
-  const year = fecha.value.getFullYear()
-  const month = String(fecha.value.getMonth() + 1).padStart(2, '0')
-  const prefijo = `${year}-${month}`
-
-  const citasMes = citas.value.filter((cita) => String(cita.fecha || '').startsWith(prefijo))
-
   return {
-    total: citasMes.length,
-    pendientes: citasMes.filter((cita) => normalizarEstado(cita.estado) === 'pendiente').length,
-    concluidas: citasMes.filter((cita) => normalizarEstado(cita.estado) === 'concluida').length,
-    canceladas: citasMes.filter((cita) => normalizarEstado(cita.estado) === 'cancelada').length
+    total: citasMes.value.length,
+    pendientes: citasMes.value.filter((cita) => normalizarEstado(cita.estado) === 'pendiente').length,
+    concluidas: citasMes.value.filter((cita) => normalizarEstado(cita.estado) === 'concluida').length,
+    canceladas: citasMes.value.filter((cita) => normalizarEstado(cita.estado) === 'cancelada').length
   }
+})
+
+const totalGeneradoMes = computed(() => {
+  return citasMes.value.reduce((total, cita) => {
+    return total + numero(cita.precio)
+  }, 0)
+})
+
+const ingresoPagadoMes = computed(() => {
+  return citasMes.value
+    .filter((cita) => estaPagada(cita))
+    .reduce((total, cita) => {
+      return total + numero(cita.precio)
+    }, 0)
+})
+
+const resumenDiasMes = computed(() => {
+  return diasDelMes.value
+    .map((dia) => {
+      const totalGenerado = dia.citas.reduce((total, cita) => {
+        return total + numero(cita.precio)
+      }, 0)
+
+      const totalPagado = dia.citas
+        .filter((cita) => estaPagada(cita))
+        .reduce((total, cita) => {
+          return total + numero(cita.precio)
+        }, 0)
+
+      return {
+        fecha: dia.fecha,
+        total: dia.citas.length,
+        pendientes: dia.citas.filter((cita) => normalizarEstado(cita.estado) === 'pendiente').length,
+        concluidas: dia.citas.filter((cita) => normalizarEstado(cita.estado) === 'concluida').length,
+        canceladas: dia.citas.filter((cita) => normalizarEstado(cita.estado) === 'cancelada').length,
+        generado: totalGenerado,
+        pagado: totalPagado
+      }
+    })
+    .filter((dia) => dia.total > 0)
 })
 
 function formatoFechaISO(date) {
@@ -402,6 +482,24 @@ function formatoFechaISO(date) {
   const day = String(date.getDate()).padStart(2, '0')
 
   return `${year}-${month}-${day}`
+}
+
+function numero(value) {
+  const result = Number(value || 0)
+
+  return Number.isNaN(result) ? 0 : result
+}
+
+function money(value) {
+  return numero(value).toFixed(2)
+}
+
+function limpiarTexto(value) {
+  return String(value || '').replace(/\s+/g, ' ').trim()
+}
+
+function estaPagada(cita) {
+  return String(cita.estado_pago || '').toLowerCase() === 'pagado'
 }
 
 function getErrorMessage(error) {
@@ -460,6 +558,10 @@ function textoEstado(estado) {
   return 'Pendiente'
 }
 
+function textoPago(cita) {
+  return estaPagada(cita) ? 'Pagado' : 'Pendiente'
+}
+
 function colorClaseEstado(estado) {
   const valor = normalizarEstado(estado)
 
@@ -486,8 +588,14 @@ function horaCorta(hora) {
   return String(hora).slice(0, 5)
 }
 
-function money(value) {
-  return Number(value || 0).toFixed(2)
+function formatoFechaNormal(fechaStr) {
+  if (!fechaStr) return ''
+
+  const partes = fechaStr.split('-')
+
+  if (partes.length !== 3) return fechaStr
+
+  return `${partes[2]}/${partes[1]}/${partes[0]}`
 }
 
 function formatoFechaLarga(fechaStr) {
@@ -532,6 +640,110 @@ function nuevaCita() {
     query: {
       fecha: diaSeleccionado.value
     }
+  })
+}
+
+function generarPDF() {
+  const doc = new jsPDF('p', 'mm', 'a4')
+  const mesActual = `${nombreMes.value} ${anio.value}`
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(18)
+  doc.text('Extracto mensual Glamur', 14, 18)
+
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(10)
+  doc.text(`Mes: ${mesActual}`, 14, 26)
+  doc.text(`Generado: ${new Date().toLocaleString('es-BO')}`, 14, 32)
+
+  autoTable(doc, {
+    startY: 42,
+    head: [['Resumen', 'Cantidad / Monto']],
+    body: [
+      ['Total de citas', String(resumenMes.value.total)],
+      ['Pendientes', String(resumenMes.value.pendientes)],
+      ['Concluidas', String(resumenMes.value.concluidas)],
+      ['Canceladas', String(resumenMes.value.canceladas)],
+      ['Total generado', `Bs ${money(totalGeneradoMes.value)}`],
+      ['Total pagado', `Bs ${money(ingresoPagadoMes.value)}`]
+    ],
+    theme: 'grid',
+    headStyles: {
+      fillColor: [233, 30, 99],
+      textColor: [255, 255, 255],
+      fontStyle: 'bold'
+    },
+    styles: {
+      fontSize: 10,
+      cellPadding: 3
+    }
+  })
+
+  autoTable(doc, {
+    startY: doc.lastAutoTable.finalY + 10,
+    head: [['Fecha', 'Citas', 'Pend.', 'Conc.', 'Canc.', 'Generado', 'Pagado']],
+    body: resumenDiasMes.value.length
+      ? resumenDiasMes.value.map((dia) => [
+        formatoFechaNormal(dia.fecha),
+        String(dia.total),
+        String(dia.pendientes),
+        String(dia.concluidas),
+        String(dia.canceladas),
+        `Bs ${money(dia.generado)}`,
+        `Bs ${money(dia.pagado)}`
+      ])
+      : [['Sin datos', '0', '0', '0', '0', 'Bs 0.00', 'Bs 0.00']],
+    theme: 'striped',
+    headStyles: {
+      fillColor: [21, 17, 31],
+      textColor: [255, 255, 255],
+      fontStyle: 'bold'
+    },
+    styles: {
+      fontSize: 9,
+      cellPadding: 2.5
+    }
+  })
+
+  autoTable(doc, {
+    startY: doc.lastAutoTable.finalY + 10,
+    head: [['Fecha', 'Hora', 'Cliente', 'Servicio', 'Precio', 'Estado', 'Pago']],
+    body: citasMes.value.length
+      ? citasMes.value.map((cita) => [
+        formatoFechaNormal(cita.fecha),
+        horaCorta(cita.hora),
+        limpiarTexto(cita.cliente?.nombre || 'Sin cliente'),
+        limpiarTexto(cita.servicio || 'Sin servicio'),
+        `Bs ${money(cita.precio)}`,
+        textoEstado(cita.estado),
+        textoPago(cita)
+      ])
+      : [['Sin datos', '-', '-', '-', 'Bs 0.00', '-', '-']],
+    theme: 'grid',
+    headStyles: {
+      fillColor: [156, 39, 176],
+      textColor: [255, 255, 255],
+      fontStyle: 'bold'
+    },
+    styles: {
+      fontSize: 8,
+      cellPadding: 2.2
+    },
+    columnStyles: {
+      3: {
+        cellWidth: 45
+      }
+    }
+  })
+
+  const mesNumero = String(fecha.value.getMonth() + 1).padStart(2, '0')
+  const nombreArchivo = `extracto_glamur_${anio.value}_${mesNumero}.pdf`
+
+  doc.save(nombreArchivo)
+
+  $q.notify({
+    type: 'positive',
+    message: 'PDF generado correctamente'
   })
 }
 
@@ -613,6 +825,17 @@ onMounted(async () => {
     0 12px 28px rgba(233, 30, 99, 0.28);
 }
 
+.btn-pdf {
+  background:
+    linear-gradient(135deg, #15111f, #3b1747);
+
+  color: white;
+  border-radius: 16px;
+  font-weight: 900;
+  box-shadow:
+    0 12px 28px rgba(21, 17, 31, 0.28);
+}
+
 .month-bar {
   background: white;
   border-radius: 22px;
@@ -638,12 +861,19 @@ onMounted(async () => {
   color: #6b6472;
 }
 
+.month-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .summary-card {
   border-radius: 22px;
   background: white;
   box-shadow:
     0 14px 35px rgba(21, 17, 31, 0.08);
   border: 1px solid rgba(0, 0, 0, 0.04);
+  min-height: 122px;
 }
 
 .summary-card.pending {
@@ -658,6 +888,14 @@ onMounted(async () => {
   background: #ffebee;
 }
 
+.summary-card.generated {
+  background: #f3e5f5;
+}
+
+.summary-card.paid {
+  background: #e0f2f1;
+}
+
 .summary-label {
   font-size: 13px;
   font-weight: 800;
@@ -667,6 +905,13 @@ onMounted(async () => {
 .summary-number {
   margin-top: 6px;
   font-size: 34px;
+  font-weight: 900;
+  color: #15111f;
+}
+
+.summary-money {
+  margin-top: 10px;
+  font-size: 22px;
   font-weight: 900;
   color: #15111f;
 }
@@ -698,6 +943,14 @@ onMounted(async () => {
   font-size: 13px;
   font-weight: 800;
   color: #4b4454;
+}
+
+.legend-spacer {
+  flex: 1;
+}
+
+.text-pdf {
+  color: #c2185b;
 }
 
 .dot {
@@ -1028,8 +1281,17 @@ onMounted(async () => {
     align-items: flex-start;
   }
 
-  .month-bar .q-btn {
+  .month-actions {
     width: 100%;
+    flex-direction: column;
+  }
+
+  .month-actions .q-btn {
+    width: 100%;
+  }
+
+  .legend-spacer {
+    display: none;
   }
 
   .calendar-grid {
