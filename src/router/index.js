@@ -21,14 +21,16 @@ export default route(function () {
 
   Router.beforeEach((to, from, next) => {
     const token = localStorage.getItem('glamur_token')
+
     const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
+    const guestOnly = to.matched.some(record => record.meta.guestOnly)
 
     if (requiresAuth && !token) {
       next('/login')
       return
     }
 
-    if (to.path === '/login' && token) {
+    if (guestOnly && token) {
       next('/dashboard')
       return
     }
