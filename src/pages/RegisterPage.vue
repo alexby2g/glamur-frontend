@@ -16,11 +16,19 @@
             </div>
 
             <div class="register-subtitle">
-              Regístrate con tu correo Gmail
+              Registro protegido para administradores
             </div>
           </q-card-section>
 
           <q-card-section class="register-body">
+
+            <q-banner class="security-banner q-mb-md" rounded>
+              <template #avatar>
+                <q-icon name="admin_panel_settings" color="pink-7" />
+              </template>
+
+              Para crear una cuenta debes ingresar el código secreto de administrador.
+            </q-banner>
 
             <q-input
               v-model.trim="form.nombre"
@@ -83,7 +91,7 @@
               label="Confirmar contraseña"
               outlined
               rounded
-              class="q-mb-lg"
+              class="q-mb-md"
               bg-color="white"
               :type="showPassword2 ? 'text' : 'password'"
               :disable="loading"
@@ -99,6 +107,31 @@
                   class="cursor-pointer"
                   color="grey-7"
                   @click="showPassword2 = !showPassword2"
+                />
+              </template>
+            </q-input>
+
+            <q-input
+              v-model.trim="form.codigo_registro"
+              label="Código secreto de administrador"
+              outlined
+              rounded
+              class="q-mb-lg"
+              bg-color="white"
+              :type="showCode ? 'text' : 'password'"
+              :disable="loading"
+              @keyup.enter="register"
+            >
+              <template #prepend>
+                <q-icon name="vpn_key" color="pink" />
+              </template>
+
+              <template #append>
+                <q-icon
+                  :name="showCode ? 'visibility_off' : 'visibility'"
+                  class="cursor-pointer"
+                  color="grey-7"
+                  @click="showCode = !showCode"
                 />
               </template>
             </q-input>
@@ -146,12 +179,14 @@ const router = useRouter()
 const loading = ref(false)
 const showPassword = ref(false)
 const showPassword2 = ref(false)
+const showCode = ref(false)
 
 const form = ref({
   nombre: '',
   usuario: '',
   password: '',
-  password_confirmation: ''
+  password_confirmation: '',
+  codigo_registro: ''
 })
 
 function getErrorMessage(error) {
@@ -183,7 +218,7 @@ function validarFormulario() {
     return false
   }
 
-  if (!form.value.usuario.includes('@gmail.com')) {
+  if (!form.value.usuario.toLowerCase().includes('@gmail.com')) {
     $q.notify({
       type: 'warning',
       message: 'Debe usar un correo Gmail válido'
@@ -219,6 +254,15 @@ function validarFormulario() {
     return false
   }
 
+  if (!form.value.codigo_registro) {
+    $q.notify({
+      type: 'warning',
+      message: 'Ingrese el código secreto de administrador'
+    })
+
+    return false
+  }
+
   return true
 }
 
@@ -230,9 +274,10 @@ async function register() {
   try {
     const { data } = await api.post('/register', {
       nombre: form.value.nombre,
-      usuario: form.value.usuario,
+      usuario: form.value.usuario.toLowerCase(),
       password: form.value.password,
-      password_confirmation: form.value.password_confirmation
+      password_confirmation: form.value.password_confirmation,
+      codigo_registro: form.value.codigo_registro
     })
 
     localStorage.setItem('glamur_token', data.token)
@@ -269,7 +314,7 @@ async function register() {
 }
 
 .register-card {
-  width: 430px;
+  width: 440px;
   max-width: 95vw;
   border-radius: 28px;
   overflow: hidden;
@@ -314,6 +359,13 @@ async function register() {
 .register-body {
   padding: 28px 24px 30px;
   background: white;
+}
+
+.security-banner {
+  background: #fff0f6;
+  color: #7b1b48;
+  border: 1px solid #f8bbd0;
+  font-weight: 700;
 }
 
 .btn-register {
