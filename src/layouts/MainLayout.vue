@@ -33,14 +33,71 @@
 
         </q-toolbar-title>
 
-        <q-btn
+        <!-- USUARIO / CERRAR SESIÓN -->
+        <q-btn-dropdown
           flat
-          round
           dense
-          icon="notifications"
+          no-caps
           color="white"
-          class="top-action"
-        />
+          dropdown-icon="expand_more"
+          class="user-dropdown"
+        >
+          <template #label>
+            <div class="row items-center no-wrap user-label">
+
+              <q-avatar size="36px" class="user-avatar">
+                <q-icon name="person" color="white" size="21px" />
+              </q-avatar>
+
+              <div class="user-info">
+                <div class="user-name">
+                  {{ usuarioNombre }}
+                </div>
+
+                <div class="user-role">
+                  Administrador
+                </div>
+              </div>
+
+            </div>
+          </template>
+
+          <q-list class="user-menu">
+
+            <q-item>
+              <q-item-section avatar>
+                <q-avatar class="menu-user-avatar">
+                  <q-icon name="person" color="white" />
+                </q-avatar>
+              </q-item-section>
+
+              <q-item-section>
+                <q-item-label class="text-weight-bold">
+                  {{ usuarioNombre }}
+                </q-item-label>
+
+                <q-item-label caption>
+                  Sesión activa
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+
+            <q-separator />
+
+            <q-item clickable v-close-popup @click="cerrarSesion">
+              <q-item-section avatar>
+                <q-icon name="logout" color="negative" />
+              </q-item-section>
+
+              <q-item-section>
+                <q-item-label class="text-negative text-weight-bold">
+                  Cerrar sesión
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+
+          </q-list>
+        </q-btn-dropdown>
 
       </q-toolbar>
     </q-header>
@@ -87,19 +144,15 @@
         >
 
           <q-item-section avatar>
-
             <div class="menu-icon-box">
               <q-icon :name="item.icon" size="22px" />
             </div>
-
           </q-item-section>
 
           <q-item-section>
-
             <div class="menu-label">
               {{ item.label }}
             </div>
-
           </q-item-section>
 
         </q-item>
@@ -134,12 +187,16 @@
 </template>
 
 <script>
+import { api } from 'boot/axios'
+
 export default {
   name: 'MainLayout',
 
   data () {
     return {
       drawer: false,
+
+      usuarioNombre: 'Administrador',
 
       menu: [
         {
@@ -184,6 +241,66 @@ export default {
           to: '/historial-clientes'
         }
       ]
+    }
+  },
+
+  mounted () {
+    this.cargarUsuario()
+  },
+
+  methods: {
+    cargarUsuario () {
+      const usuarioGuardado = localStorage.getItem('glamur_user')
+
+      if (!usuarioGuardado) {
+        this.usuarioNombre = 'Administrador'
+        return
+      }
+
+      try {
+        const usuario = JSON.parse(usuarioGuardado)
+
+        this.usuarioNombre =
+          usuario?.nombre ||
+          usuario?.usuario ||
+          'Administrador'
+      } catch {
+        this.usuarioNombre = 'Administrador'
+      }
+    },
+
+    cerrarSesion () {
+      this.$q.dialog({
+        title: 'Cerrar sesión',
+        message: '¿Deseas cerrar tu sesión actual?',
+        persistent: true,
+        ok: {
+          label: 'Sí, cerrar sesión',
+          color: 'negative',
+          unelevated: true
+        },
+        cancel: {
+          label: 'Cancelar',
+          color: 'grey-7',
+          flat: true
+        }
+      }).onOk(async () => {
+        try {
+          await api.post('/logout')
+        } catch (error) {
+          console.warn('No se pudo cerrar sesión en el servidor. Se cerrará localmente.', error)
+        } finally {
+          localStorage.removeItem('glamur_token')
+          localStorage.removeItem('glamur_user')
+
+          this.$q.notify({
+            type: 'positive',
+            message: 'Sesión cerrada correctamente'
+          })
+
+          this.$router.replace('/login')
+        }
+      })
     }
   }
 }
@@ -245,8 +362,69 @@ export default {
   color: rgba(255,255,255,0.72);
 }
 
-.top-action {
+/* USUARIO HEADER */
+
+.user-dropdown {
+  min-height: 44px;
+  border-radius: 18px;
+  padding: 4px 8px;
   background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(248,215,161,0.18);
+}
+
+.user-dropdown:hover {
+  background: rgba(255,255,255,0.14);
+}
+
+.user-label {
+  gap: 9px;
+}
+
+.user-avatar {
+  background:
+    linear-gradient(
+      135deg,
+      #e91e63,
+      #b8860b
+    );
+
+  box-shadow:
+    0 8px 20px rgba(233,30,99,0.35);
+}
+
+.user-info {
+  text-align: left;
+  line-height: 14px;
+}
+
+.user-name {
+  font-size: 13px;
+  font-weight: 900;
+  color: white;
+  max-width: 135px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-role {
+  font-size: 10px;
+  color: rgba(255,236,200,0.78);
+}
+
+.user-menu {
+  min-width: 235px;
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.menu-user-avatar {
+  background:
+    linear-gradient(
+      135deg,
+      #e91e63,
+      #b8860b
+    );
 }
 
 /* SIDEBAR */
@@ -481,6 +659,23 @@ export default {
 
   .top-subtitle {
     display: none;
+  }
+
+  .user-info {
+    display: none;
+  }
+
+  .user-dropdown {
+    padding: 4px;
+    border-radius: 50%;
+  }
+
+  .drawer-title {
+    font-size: 24px;
+  }
+
+  .menu-item {
+    min-height: 56px;
   }
 
 }
