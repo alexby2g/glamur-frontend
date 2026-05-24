@@ -1,14 +1,11 @@
 <template>
   <q-page class="login-page">
 
-    <div class="login-bg-effect one"></div>
-    <div class="login-bg-effect two"></div>
-
     <q-card class="login-card">
 
       <q-card-section class="login-header">
-        <q-avatar class="login-logo" size="76px">
-          <q-icon name="spa" color="white" size="42px" />
+        <q-avatar class="login-logo" size="78px">
+          <q-icon name="spa" color="white" size="44px" />
         </q-avatar>
 
         <div class="login-title">
@@ -21,8 +18,7 @@
       </q-card-section>
 
       <q-card-section class="login-body">
-
-        <q-form @submit.prevent="login" class="q-gutter-md">
+        <q-form class="q-gutter-md" @submit.prevent="login">
 
           <q-input
             v-model.trim="form.usuario"
@@ -62,15 +58,14 @@
 
           <q-btn
             type="submit"
-            label="Ingresar"
+            label="Iniciar sesión"
             icon="login"
             class="btn-login full-width"
-            :loading="loading"
             unelevated
+            :loading="loading"
           />
 
         </q-form>
-
       </q-card-section>
 
       <q-card-section class="login-footer">
@@ -181,33 +176,9 @@ onMounted(async () => {
   place-items: center;
   padding: 20px;
   background:
-    radial-gradient(circle at top left, rgba(233, 30, 99, 0.22), transparent 34%),
-    radial-gradient(circle at bottom right, rgba(156, 39, 176, 0.22), transparent 34%),
+    radial-gradient(circle at top left, rgba(233, 30, 99, 0.25), transparent 34%),
+    radial-gradient(circle at bottom right, rgba(156, 39, 176, 0.25), transparent 34%),
     linear-gradient(135deg, #120f1c 0%, #241329 55%, #e91e63 100%);
-  position: relative;
-  overflow: hidden;
-}
-
-.login-bg-effect {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(8px);
-}
-
-.login-bg-effect.one {
-  width: 240px;
-  height: 240px;
-  background: rgba(233, 30, 99, 0.22);
-  top: -70px;
-  left: -70px;
-}
-
-.login-bg-effect.two {
-  width: 300px;
-  height: 300px;
-  background: rgba(156, 39, 176, 0.20);
-  bottom: -100px;
-  right: -100px;
 }
 
 .login-card {
@@ -215,15 +186,13 @@ onMounted(async () => {
   max-width: 96vw;
   border-radius: 30px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.96);
+  background: white;
   box-shadow: 0 28px 70px rgba(0, 0, 0, 0.35);
-  position: relative;
-  z-index: 1;
 }
 
 .login-header {
   text-align: center;
-  padding: 34px 26px 18px;
+  padding: 34px 26px 20px;
   background: linear-gradient(135deg, #15111f, #241329 45%, #e91e63);
   color: white;
 }
@@ -237,13 +206,12 @@ onMounted(async () => {
   margin-top: 16px;
   font-size: 34px;
   font-weight: 900;
-  letter-spacing: 0.5px;
 }
 
 .login-subtitle {
   margin-top: 4px;
   font-size: 14px;
-  opacity: 0.78;
+  opacity: 0.8;
 }
 
 .login-body {
