@@ -71,7 +71,7 @@
           </q-card-section>
 
           <q-card-section class="login-footer">
-            Usuario inicial: <b>admin</b> · Contraseña: <b>admin123</b>
+            Usuario inicial: <b></b> · Contraseña: <b></b>
           </q-card-section>
 
         </q-card>
