@@ -33,6 +33,112 @@
 
         </q-toolbar-title>
 
+        <!-- NOTIFICACIONES -->
+        <q-btn
+          flat
+          dense
+          round
+          icon="notifications"
+          color="white"
+          class="notification-btn q-mr-sm"
+        >
+          <q-badge
+            v-if="noLeidas > 0"
+            color="red"
+            floating
+            rounded
+          >
+            {{ noLeidas > 9 ? '9+' : noLeidas }}
+          </q-badge>
+
+          <q-menu
+            class="notification-menu"
+            anchor="bottom right"
+            self="top right"
+          >
+            <div class="notification-header">
+              <div>
+                <div class="notification-title">
+                  🔔 Notificaciones
+                </div>
+
+                <div class="notification-subtitle">
+                  Pagos y actividad del sistema
+                </div>
+              </div>
+
+              <q-btn
+                v-if="notificaciones.length > 0"
+                flat
+                dense
+                round
+                icon="done_all"
+                color="white"
+                @click="marcarTodasLeidas"
+              >
+                <q-tooltip>Marcar todas como leídas</q-tooltip>
+              </q-btn>
+            </div>
+
+            <q-separator />
+
+            <q-scroll-area class="notification-scroll">
+              <div
+                v-if="notificaciones.length === 0"
+                class="empty-notifications"
+              >
+                <q-icon name="notifications_none" size="42px" />
+                <div class="text-weight-bold q-mt-sm">
+                  Sin notificaciones
+                </div>
+                <div class="text-caption">
+                  Cuando se registre un pago aparecerá aquí.
+                </div>
+              </div>
+
+              <q-list v-else separator>
+                <q-item
+                  v-for="n in notificaciones"
+                  :key="n.id"
+                  clickable
+                  class="notification-item"
+                  :class="{ 'notification-unread': !n.leido }"
+                  @click="marcarComoLeida(n)"
+                >
+                  <q-item-section avatar>
+                    <q-avatar
+                      :class="n.leido ? 'notif-avatar-read' : 'notif-avatar-unread'"
+                    >
+                      <q-icon
+                        :name="n.tipo === 'pago' ? 'payments' : 'notifications'"
+                        color="white"
+                      />
+                    </q-avatar>
+                  </q-item-section>
+
+                  <q-item-section>
+                    <q-item-label class="text-weight-bold">
+                      {{ n.titulo }}
+                    </q-item-label>
+
+                    <q-item-label caption lines="2">
+                      {{ n.mensaje }}
+                    </q-item-label>
+
+                    <q-item-label caption class="notification-date">
+                      {{ formatearFecha(n.created_at) }}
+                    </q-item-label>
+                  </q-item-section>
+
+                  <q-item-section side v-if="!n.leido">
+                    <q-icon name="fiber_manual_record" color="pink" size="12px" />
+                  </q-item-section>
+                </q-item>
+              </q-list>
+            </q-scroll-area>
+          </q-menu>
+        </q-btn>
+
         <!-- USUARIO / CERRAR SESIÓN -->
         <q-btn-dropdown
           flat
@@ -198,6 +304,11 @@ export default {
 
       usuarioNombre: 'Administrador',
 
+      notificaciones: [],
+      noLeidas: 0,
+      intervaloNotificaciones: null,
+      notificacionesInicializadas: false,
+
       menu: [
         {
           label: 'Dashboard',
@@ -252,6 +363,17 @@ export default {
 
   mounted () {
     this.cargarUsuario()
+    this.cargarNotificaciones()
+
+    this.intervaloNotificaciones = setInterval(() => {
+      this.cargarNotificaciones()
+    }, 8000)
+  },
+
+  beforeUnmount () {
+    if (this.intervaloNotificaciones) {
+      clearInterval(this.intervaloNotificaciones)
+    }
   },
 
   methods: {
@@ -275,6 +397,82 @@ export default {
       }
     },
 
+    async cargarNotificaciones () {
+      try {
+        const noLeidasAntes = this.noLeidas
+
+        const { data } = await api.get('/notificaciones')
+
+        this.notificaciones = Array.isArray(data?.notificaciones)
+          ? data.notificaciones
+          : []
+
+        this.noLeidas = Number(data?.no_leidas || 0)
+
+        if (
+          this.notificacionesInicializadas &&
+          this.noLeidas > noLeidasAntes
+        ) {
+          const nueva = this.notificaciones[0]
+
+          this.$q.notify({
+            type: 'positive',
+            icon: 'notifications_active',
+            position: 'top-right',
+            message: nueva?.mensaje || 'Nueva notificación registrada'
+          })
+        }
+
+        this.notificacionesInicializadas = true
+      } catch {
+        // No mostramos error para no molestar al usuario cada 8 segundos.
+      }
+    },
+
+    async marcarComoLeida (notificacion) {
+      if (!notificacion || notificacion.leido) return
+
+      try {
+        await api.put(`/notificaciones/${notificacion.id}/leer`)
+        await this.cargarNotificaciones()
+      } catch {
+        this.$q.notify({
+          type: 'negative',
+          message: 'No se pudo marcar la notificación como leída'
+        })
+      }
+    },
+
+    async marcarTodasLeidas () {
+      try {
+        await api.put('/notificaciones/leer-todas')
+
+        this.$q.notify({
+          type: 'positive',
+          message: 'Notificaciones marcadas como leídas'
+        })
+
+        await this.cargarNotificaciones()
+      } catch {
+        this.$q.notify({
+          type: 'negative',
+          message: 'No se pudieron actualizar las notificaciones'
+        })
+      }
+    },
+
+    formatearFecha (fecha) {
+      if (!fecha) return ''
+
+      return new Date(fecha).toLocaleString('es-BO', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    },
+
     cerrarSesion () {
       this.$q.dialog({
         title: 'Cerrar sesión',
@@ -293,8 +491,8 @@ export default {
       }).onOk(async () => {
         try {
           await api.post('/logout')
-        } catch (error) {
-          console.warn('No se pudo cerrar sesión en el servidor. Se cerrará localmente.', error)
+        } catch {
+          // Si Render está dormido o falla, igual cerramos localmente.
         } finally {
           localStorage.removeItem('glamur_token')
           localStorage.removeItem('glamur_user')
@@ -366,6 +564,90 @@ export default {
 .top-subtitle {
   font-size: 11px;
   color: rgba(255,255,255,0.72);
+}
+
+/* NOTIFICACIONES */
+
+.notification-btn {
+  background: rgba(255,255,255,0.08);
+}
+
+.notification-btn:hover {
+  background: rgba(255,255,255,0.14);
+}
+
+.notification-menu {
+  width: 360px;
+  max-width: 94vw;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 18px 50px rgba(20,10,30,0.28);
+}
+
+.notification-header {
+  padding: 16px;
+  background:
+    linear-gradient(
+      135deg,
+      #15111f,
+      #e91e63
+    );
+  color: white;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.notification-title {
+  font-size: 17px;
+  font-weight: 900;
+}
+
+.notification-subtitle {
+  font-size: 12px;
+  color: rgba(255,255,255,0.72);
+}
+
+.notification-scroll {
+  height: 360px;
+  max-height: 70vh;
+}
+
+.empty-notifications {
+  min-height: 250px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  color: #777;
+  padding: 24px;
+}
+
+.notification-item {
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+.notification-unread {
+  background: #fff0f6;
+}
+
+.notif-avatar-unread {
+  background:
+    linear-gradient(
+      135deg,
+      #e91e63,
+      #9c27b0
+    );
+}
+
+.notif-avatar-read {
+  background: #9e9e9e;
+}
+
+.notification-date {
+  margin-top: 4px;
+  color: #9e9e9e;
 }
 
 /* USUARIO HEADER */
@@ -682,6 +964,10 @@ export default {
 
   .menu-item {
     min-height: 56px;
+  }
+
+  .notification-menu {
+    width: 92vw;
   }
 
 }
