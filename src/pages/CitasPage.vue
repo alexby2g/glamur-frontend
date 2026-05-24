@@ -81,7 +81,7 @@
             class="estado-badge"
             :color="props.row.estado_pago === 'pagado' ? 'green' : 'red'"
           >
-            {{ props.row.estado_pago || 'pendiente' }}
+            {{ mostrarPago(props.row.estado_pago) }}
           </q-badge>
         </q-td>
       </template>
@@ -109,7 +109,7 @@
               icon="check"
               @click="finalizar(props.row.id)"
             >
-              <q-tooltip>Finalizar</q-tooltip>
+              <q-tooltip>Finalizar cita</q-tooltip>
             </q-btn>
 
             <q-btn
@@ -121,7 +121,7 @@
               icon="payments"
               @click="pagar(props.row)"
             >
-              <q-tooltip>Pagar</q-tooltip>
+              <q-tooltip>Registrar pago</q-tooltip>
             </q-btn>
 
             <q-btn
@@ -143,23 +143,22 @@
               icon="delete"
               @click="remove(props.row.id)"
             >
-              <q-tooltip>Eliminar</q-tooltip>
+              <q-tooltip>Eliminar cita</q-tooltip>
             </q-btn>
           </div>
         </q-td>
       </template>
     </q-table>
 
-    <!-- DIALOG NUEVA / EDITAR CITA -->
     <q-dialog
       v-model="dialog"
       persistent
-      :maximized="$q.screen.lt.md"
+      :maximized="$q.screen.lt.sm"
     >
-      <q-card class="dialog-card column no-wrap">
+      <q-card class="dialog-card dialog-card-main">
         <q-card-section class="dialog-header row items-center">
           <div class="text-h6 text-weight-bold">
-            {{ form.id ? '✏️ Editar cita' : '📅 Nueva cita' }}
+            {{ form.id ? '✏️ Editar cita' : '🗓️ Nueva cita' }}
           </div>
 
           <q-space />
@@ -174,7 +173,7 @@
           />
         </q-card-section>
 
-        <q-card-section class="dialog-body col">
+        <q-card-section class="dialog-body">
           <div class="q-gutter-md">
             <q-select
               v-model="form.cliente_id"
@@ -185,28 +184,60 @@
               map-options
               use-input
               input-debounce="0"
+              clearable
               label="Cliente *"
               outlined
               dense
               rounded
               bg-color="white"
               @filter="filtrarClientes"
-            />
+            >
+              <template #prepend>
+                <q-icon name="person" color="pink" />
+              </template>
+
+              <template #option="scope">
+                <q-item v-bind="scope.itemProps">
+                  <q-item-section avatar>
+                    <q-avatar color="pink" text-color="white" icon="person" />
+                  </q-item-section>
+
+                  <q-item-section>
+                    <q-item-label class="text-weight-bold">
+                      {{ scope.opt.nombre }}
+                    </q-item-label>
+
+                    <q-item-label caption>
+                      {{ scope.opt.telefono || 'Sin teléfono' }}
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
+              </template>
+
+              <template #no-option>
+                <q-item>
+                  <q-item-section class="text-grey">
+                    No se encontraron clientes
+                  </q-item-section>
+                </q-item>
+              </template>
+            </q-select>
 
             <q-input
-              v-model="form.categoria_servicio"
+              v-model="form.servicio"
               label="Servicio"
-              readonly
               outlined
               dense
               rounded
+              readonly
               bg-color="white"
+              class="input-readonly"
             />
 
             <q-select
-              v-model="comboSeleccionado"
+              v-model="form.servicioOption"
               :options="serviciosFiltrados"
-              option-label="label"
+              option-label="combo"
               use-input
               input-debounce="0"
               clearable
@@ -217,36 +248,60 @@
               bg-color="white"
               @filter="filtrarServicios"
               @update:model-value="seleccionarServicio"
+              @clear="limpiarServicio"
             >
+              <template #prepend>
+                <q-icon name="spa" color="pink" />
+              </template>
+
+              <template #selected-item="scope">
+                <div class="text-weight-bold">
+                  {{ scope.opt.combo }}
+                </div>
+              </template>
+
               <template #option="scope">
                 <q-item v-bind="scope.itemProps">
+                  <q-item-section avatar>
+                    <q-avatar color="pink" text-color="white" icon="spa" />
+                  </q-item-section>
+
                   <q-item-section>
                     <q-item-label class="text-weight-bold">
-                      {{ scope.opt.servicio.nombre }}
+                      {{ scope.opt.combo }}
                     </q-item-label>
 
                     <q-item-label caption>
-                      {{ scope.opt.servicio.descripcion }}
+                      {{ scope.opt.detalle }}
                     </q-item-label>
                   </q-item-section>
 
                   <q-item-section side>
-                    <q-badge color="pink" rounded>
-                      Bs {{ money(scope.opt.servicio.precio) }}
+                    <q-badge color="green" rounded>
+                      Bs {{ money(scope.opt.precio) }}
                     </q-badge>
+                  </q-item-section>
+                </q-item>
+              </template>
+
+              <template #no-option>
+                <q-item>
+                  <q-item-section class="text-grey">
+                    No hay combos registrados
                   </q-item-section>
                 </q-item>
               </template>
             </q-select>
 
             <q-input
-              v-model="form.detalle_servicio"
+              v-model="form.detalle"
               label="Detalle del combo"
-              readonly
               outlined
               dense
               rounded
+              readonly
               bg-color="white"
+              class="input-readonly"
             />
 
             <q-input
@@ -256,9 +311,13 @@
               outlined
               dense
               rounded
-              readonly
+              min="0"
               bg-color="white"
-            />
+            >
+              <template #prepend>
+                <q-icon name="payments" color="green" />
+              </template>
+            </q-input>
 
             <div class="row q-col-gutter-md">
               <div class="col-12 col-sm-6">
@@ -270,7 +329,11 @@
                   dense
                   rounded
                   bg-color="white"
-                />
+                >
+                  <template #prepend>
+                    <q-icon name="event" color="pink" />
+                  </template>
+                </q-input>
               </div>
 
               <div class="col-12 col-sm-6">
@@ -282,13 +345,17 @@
                   dense
                   rounded
                   bg-color="white"
-                />
+                >
+                  <template #prepend>
+                    <q-icon name="schedule" color="pink" />
+                  </template>
+                </q-input>
               </div>
             </div>
 
             <q-select
               v-model="form.estado"
-              :options="estadosCita"
+              :options="estados"
               option-label="label"
               option-value="value"
               emit-value
@@ -298,33 +365,17 @@
               dense
               rounded
               bg-color="white"
-            />
+            >
+              <template #prepend>
+                <q-icon name="flag" color="pink" />
+              </template>
+            </q-select>
           </div>
         </q-card-section>
 
         <q-card-actions align="right" class="dialog-actions">
           <q-btn
-            v-if="form.id"
-            class="btn-action btn-delete"
-            label="Eliminar"
-            icon="delete"
-            unelevated
-            @click="removeDesdeDialog"
-          />
-
-          <q-btn
-            v-if="form.id && form.estado !== 'concluida'"
-            class="btn-action btn-finish"
-            label="Finalizar"
-            icon="check"
-            unelevated
-            @click="finalizarDesdeDialog"
-          />
-
-          <q-space class="desktop-space" />
-
-          <q-btn
-            class="btn-action btn-cancel"
+            class="btn-cancelar"
             label="Cancelar"
             icon="close"
             unelevated
@@ -332,24 +383,22 @@
           />
 
           <q-btn
-            class="btn-action btn-save"
+            class="btn-glamur"
             :label="form.id ? 'Guardar cambios' : 'Registrar cita'"
             icon="save"
             :loading="saving"
-            unelevated
             @click="save"
           />
         </q-card-actions>
       </q-card>
     </q-dialog>
 
-    <!-- DIALOG PAGO -->
     <q-dialog
       v-model="dialogPago"
       persistent
-      :maximized="$q.screen.lt.md"
+      :maximized="$q.screen.lt.sm"
     >
-      <q-card class="dialog-card-small column no-wrap">
+      <q-card class="dialog-card-small dialog-card-main">
         <q-card-section class="dialog-header row items-center">
           <div class="text-h6 text-weight-bold">
             💰 Realizar pago
@@ -367,7 +416,7 @@
           />
         </q-card-section>
 
-        <q-card-section class="dialog-body col">
+        <q-card-section class="dialog-body">
           <div class="q-gutter-md">
             <q-input
               v-model.number="pago.monto"
@@ -394,10 +443,7 @@
               bg-color="white"
             />
 
-            <div
-              v-if="pago.metodo === 'qr'"
-              class="qr-box"
-            >
+            <div v-if="pago.metodo === 'qr'" class="qr-box">
               <q-img
                 src="~assets/qr.jpg"
                 class="qr-img"
@@ -413,7 +459,7 @@
 
         <q-card-actions align="right" class="dialog-actions">
           <q-btn
-            class="btn-action btn-cancel"
+            class="btn-cancelar"
             label="Cancelar"
             icon="close"
             unelevated
@@ -421,23 +467,21 @@
           />
 
           <q-btn
-            class="btn-action btn-save"
+            class="btn-glamur"
             label="Confirmar pago"
             icon="payments"
             :loading="savingPago"
-            unelevated
             @click="confirmarPago"
           />
         </q-card-actions>
       </q-card>
     </q-dialog>
 
-    <!-- DIALOG HISTORIAL -->
     <q-dialog
       v-model="dialogHistorial"
-      :maximized="$q.screen.lt.md"
+      :maximized="$q.screen.lt.sm"
     >
-      <q-card class="dialog-card-historial column no-wrap">
+      <q-card class="dialog-card-historial dialog-card-main">
         <q-card-section class="dialog-header row items-center">
           <div class="text-h6 text-weight-bold">
             📜 Historial de pagos
@@ -455,7 +499,7 @@
           />
         </q-card-section>
 
-        <q-card-section class="dialog-body col">
+        <q-card-section class="dialog-body">
           <q-table
             class="tabla-glamur tabla-historial"
             :rows="historial"
@@ -474,6 +518,12 @@
               </q-td>
             </template>
 
+            <template #body-cell-metodo="props">
+              <q-td :props="props">
+                {{ mostrarMetodo(props.row.metodo) }}
+              </q-td>
+            </template>
+
             <template #body-cell-estado="props">
               <q-td :props="props">
                 <q-badge color="green" rounded>
@@ -486,7 +536,7 @@
 
         <q-card-actions align="right" class="dialog-actions">
           <q-btn
-            class="btn-action btn-cancel"
+            class="btn-cancelar"
             label="Cerrar"
             icon="close"
             unelevated
@@ -499,9 +549,9 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, onMounted, watch } from 'vue'
 import { useQuasar } from 'quasar'
+import { useRoute, useRouter } from 'vue-router'
 import { api } from 'boot/axios'
 
 defineOptions({
@@ -510,6 +560,7 @@ defineOptions({
 
 const $q = useQuasar()
 const route = useRoute()
+const router = useRouter()
 
 const citas = ref([])
 const clientes = ref([])
@@ -526,44 +577,91 @@ const loading = ref(false)
 const saving = ref(false)
 const savingPago = ref(false)
 
-const comboSeleccionado = ref(null)
-
-const metodosPago = [
-  {
-    label: 'Efectivo',
-    value: 'efectivo'
-  },
-  {
-    label: 'QR',
-    value: 'qr'
-  },
-  {
-    label: 'Transferencia',
-    value: 'transferencia'
-  }
+const estados = [
+  { label: 'Pendiente', value: 'pendiente' },
+  { label: 'Concluida', value: 'concluida' },
+  { label: 'Cancelada', value: 'cancelada' }
 ]
 
-const estadosCita = [
+const metodosPago = [
+  { label: 'Efectivo', value: 'efectivo' },
+  { label: 'QR', value: 'qr' },
+  { label: 'Transferencia', value: 'transferencia' }
+]
+
+const serviciosBase = [
   {
-    label: 'Pendiente',
-    value: 'pendiente'
+    servicio: 'CEJAS Y PESTAÑAS',
+    combo: 'CLEAN BROWS',
+    detalle: 'Depilación + Visagismo',
+    precio: 25,
+    activo: true
   },
   {
-    label: 'Finalizada',
-    value: 'concluida'
+    servicio: 'CEJAS Y PESTAÑAS',
+    combo: 'BROWS PRO',
+    detalle: 'Henna + Depilación y Visagismo',
+    precio: 80,
+    activo: true
   },
   {
-    label: 'Cancelada',
-    value: 'cancelada'
+    servicio: 'CEJAS Y PESTAÑAS',
+    combo: 'LAMI BROWS',
+    detalle: 'Laminado + Vitaminas + Depilación y Visagismo',
+    precio: 80,
+    activo: true
+  },
+  {
+    servicio: 'CEJAS Y PESTAÑAS',
+    combo: 'LASH PERFECT',
+    detalle: 'Lifting + Tinte efecto rimel',
+    precio: 85,
+    activo: true
+  },
+  {
+    servicio: 'CEJAS Y PESTAÑAS',
+    combo: 'PERFECT BROWS',
+    detalle: 'Laminado + Henna + Depilación + Visagismo',
+    precio: 135,
+    activo: true
+  },
+  {
+    servicio: 'CEJAS Y PESTAÑAS',
+    combo: 'GLOW UP EXPRESS',
+    detalle: 'Laminado + Henna + Depilación y Visagismo + Lifting + Tinte efecto rimel',
+    precio: 220,
+    activo: true
+  },
+  {
+    servicio: 'CEJAS Y PESTAÑAS',
+    combo: 'PERFECT EXPRESS',
+    detalle: 'Henna + Depilación y Visagismo + Lifting + Tinte efecto rimel',
+    precio: 165,
+    activo: true
+  },
+  {
+    servicio: 'CEJAS Y PESTAÑAS',
+    combo: 'LASH & BROWS EXPRESS',
+    detalle: 'Laminado + Lifting + Tinte efecto rimel + Vitaminas + Depilación y Visagismo',
+    precio: 165,
+    activo: true
+  },
+  {
+    servicio: 'CEJAS Y PESTAÑAS',
+    combo: 'RETOQUE BROWS PRO',
+    detalle: 'Henna',
+    precio: 40,
+    activo: true
   }
 ]
 
 const form = ref({
   id: null,
   cliente_id: null,
-  categoria_servicio: 'CEJAS Y PESTAÑAS',
-  servicio: '',
-  detalle_servicio: '',
+  servicio: 'CEJAS Y PESTAÑAS',
+  servicioOption: null,
+  combo: '',
+  detalle: '',
   precio: 0,
   fecha: '',
   hora: '',
@@ -574,84 +672,6 @@ const pago = ref({
   cita_id: null,
   monto: 0,
   metodo: 'efectivo'
-})
-
-const combosBase = [
-  {
-    categoria: 'CEJAS Y PESTAÑAS',
-    nombre: 'CLEAN BROWS',
-    descripcion: 'Depilación + Visagismo',
-    precio: 25,
-    activo: true
-  },
-  {
-    categoria: 'CEJAS Y PESTAÑAS',
-    nombre: 'BROWS PRO',
-    descripcion: 'Henna + Depilación y Visagismo',
-    precio: 80,
-    activo: true
-  },
-  {
-    categoria: 'CEJAS Y PESTAÑAS',
-    nombre: 'LAMI BROWS',
-    descripcion: 'Laminado + Vitaminas + Depilación y Visagismo',
-    precio: 80,
-    activo: true
-  },
-  {
-    categoria: 'CEJAS Y PESTAÑAS',
-    nombre: 'LASH PERFECT',
-    descripcion: 'Lifting + Tinte efecto rimel',
-    precio: 85,
-    activo: true
-  },
-  {
-    categoria: 'CEJAS Y PESTAÑAS',
-    nombre: 'PERFECT BROWS',
-    descripcion: 'Laminado + Henna + Depilación + Visagismo',
-    precio: 135,
-    activo: true
-  },
-  {
-    categoria: 'CEJAS Y PESTAÑAS',
-    nombre: 'GLOW UP EXPRESS',
-    descripcion: 'Laminado + Henna + Depilación y Visagismo + Lifting + Tinte efecto rimel',
-    precio: 220,
-    activo: true
-  },
-  {
-    categoria: 'CEJAS Y PESTAÑAS',
-    nombre: 'PERFECT EXPRESS',
-    descripcion: 'Henna + Depilación y Visagismo + Lifting + Tinte efecto rimel',
-    precio: 165,
-    activo: true
-  },
-  {
-    categoria: 'CEJAS Y PESTAÑAS',
-    nombre: 'LASH & BROWS EXPRESS',
-    descripcion: 'Laminado + Lifting + Tinte efecto rimel + Vitaminas + Depilación y Visagismo',
-    precio: 165,
-    activo: true
-  },
-  {
-    categoria: 'CEJAS Y PESTAÑAS',
-    nombre: 'RETOQUE BROWS PRO',
-    descripcion: 'Henna',
-    precio: 40,
-    activo: true
-  }
-]
-
-const serviciosOptions = computed(() => {
-  return servicios.value
-    .filter(item => item.activo !== false)
-    .map(item => {
-      return {
-        label: item.nombre,
-        value: item.id || item.nombre,
-        servicio: item
-      }
-    })
 })
 
 const columns = [
@@ -666,13 +686,15 @@ const columns = [
     name: 'servicio',
     label: 'Servicio / Combo',
     field: 'servicio',
-    align: 'left'
+    align: 'left',
+    sortable: true
   },
   {
     name: 'precio',
     label: 'Precio',
     field: 'precio',
-    align: 'left'
+    align: 'left',
+    sortable: true
   },
   {
     name: 'fecha',
@@ -717,7 +739,7 @@ const columnsHistorial = [
   {
     name: 'metodo',
     label: 'Método',
-    field: row => mostrarMetodo(row.metodo),
+    field: 'metodo',
     align: 'left'
   },
   {
@@ -742,19 +764,11 @@ function hoy() {
   return new Date().toISOString().slice(0, 10)
 }
 
-function mostrarMetodo(value) {
-  if (value === 'qr') return 'QR'
-  if (value === 'efectivo') return 'Efectivo'
-  if (value === 'transferencia') return 'Transferencia'
-
-  return value || 'No definido'
-}
-
-function mostrarEstado(value) {
-  if (value === 'concluida') return 'Finalizada'
-  if (value === 'cancelada') return 'Cancelada'
-
-  return 'Pendiente'
+function normalizar(valor) {
+  return String(valor || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
 }
 
 function getErrorMessage(error) {
@@ -767,68 +781,36 @@ function getErrorMessage(error) {
   return data?.message || data?.error || 'Ocurrió un error'
 }
 
-function normalizarLista(data, key) {
+function responseToArray(data) {
   if (Array.isArray(data)) return data
   if (Array.isArray(data?.data)) return data.data
-  if (Array.isArray(data?.[key])) return data[key]
-
+  if (Array.isArray(data?.servicios)) return data.servicios
+  if (Array.isArray(data?.clientes)) return data.clientes
+  if (Array.isArray(data?.citas)) return data.citas
   return []
-}
-
-function normalizarFechaQuery(value) {
-  const fechaQuery = Array.isArray(value) ? value[0] : value
-  const texto = String(fechaQuery || '').trim()
-
-  if (/^\d{4}-\d{2}-\d{2}$/.test(texto)) {
-    return texto
-  }
-
-  return ''
 }
 
 function colorEstado(estado) {
   if (estado === 'concluida') return 'green'
   if (estado === 'cancelada') return 'red'
-
   return 'orange'
 }
 
-function filtrarClientes(value, update) {
-  update(() => {
-    const texto = String(value || '').toLowerCase()
-
-    if (!texto) {
-      clientesFiltrados.value = clientes.value
-      return
-    }
-
-    clientesFiltrados.value = clientes.value.filter(cliente => {
-      const nombre = String(cliente.nombre || '').toLowerCase()
-      const telefono = String(cliente.telefono || '').toLowerCase()
-
-      return nombre.includes(texto) || telefono.includes(texto)
-    })
-  })
+function mostrarEstado(estado) {
+  if (estado === 'concluida') return 'Concluida'
+  if (estado === 'cancelada') return 'Cancelada'
+  return 'Pendiente'
 }
 
-function filtrarServicios(value, update) {
-  update(() => {
-    const texto = String(value || '').toLowerCase()
+function mostrarPago(estado) {
+  if (estado === 'pagado') return 'Pagado'
+  return 'Pendiente'
+}
 
-    if (!texto) {
-      serviciosFiltrados.value = serviciosOptions.value
-      return
-    }
-
-    serviciosFiltrados.value = serviciosOptions.value.filter(option => {
-      const item = option.servicio
-      const nombre = String(item.nombre || '').toLowerCase()
-      const categoria = String(item.categoria || '').toLowerCase()
-      const descripcion = String(item.descripcion || item.detalle || '').toLowerCase()
-
-      return nombre.includes(texto) || categoria.includes(texto) || descripcion.includes(texto)
-    })
-  })
+function mostrarMetodo(metodo) {
+  if (metodo === 'qr') return 'QR'
+  if (metodo === 'transferencia') return 'Transferencia'
+  return 'Efectivo'
 }
 
 async function load() {
@@ -836,7 +818,7 @@ async function load() {
 
   try {
     const { data } = await api.get('/citas')
-    citas.value = normalizarLista(data, 'citas')
+    citas.value = responseToArray(data)
   } catch (error) {
     $q.notify({
       type: 'negative',
@@ -850,7 +832,7 @@ async function load() {
 async function loadClientes() {
   try {
     const { data } = await api.get('/clientes')
-    clientes.value = normalizarLista(data, 'clientes')
+    clientes.value = responseToArray(data)
     clientesFiltrados.value = clientes.value
   } catch (error) {
     $q.notify({
@@ -863,95 +845,142 @@ async function loadClientes() {
 async function loadServicios() {
   try {
     const { data } = await api.get('/servicios')
+    const respuesta = responseToArray(data)
 
-    servicios.value = normalizarLista(data, 'servicios')
+    servicios.value = respuesta.length > 0
+      ? respuesta.filter(item => item.activo !== false)
+      : serviciosBase
 
-    if (!servicios.value.length) {
-      servicios.value = combosBase
-    }
-
-    serviciosFiltrados.value = serviciosOptions.value
-  } catch {
-    servicios.value = combosBase
-    serviciosFiltrados.value = serviciosOptions.value
+    serviciosFiltrados.value = servicios.value
+  } catch (error) {
+    servicios.value = serviciosBase
+    serviciosFiltrados.value = serviciosBase
   }
 }
 
-function seleccionarServicio(option) {
-  if (!option) {
-    comboSeleccionado.value = null
-    form.value.servicio = ''
-    form.value.detalle_servicio = ''
-    form.value.precio = 0
+function filtrarClientes(valor, update) {
+  update(() => {
+    const texto = normalizar(valor)
 
+    if (!texto) {
+      clientesFiltrados.value = clientes.value
+      return
+    }
+
+    clientesFiltrados.value = clientes.value.filter(cliente => {
+      return normalizar(cliente.nombre).includes(texto) ||
+        normalizar(cliente.telefono).includes(texto)
+    })
+  })
+}
+
+function filtrarServicios(valor, update) {
+  update(() => {
+    const texto = normalizar(valor)
+
+    if (!texto) {
+      serviciosFiltrados.value = servicios.value
+      return
+    }
+
+    serviciosFiltrados.value = servicios.value.filter(servicio => {
+      return normalizar(servicio.servicio).includes(texto) ||
+        normalizar(servicio.combo).includes(texto) ||
+        normalizar(servicio.detalle).includes(texto)
+    })
+  })
+}
+
+function seleccionarServicio(servicio) {
+  if (!servicio) {
+    limpiarServicio()
     return
   }
 
-  const item = option.servicio
-
-  form.value.categoria_servicio = item.categoria || 'CEJAS Y PESTAÑAS'
-  form.value.servicio = item.nombre || ''
-  form.value.detalle_servicio = item.descripcion || item.detalle || ''
-  form.value.precio = Number(item.precio || 0)
+  form.value.servicioOption = servicio
+  form.value.servicio = servicio.servicio || 'CEJAS Y PESTAÑAS'
+  form.value.combo = servicio.combo || ''
+  form.value.detalle = servicio.detalle || ''
+  form.value.precio = Number(servicio.precio || 0)
 }
 
-function buscarComboPorNombre(nombre) {
-  const texto = String(nombre || '').toLowerCase()
-
-  return serviciosOptions.value.find(option => {
-    return String(option.servicio.nombre || '').toLowerCase() === texto
-  }) || null
+function limpiarServicio() {
+  form.value.servicioOption = null
+  form.value.combo = ''
+  form.value.detalle = ''
+  form.value.precio = 0
 }
 
-function openDialog(fechaSeleccionada = '') {
-  const fechaFinal = normalizarFechaQuery(fechaSeleccionada) || hoy()
-
+function openDialog(fechaSeleccionada = null) {
   form.value = {
     id: null,
     cliente_id: null,
-    categoria_servicio: 'CEJAS Y PESTAÑAS',
-    servicio: '',
-    detalle_servicio: '',
+    servicio: 'CEJAS Y PESTAÑAS',
+    servicioOption: null,
+    combo: '',
+    detalle: '',
     precio: 0,
-    fecha: fechaFinal,
+    fecha: fechaSeleccionada || String(route.query.fecha || '') || hoy(),
     hora: '',
     estado: 'pendiente'
   }
 
-  comboSeleccionado.value = null
   dialog.value = true
 }
 
 function edit(row) {
+  const servicioEncontrado = servicios.value.find(item => {
+    return normalizar(item.combo) === normalizar(row.servicio)
+  })
+
   form.value = {
     id: row.id,
     cliente_id: row.cliente_id,
-    categoria_servicio: 'CEJAS Y PESTAÑAS',
-    servicio: row.servicio || '',
-    detalle_servicio: '',
-    precio: Number(row.precio || 0),
+    servicio: servicioEncontrado?.servicio || 'CEJAS Y PESTAÑAS',
+    servicioOption: servicioEncontrado || null,
+    combo: row.servicio || servicioEncontrado?.combo || '',
+    detalle: servicioEncontrado?.detalle || '',
+    precio: Number(row.precio || servicioEncontrado?.precio || 0),
     fecha: row.fecha || hoy(),
     hora: row.hora ? String(row.hora).slice(0, 5) : '',
     estado: row.estado || 'pendiente'
-  }
-
-  const combo = buscarComboPorNombre(row.servicio)
-
-  if (combo) {
-    comboSeleccionado.value = combo
-    seleccionarServicio(combo)
-  } else {
-    comboSeleccionado.value = null
   }
 
   dialog.value = true
 }
 
 async function save() {
-  if (!form.value.cliente_id || !form.value.servicio || !form.value.fecha || !form.value.hora) {
+  if (!form.value.cliente_id) {
     $q.notify({
       type: 'warning',
-      message: 'Completa cliente, combo, fecha y hora'
+      message: 'Selecciona un cliente'
+    })
+
+    return
+  }
+
+  if (!form.value.combo) {
+    $q.notify({
+      type: 'warning',
+      message: 'Selecciona un combo o servicio'
+    })
+
+    return
+  }
+
+  if (!form.value.fecha || !form.value.hora) {
+    $q.notify({
+      type: 'warning',
+      message: 'Completa la fecha y la hora'
+    })
+
+    return
+  }
+
+  if (Number(form.value.precio || 0) <= 0) {
+    $q.notify({
+      type: 'warning',
+      message: 'El precio debe ser mayor a 0'
     })
 
     return
@@ -962,7 +991,7 @@ async function save() {
   try {
     const payload = {
       cliente_id: form.value.cliente_id,
-      servicio: form.value.servicio,
+      servicio: form.value.combo,
       precio: Number(form.value.precio || 0),
       fecha: form.value.fecha,
       hora: String(form.value.hora).slice(0, 5),
@@ -986,6 +1015,7 @@ async function save() {
     }
 
     dialog.value = false
+
     await load()
   } catch (error) {
     $q.notify({
@@ -998,30 +1028,37 @@ async function save() {
 }
 
 async function finalizar(id) {
-  try {
-    await api.put(`/citas/finalizar/${id}`)
+  $q.dialog({
+    title: 'Finalizar cita',
+    message: '¿Deseas marcar esta cita como concluida?',
+    persistent: true,
+    ok: {
+      label: 'Finalizar',
+      color: 'positive',
+      unelevated: true
+    },
+    cancel: {
+      label: 'Cancelar',
+      color: 'grey-7',
+      flat: true
+    }
+  }).onOk(async () => {
+    try {
+      await api.put(`/citas/finalizar/${id}`)
 
-    $q.notify({
-      type: 'positive',
-      message: 'Cita finalizada correctamente'
-    })
+      $q.notify({
+        type: 'positive',
+        message: 'Cita finalizada correctamente'
+      })
 
-    await load()
-  } catch (error) {
-    $q.notify({
-      type: 'negative',
-      message: getErrorMessage(error)
-    })
-  }
-}
-
-async function finalizarDesdeDialog() {
-  if (!form.value.id) return
-
-  await finalizar(form.value.id)
-
-  form.value.estado = 'concluida'
-  dialog.value = false
+      await load()
+    } catch (error) {
+      $q.notify({
+        type: 'negative',
+        message: getErrorMessage(error)
+      })
+    }
+  })
 }
 
 function pagar(row) {
@@ -1075,7 +1112,7 @@ async function verHistorial(id) {
   try {
     const { data } = await api.get(`/pagos/historial/${id}`)
 
-    historial.value = normalizarLista(data, 'pagos')
+    historial.value = responseToArray(data)
     dialogHistorial.value = true
   } catch (error) {
     $q.notify({
@@ -1088,7 +1125,7 @@ async function verHistorial(id) {
 function remove(id) {
   $q.dialog({
     title: 'Eliminar cita',
-    message: '¿Seguro que deseas eliminar esta cita?',
+    message: '¿Seguro que deseas eliminar esta cita? Se guardará en historial si el backend tiene recuperación activa.',
     persistent: true,
     ok: {
       label: 'Eliminar',
@@ -1109,10 +1146,6 @@ function remove(id) {
         message: 'Cita eliminada correctamente'
       })
 
-      if (form.value.id === id) {
-        dialog.value = false
-      }
-
       await load()
     } catch (error) {
       $q.notify({
@@ -1123,19 +1156,13 @@ function remove(id) {
   })
 }
 
-function removeDesdeDialog() {
-  if (!form.value.id) return
-
-  remove(form.value.id)
-}
-
 watch(
   () => route.query.fecha,
-  nuevaFecha => {
-    const fechaCalendario = normalizarFechaQuery(nuevaFecha)
-
-    if (fechaCalendario) {
-      openDialog(fechaCalendario)
+  async nuevaFecha => {
+    if (nuevaFecha) {
+      await loadServicios()
+      openDialog(String(nuevaFecha))
+      router.replace({ path: '/citas' })
     }
   }
 )
@@ -1147,10 +1174,9 @@ onMounted(async () => {
     loadServicios()
   ])
 
-  const fechaCalendario = normalizarFechaQuery(route.query.fecha)
-
-  if (fechaCalendario) {
-    openDialog(fechaCalendario)
+  if (route.query.fecha) {
+    openDialog(String(route.query.fecha))
+    router.replace({ path: '/citas' })
   }
 })
 </script>
@@ -1177,13 +1203,24 @@ onMounted(async () => {
   font-weight: 900;
   border-radius: 16px;
   padding: 10px 18px;
+  box-shadow: 0 10px 24px rgba(20, 10, 30, 0.18);
 }
 
 .btn-glamur {
   background: linear-gradient(135deg, #e91e63, #9c27b0);
   color: white;
-  font-weight: 800;
+  font-weight: 900;
   border-radius: 16px;
+  padding: 10px 18px;
+  box-shadow: 0 10px 24px rgba(233, 30, 99, 0.25);
+}
+
+.btn-cancelar {
+  background: #f2f2f5;
+  color: #666;
+  font-weight: 900;
+  border-radius: 16px;
+  padding: 10px 18px;
 }
 
 .tabla-glamur {
@@ -1191,6 +1228,10 @@ onMounted(async () => {
   overflow: hidden;
   background: white;
   box-shadow: 0 14px 35px rgba(156, 39, 176, 0.12);
+}
+
+.tabla-glamur :deep(.q-table__middle) {
+  overflow-x: auto;
 }
 
 .tabla-glamur :deep(.q-table thead tr) {
@@ -1223,8 +1264,6 @@ onMounted(async () => {
 .dialog-card,
 .dialog-card-small,
 .dialog-card-historial {
-  display: flex;
-  flex-direction: column;
   border-radius: 24px;
   overflow: hidden;
 }
@@ -1232,7 +1271,6 @@ onMounted(async () => {
 .dialog-card {
   width: 560px;
   max-width: 96vw;
-  height: auto;
   max-height: 92vh;
 }
 
@@ -1248,57 +1286,38 @@ onMounted(async () => {
   max-height: 92vh;
 }
 
+.dialog-card-main {
+  display: flex;
+  flex-direction: column;
+}
+
 .dialog-header {
   background: linear-gradient(135deg, #e91e63, #9c27b0);
   color: white;
-  flex: 0 0 auto;
-  z-index: 5;
+  position: sticky;
+  top: 0;
+  z-index: 3;
 }
 
 .dialog-body {
   background: #ffffff;
   padding: 24px;
-  flex: 1 1 auto;
-  min-height: 0;
   overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  flex: 1;
 }
 
 .dialog-actions {
   padding: 16px 22px;
   background: white;
-  border-top: 1px solid #eeeeee;
-  flex: 0 0 auto;
+  border-top: 1px solid #eee;
   position: sticky;
   bottom: 0;
-  z-index: 10;
-  box-shadow: 0 -8px 22px rgba(20, 10, 30, 0.08);
+  z-index: 4;
+  box-shadow: 0 -8px 18px rgba(20, 10, 30, 0.06);
 }
 
-.btn-action {
-  border-radius: 14px;
-  font-weight: 900;
-  padding: 9px 16px;
-}
-
-.btn-save {
-  background: linear-gradient(135deg, #e91e63, #9c27b0);
-  color: white;
-}
-
-.btn-cancel {
-  background: #f3f4f6;
-  color: #555555;
-}
-
-.btn-finish {
-  background: #16a34a;
-  color: white;
-}
-
-.btn-delete {
-  background: #dc2626;
-  color: white;
+.input-readonly :deep(.q-field__control) {
+  border-style: dashed;
 }
 
 .qr-box {
@@ -1315,7 +1334,7 @@ onMounted(async () => {
   border-radius: 14px;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 600px) {
   .citas-page {
     padding: 10px;
   }
@@ -1339,58 +1358,31 @@ onMounted(async () => {
   .dialog-card,
   .dialog-card-small,
   .dialog-card-historial {
-    width: 100vw !important;
-    max-width: 100vw !important;
-    height: 100vh !important;
-    height: 100dvh !important;
-    max-height: 100vh !important;
-    max-height: 100dvh !important;
-    border-radius: 0 !important;
-  }
-
-  .dialog-header {
-    min-height: 74px;
-    padding: 18px 22px;
+    width: 100%;
+    max-width: 100%;
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
   }
 
   .dialog-body {
-    padding: 20px 30px 28px;
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow-y: auto;
+    padding: 18px;
+    padding-bottom: 110px;
   }
 
   .dialog-actions {
-    position: sticky;
-    bottom: 0;
-    display: grid;
-    grid-template-columns: 1fr;
+    flex-wrap: wrap;
     gap: 10px;
-    padding: 12px 18px calc(14px + env(safe-area-inset-bottom));
-    background: #ffffff;
+    padding: 12px 16px 18px;
   }
 
   .dialog-actions .q-btn {
-    width: 100%;
-    min-height: 44px;
-  }
-
-  .desktop-space {
-    display: none;
+    flex: 1;
+    min-width: 140px;
   }
 
   .acciones .q-btn {
     margin-bottom: 4px;
-  }
-}
-
-@media (max-width: 480px) {
-  .dialog-body {
-    padding: 18px 30px 26px;
-  }
-
-  .dialog-header .text-h6 {
-    font-size: 21px;
   }
 }
 </style>
