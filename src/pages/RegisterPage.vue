@@ -1,11 +1,8 @@
 <template>
   <q-layout view="lHh Lpr lFf" class="register-layout">
-
     <q-page-container>
       <q-page class="register-page flex flex-center">
-
         <q-card class="register-card">
-
           <q-card-section class="register-header">
             <q-avatar class="register-logo" size="78px">
               <q-icon name="spa" color="white" size="44px" />
@@ -16,19 +13,24 @@
             </div>
 
             <div class="register-subtitle">
-              Registro protegido para administradores
+              Regístrate con tu correo Gmail
             </div>
           </q-card-section>
 
           <q-card-section class="register-body">
+            <div class="security-box q-mb-md">
+              <q-icon name="admin_panel_settings" size="34px" color="pink" />
 
-            <q-banner class="security-banner q-mb-md" rounded>
-              <template #avatar>
-                <q-icon name="admin_panel_settings" color="pink-7" />
-              </template>
+              <div>
+                <div class="security-title">
+                  Registro protegido
+                </div>
 
-              Para crear una cuenta debes ingresar el código secreto de administrador.
-            </q-banner>
+                <div class="security-text">
+                  Para crear una cuenta debes ingresar el código secreto de administrador.
+                </div>
+              </div>
+            </div>
 
             <q-input
               v-model.trim="form.nombre"
@@ -152,14 +154,10 @@
               to="/login"
               :disable="loading"
             />
-
           </q-card-section>
-
         </q-card>
-
       </q-page>
     </q-page-container>
-
   </q-layout>
 </template>
 
@@ -314,7 +312,7 @@ async function register() {
 }
 
 .register-card {
-  width: 440px;
+  width: 430px;
   max-width: 95vw;
   border-radius: 28px;
   overflow: hidden;
@@ -361,11 +359,26 @@ async function register() {
   background: white;
 }
 
-.security-banner {
+.security-box {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 18px;
   background: #fff0f6;
-  color: #7b1b48;
-  border: 1px solid #f8bbd0;
-  font-weight: 700;
+  border: 1px solid rgba(233, 30, 99, 0.22);
+}
+
+.security-title {
+  font-size: 14px;
+  font-weight: 900;
+  color: #c2185b;
+}
+
+.security-text {
+  font-size: 12px;
+  color: #7b1b45;
+  line-height: 1.3;
 }
 
 .btn-register {
