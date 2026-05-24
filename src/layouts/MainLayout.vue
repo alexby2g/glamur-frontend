@@ -139,6 +139,11 @@ export default {
           label: 'Historial',
           icon: 'history',
           to: '/historial'
+        },
+        {
+          label: 'Historial Clientes',
+          icon: 'manage_search',
+          to: '/historial-clientes'
         }
       ]
     }
@@ -234,7 +239,7 @@ export default {
 .menu-list {
   position: relative;
   z-index: 1;
-  padding: 0 14px;
+  padding: 0 14px 110px;
 }
 
 .menu-header {

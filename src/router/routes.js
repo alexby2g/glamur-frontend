@@ -28,21 +28,27 @@ const routes = [
       },
 
       {
-        path: 'pagos',
-        name: 'pagos',
-        component: () => import('pages/PagosPage.vue')
-      },
-
-      {
         path: 'calendario',
         name: 'calendario',
         component: () => import('pages/CalendarioPage.vue')
       },
 
       {
+        path: 'pagos',
+        name: 'pagos',
+        component: () => import('pages/PagosPage.vue')
+      },
+
+      {
         path: 'historial',
         name: 'historial',
         component: () => import('pages/HistorialPage.vue')
+      },
+
+      {
+        path: 'historial-clientes',
+        name: 'historial-clientes',
+        component: () => import('pages/HistorialClientesPage.vue')
       }
     ]
   },
