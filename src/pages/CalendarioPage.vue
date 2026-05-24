@@ -1,258 +1,179 @@
 <template>
-  <q-page class="calendario-page q-pa-md">
+  <q-page class="q-pa-md calendario-page">
 
-    <!-- HEADER -->
     <div class="calendar-hero q-mb-lg">
       <div>
-        <div class="hero-badge">
-          Calendario administrativo
-        </div>
-
-        <div class="hero-title">
+        <div class="text-h4 text-weight-bold text-white">
           📅 Calendario Glamur
         </div>
 
-        <div class="hero-subtitle">
-          Control mensual de citas pendientes, concluidas, canceladas y extracto PDF
+        <div class="text-subtitle2 text-white">
+          Control mensual de citas, estados y extractos
         </div>
       </div>
 
       <div class="hero-actions">
         <q-btn
           class="btn-white"
-          icon="chevron_left"
-          label="Anterior"
-          @click="mesAnterior"
+          icon="picture_as_pdf"
+          label="Extracto PDF"
+          :loading="descargandoPdf"
+          @click="descargarExtractoPDF"
         />
 
         <q-btn
           class="btn-white"
-          icon-right="chevron_right"
-          label="Siguiente"
-          @click="mesSiguiente"
+          icon="refresh"
+          label="Actualizar"
+          :loading="loading"
+          @click="load"
         />
       </div>
     </div>
 
-    <!-- MES ACTUAL -->
-    <div class="month-bar q-mb-md">
-      <div>
+    <q-card class="calendar-card">
+
+      <q-card-section class="calendar-toolbar">
+        <q-btn
+          round
+          unelevated
+          icon="chevron_left"
+          class="nav-btn"
+          @click="mesAnterior"
+        />
+
         <div class="month-title">
           {{ nombreMes }} {{ anio }}
         </div>
 
-        <div class="month-subtitle">
-          Haz clic en una fecha para ver sus citas o registrar una nueva cita.
-        </div>
-      </div>
-
-      <div class="month-actions">
         <q-btn
-          class="btn-glamur"
-          icon="today"
-          label="Hoy"
-          @click="irHoy"
+          round
+          unelevated
+          icon="chevron_right"
+          class="nav-btn"
+          @click="mesSiguiente"
         />
+      </q-card-section>
 
-        <q-btn
-          class="btn-pdf"
-          icon="picture_as_pdf"
-          label="Generar PDF"
-          @click="generarPDF"
-        />
-      </div>
-    </div>
+      <q-separator />
 
-    <!-- RESUMEN -->
-    <div class="row q-col-gutter-md q-mb-lg">
-      <div class="col-12 col-sm-6 col-md-2">
-        <q-card class="summary-card">
-          <q-card-section>
-            <div class="summary-label">Total citas</div>
-            <div class="summary-number">{{ resumenMes.total }}</div>
-            <div class="summary-caption">Citas del mes</div>
-          </q-card-section>
-        </q-card>
-      </div>
+      <q-card-section>
+        <div class="legend q-mb-md">
+          <div class="legend-item">
+            <span class="dot dot-green"></span>
+            Realizadas
+          </div>
 
-      <div class="col-12 col-sm-6 col-md-2">
-        <q-card class="summary-card pending">
-          <q-card-section>
-            <div class="summary-label">Pendientes</div>
-            <div class="summary-number">{{ resumenMes.pendientes }}</div>
-            <div class="summary-caption">Por atender</div>
-          </q-card-section>
-        </q-card>
-      </div>
+          <div class="legend-item">
+            <span class="dot dot-yellow"></span>
+            Pendientes
+          </div>
 
-      <div class="col-12 col-sm-6 col-md-2">
-        <q-card class="summary-card done">
-          <q-card-section>
-            <div class="summary-label">Concluidas</div>
-            <div class="summary-number">{{ resumenMes.concluidas }}</div>
-            <div class="summary-caption">Realizadas</div>
-          </q-card-section>
-        </q-card>
-      </div>
-
-      <div class="col-12 col-sm-6 col-md-2">
-        <q-card class="summary-card cancelled">
-          <q-card-section>
-            <div class="summary-label">Canceladas</div>
-            <div class="summary-number">{{ resumenMes.canceladas }}</div>
-            <div class="summary-caption">No realizadas</div>
-          </q-card-section>
-        </q-card>
-      </div>
-
-      <div class="col-12 col-sm-6 col-md-2">
-        <q-card class="summary-card generated">
-          <q-card-section>
-            <div class="summary-label">Generado</div>
-            <div class="summary-money">Bs {{ money(totalGeneradoMes) }}</div>
-            <div class="summary-caption">Según citas</div>
-          </q-card-section>
-        </q-card>
-      </div>
-
-      <div class="col-12 col-sm-6 col-md-2">
-        <q-card class="summary-card paid">
-          <q-card-section>
-            <div class="summary-label">Pagado</div>
-            <div class="summary-money">Bs {{ money(ingresoPagadoMes) }}</div>
-            <div class="summary-caption">Pagos confirmados</div>
-          </q-card-section>
-        </q-card>
-      </div>
-    </div>
-
-    <!-- LEYENDA -->
-    <div class="legend-card q-mb-md">
-      <div class="legend-item">
-        <span class="dot dot-pending"></span>
-        Pendiente
-      </div>
-
-      <div class="legend-item">
-        <span class="dot dot-done"></span>
-        Concluida / Realizada
-      </div>
-
-      <div class="legend-item">
-        <span class="dot dot-cancelled"></span>
-        Cancelada
-      </div>
-
-      <div class="legend-spacer"></div>
-
-      <div class="legend-item text-pdf">
-        <q-icon name="picture_as_pdf" />
-        Extracto mensual disponible
-      </div>
-    </div>
-
-    <!-- LOADING -->
-    <q-linear-progress
-      v-if="loading"
-      indeterminate
-      color="pink"
-      class="q-mb-md"
-    />
-
-    <!-- CALENDARIO -->
-    <q-card class="calendar-card">
-      <div class="week-grid">
-        <div
-          v-for="diaSemana in diasSemana"
-          :key="diaSemana"
-          class="week-name"
-        >
-          {{ diaSemana }}
+          <div class="legend-item">
+            <span class="dot dot-red"></span>
+            Canceladas
+          </div>
         </div>
-      </div>
 
-      <div class="calendar-grid">
-        <div
-          v-for="blank in espaciosVacios"
-          :key="`blank-${blank}`"
-          class="day-box empty"
-        ></div>
+        <div class="week-grid q-mb-sm">
+          <div
+            v-for="dia in diasSemana"
+            :key="dia"
+            class="week-day"
+          >
+            {{ dia }}
+          </div>
+        </div>
 
-        <div
-          v-for="dia in diasDelMes"
-          :key="dia.fecha"
-          class="day-box"
-          :class="{
-            today: dia.fecha === fechaHoy,
-            selected: dia.fecha === diaSeleccionado,
-            hasCitas: dia.citas.length > 0
-          }"
-          @click="seleccionarDia(dia.fecha)"
-        >
-          <div class="day-header">
+        <div class="calendar-grid">
+
+          <div
+            v-for="n in espaciosInicio"
+            :key="`empty-${n}`"
+            class="day-box empty-day"
+          ></div>
+
+          <div
+            v-for="dia in diasDelMes"
+            :key="dia.fecha"
+            class="day-box"
+            :class="claseDia(dia)"
+            @click="seleccionarDia(dia.fecha)"
+          >
             <div class="day-number">
               {{ dia.dia }}
             </div>
 
-            <q-badge
+            <div
               v-if="dia.citas.length > 0"
-              rounded
-              class="day-count"
-              :class="colorClaseDia(dia)"
+              class="day-summary"
             >
-              {{ dia.citas.length }}
-            </q-badge>
-          </div>
+              <q-badge
+                rounded
+                class="summary-badge"
+                :color="colorPrincipalDia(dia)"
+              >
+                {{ dia.citas.length }} cita(s)
+              </q-badge>
 
-          <div class="day-events">
-            <div
-              v-for="cita in dia.citas.slice(0, 3)"
-              :key="cita.id"
-              class="event-pill"
-              :class="colorClaseEstado(cita.estado)"
-            >
-              <span class="event-time">
-                {{ horaCorta(cita.hora) }}
-              </span>
+              <div class="mini-states">
+                <span
+                  v-if="resumenDia(dia).concluidas > 0"
+                  class="mini mini-green"
+                >
+                  {{ resumenDia(dia).concluidas }}
+                </span>
 
-              <span class="event-name">
-                {{ cita.cliente?.nombre || 'Sin cliente' }}
-              </span>
+                <span
+                  v-if="resumenDia(dia).pendientes > 0"
+                  class="mini mini-yellow"
+                >
+                  {{ resumenDia(dia).pendientes }}
+                </span>
+
+                <span
+                  v-if="resumenDia(dia).canceladas > 0"
+                  class="mini mini-red"
+                >
+                  {{ resumenDia(dia).canceladas }}
+                </span>
+              </div>
             </div>
 
             <div
-              v-if="dia.citas.length > 3"
-              class="more-events"
+              v-else
+              class="text-caption text-grey-6 q-mt-sm"
             >
-              +{{ dia.citas.length - 3 }} más
+              Libre
             </div>
           </div>
+
         </div>
-      </div>
+      </q-card-section>
+
     </q-card>
 
-    <!-- MODAL DÍA -->
     <q-dialog v-model="dialog">
       <q-card class="dialog-card">
 
         <q-card-section class="dialog-header row items-center">
           <div>
-            <div class="dialog-title">
-              📅 {{ formatoFechaLarga(diaSeleccionado) }}
+            <div class="text-h6 text-weight-bold">
+              📅 {{ fechaBonita(diaSeleccionado) }}
             </div>
 
-            <div class="dialog-subtitle">
-              {{ citasDia.length }} cita(s) registrada(s)
+            <div class="text-caption">
+              {{ citasDia.length }} cita(s) registradas
             </div>
           </div>
 
           <q-space />
 
           <q-btn
-            icon="close"
             flat
             round
             dense
+            icon="close"
             color="white"
             v-close-popup
           />
@@ -262,52 +183,68 @@
 
           <div
             v-if="citasDia.length === 0"
-            class="empty-day"
+            class="empty-box"
           >
-            <q-icon name="event_available" size="54px" color="pink-5" />
-            <div class="empty-title">No hay citas este día</div>
-            <div class="empty-text">
-              Puedes registrar una nueva cita usando esta fecha automáticamente.
+            <q-icon name="event_available" size="46px" color="pink-6" />
+
+            <div class="text-weight-bold q-mt-sm">
+              No hay citas este día
+            </div>
+
+            <div class="text-caption text-grey-7">
+              Puedes registrar una nueva cita con esta fecha.
             </div>
           </div>
 
-          <div
-            v-for="cita in citasDia"
-            :key="cita.id"
-            class="appointment-card"
+          <q-list
+            v-else
+            separator
+            class="citas-list"
           >
-            <div class="appointment-left">
-              <q-avatar
-                :class="colorClaseEstado(cita.estado)"
-                text-color="white"
-                size="44px"
-              >
-                <q-icon name="event" />
-              </q-avatar>
-
-              <div>
-                <div class="appointment-client">
-                  {{ cita.cliente?.nombre || 'Sin cliente' }}
-                </div>
-
-                <div class="appointment-service">
-                  {{ cita.servicio || 'Sin servicio' }}
-                </div>
-
-                <div class="appointment-detail">
-                  {{ horaCorta(cita.hora) }} · Bs {{ money(cita.precio) }}
-                </div>
-              </div>
-            </div>
-
-            <q-badge
-              rounded
-              class="status-badge"
-              :class="colorClaseEstado(cita.estado)"
+            <q-item
+              v-for="cita in citasDia"
+              :key="cita.id"
+              class="cita-item"
             >
-              {{ textoEstado(cita.estado) }}
-            </q-badge>
-          </div>
+              <q-item-section avatar>
+                <q-avatar :color="colorEstado(cita.estado)" text-color="white">
+                  <q-icon name="event" />
+                </q-avatar>
+              </q-item-section>
+
+              <q-item-section>
+                <q-item-label class="text-weight-bold">
+                  {{ horaBonita(cita.hora) }} - {{ cita.cliente?.nombre || 'Sin cliente' }}
+                </q-item-label>
+
+                <q-item-label caption>
+                  {{ cita.servicio }}
+                </q-item-label>
+
+                <q-item-label caption>
+                  Bs {{ money(cita.precio) }}
+                </q-item-label>
+              </q-item-section>
+
+              <q-item-section side>
+                <q-badge
+                  rounded
+                  :color="colorEstado(cita.estado)"
+                  class="estado-badge"
+                >
+                  {{ cita.estado || 'pendiente' }}
+                </q-badge>
+
+                <q-badge
+                  rounded
+                  class="estado-badge q-mt-xs"
+                  :color="cita.estado_pago === 'pagado' ? 'green' : 'orange'"
+                >
+                  {{ cita.estado_pago || 'pendiente' }}
+                </q-badge>
+              </q-item-section>
+            </q-item>
+          </q-list>
 
         </q-card-section>
 
@@ -321,8 +258,8 @@
 
           <q-btn
             class="btn-glamur"
+            label="Nueva Cita"
             icon="add"
-            label="Nueva cita"
             @click="nuevaCita"
           />
         </q-card-actions>
@@ -337,8 +274,6 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
-import { jsPDF } from 'jspdf'
-import { autoTable } from 'jspdf-autotable'
 import { api } from 'boot/axios'
 
 defineOptions({
@@ -349,10 +284,12 @@ const router = useRouter()
 const $q = useQuasar()
 
 const citas = ref([])
+const loading = ref(false)
+const descargandoPdf = ref(false)
+
 const dialog = ref(false)
 const diaSeleccionado = ref('')
 const citasDia = ref([])
-const loading = ref(false)
 
 const fecha = ref(new Date())
 
@@ -372,41 +309,25 @@ const meses = [
 ]
 
 const diasSemana = [
+  'Dom',
   'Lun',
   'Mar',
   'Mié',
   'Jue',
   'Vie',
-  'Sáb',
-  'Dom'
+  'Sáb'
 ]
 
 const nombreMes = computed(() => meses[fecha.value.getMonth()])
 const anio = computed(() => fecha.value.getFullYear())
+const mesNumero = computed(() => fecha.value.getMonth() + 1)
 
-const fechaHoy = computed(() => {
-  return formatoFechaISO(new Date())
-})
-
-const espaciosVacios = computed(() => {
-  const year = fecha.value.getFullYear()
-  const month = fecha.value.getMonth()
-
-  const primerDia = new Date(year, month, 1).getDay()
-
-  return primerDia === 0 ? 6 : primerDia - 1
-})
-
-const citasMes = computed(() => {
-  const year = fecha.value.getFullYear()
-  const month = String(fecha.value.getMonth() + 1).padStart(2, '0')
-  const prefijo = `${year}-${month}`
-
-  return citas.value.filter((cita) => String(cita.fecha || '').startsWith(prefijo))
+const espaciosInicio = computed(() => {
+  return new Date(anio.value, fecha.value.getMonth(), 1).getDay()
 })
 
 const diasDelMes = computed(() => {
-  const year = fecha.value.getFullYear()
+  const year = anio.value
   const month = fecha.value.getMonth()
   const lastDay = new Date(year, month + 1, 0).getDate()
 
@@ -426,81 +347,6 @@ const diasDelMes = computed(() => {
 
   return dias
 })
-
-const resumenMes = computed(() => {
-  return {
-    total: citasMes.value.length,
-    pendientes: citasMes.value.filter((cita) => normalizarEstado(cita.estado) === 'pendiente').length,
-    concluidas: citasMes.value.filter((cita) => normalizarEstado(cita.estado) === 'concluida').length,
-    canceladas: citasMes.value.filter((cita) => normalizarEstado(cita.estado) === 'cancelada').length
-  }
-})
-
-const totalGeneradoMes = computed(() => {
-  return citasMes.value.reduce((total, cita) => {
-    return total + numero(cita.precio)
-  }, 0)
-})
-
-const ingresoPagadoMes = computed(() => {
-  return citasMes.value
-    .filter((cita) => estaPagada(cita))
-    .reduce((total, cita) => {
-      return total + numero(cita.precio)
-    }, 0)
-})
-
-const resumenDiasMes = computed(() => {
-  return diasDelMes.value
-    .map((dia) => {
-      const totalGenerado = dia.citas.reduce((total, cita) => {
-        return total + numero(cita.precio)
-      }, 0)
-
-      const totalPagado = dia.citas
-        .filter((cita) => estaPagada(cita))
-        .reduce((total, cita) => {
-          return total + numero(cita.precio)
-        }, 0)
-
-      return {
-        fecha: dia.fecha,
-        total: dia.citas.length,
-        pendientes: dia.citas.filter((cita) => normalizarEstado(cita.estado) === 'pendiente').length,
-        concluidas: dia.citas.filter((cita) => normalizarEstado(cita.estado) === 'concluida').length,
-        canceladas: dia.citas.filter((cita) => normalizarEstado(cita.estado) === 'cancelada').length,
-        generado: totalGenerado,
-        pagado: totalPagado
-      }
-    })
-    .filter((dia) => dia.total > 0)
-})
-
-function formatoFechaISO(date) {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-
-  return `${year}-${month}-${day}`
-}
-
-function numero(value) {
-  const result = Number(value || 0)
-
-  return Number.isNaN(result) ? 0 : result
-}
-
-function money(value) {
-  return numero(value).toFixed(2)
-}
-
-function limpiarTexto(value) {
-  return String(value || '').replace(/\s+/g, ' ').trim()
-}
-
-function estaPagada(cita) {
-  return String(cita.estado_pago || '').toLowerCase() === 'pagado'
-}
 
 function getErrorMessage(error) {
   const data = error?.response?.data
@@ -531,105 +377,66 @@ async function load() {
   }
 }
 
+function resumenDia(dia) {
+  const pendientes = dia.citas.filter((cita) => cita.estado === 'pendiente').length
+
+  const concluidas = dia.citas.filter((cita) => {
+    return cita.estado === 'concluida' || cita.estado === 'finalizada' || cita.estado === 'realizada'
+  }).length
+
+  const canceladas = dia.citas.filter((cita) => cita.estado === 'cancelada').length
+
+  return {
+    pendientes,
+    concluidas,
+    canceladas
+  }
+}
+
+function claseDia(dia) {
+  if (dia.citas.length === 0) return ''
+
+  const resumen = resumenDia(dia)
+
+  return {
+    'has-citas': true,
+    'day-green': resumen.concluidas > 0 && resumen.pendientes === 0 && resumen.canceladas === 0,
+    'day-yellow': resumen.pendientes > 0 && resumen.canceladas === 0,
+    'day-red': resumen.canceladas > 0
+  }
+}
+
+function colorPrincipalDia(dia) {
+  const resumen = resumenDia(dia)
+
+  if (resumen.canceladas > 0) return 'red'
+  if (resumen.pendientes > 0) return 'orange'
+  if (resumen.concluidas > 0) return 'green'
+
+  return 'grey'
+}
+
+function colorEstado(estado) {
+  if (estado === 'concluida' || estado === 'finalizada' || estado === 'realizada') return 'green'
+  if (estado === 'cancelada') return 'red'
+
+  return 'orange'
+}
+
 function seleccionarDia(fechaSel) {
   diaSeleccionado.value = fechaSel
   citasDia.value = citas.value.filter((cita) => cita.fecha === fechaSel)
   dialog.value = true
 }
 
-function normalizarEstado(estado) {
-  const valor = String(estado || 'pendiente').toLowerCase()
-
-  if (valor === 'realizada') return 'concluida'
-  if (valor === 'finalizada') return 'concluida'
-  if (valor === 'completada') return 'concluida'
-  if (valor === 'concluido') return 'concluida'
-  if (valor === 'cancelado') return 'cancelada'
-
-  return valor
-}
-
-function textoEstado(estado) {
-  const valor = normalizarEstado(estado)
-
-  if (valor === 'concluida') return 'Concluida'
-  if (valor === 'cancelada') return 'Cancelada'
-
-  return 'Pendiente'
-}
-
-function textoPago(cita) {
-  return estaPagada(cita) ? 'Pagado' : 'Pendiente'
-}
-
-function colorClaseEstado(estado) {
-  const valor = normalizarEstado(estado)
-
-  if (valor === 'concluida') return 'estado-concluida'
-  if (valor === 'cancelada') return 'estado-cancelada'
-
-  return 'estado-pendiente'
-}
-
-function colorClaseDia(dia) {
-  const tieneConcluida = dia.citas.some((cita) => normalizarEstado(cita.estado) === 'concluida')
-  const tieneCancelada = dia.citas.some((cita) => normalizarEstado(cita.estado) === 'cancelada')
-  const tienePendiente = dia.citas.some((cita) => normalizarEstado(cita.estado) === 'pendiente')
-
-  if (tieneCancelada && !tienePendiente && !tieneConcluida) return 'count-cancelled'
-  if (tieneConcluida && !tienePendiente && !tieneCancelada) return 'count-done'
-
-  return 'count-pending'
-}
-
-function horaCorta(hora) {
-  if (!hora) return '--:--'
-
-  return String(hora).slice(0, 5)
-}
-
-function formatoFechaNormal(fechaStr) {
-  if (!fechaStr) return ''
-
-  const partes = fechaStr.split('-')
-
-  if (partes.length !== 3) return fechaStr
-
-  return `${partes[2]}/${partes[1]}/${partes[0]}`
-}
-
-function formatoFechaLarga(fechaStr) {
-  if (!fechaStr) return ''
-
-  const [year, month, day] = fechaStr.split('-')
-  const date = new Date(Number(year), Number(month) - 1, Number(day))
-
-  return date.toLocaleDateString('es-BO', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  })
-}
-
 function mesAnterior() {
-  fecha.value = new Date(
-    fecha.value.getFullYear(),
-    fecha.value.getMonth() - 1,
-    1
-  )
+  fecha.value = new Date(anio.value, fecha.value.getMonth() - 1, 1)
+  load()
 }
 
 function mesSiguiente() {
-  fecha.value = new Date(
-    fecha.value.getFullYear(),
-    fecha.value.getMonth() + 1,
-    1
-  )
-}
-
-function irHoy() {
-  fecha.value = new Date()
+  fecha.value = new Date(anio.value, fecha.value.getMonth() + 1, 1)
+  load()
 }
 
 function nuevaCita() {
@@ -643,161 +450,83 @@ function nuevaCita() {
   })
 }
 
-function generarPDF() {
-  const doc = new jsPDF('p', 'mm', 'a4')
-  const mesActual = `${nombreMes.value} ${anio.value}`
-
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(18)
-  doc.text('Extracto mensual Glamur', 14, 18)
-
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(10)
-  doc.text(`Mes: ${mesActual}`, 14, 26)
-  doc.text(`Generado: ${new Date().toLocaleString('es-BO')}`, 14, 32)
-
-  autoTable(doc, {
-    startY: 42,
-    head: [['Resumen', 'Cantidad / Monto']],
-    body: [
-      ['Total de citas', String(resumenMes.value.total)],
-      ['Pendientes', String(resumenMes.value.pendientes)],
-      ['Concluidas', String(resumenMes.value.concluidas)],
-      ['Canceladas', String(resumenMes.value.canceladas)],
-      ['Total generado', `Bs ${money(totalGeneradoMes.value)}`],
-      ['Total pagado', `Bs ${money(ingresoPagadoMes.value)}`]
-    ],
-    theme: 'grid',
-    headStyles: {
-      fillColor: [233, 30, 99],
-      textColor: [255, 255, 255],
-      fontStyle: 'bold'
-    },
-    styles: {
-      fontSize: 10,
-      cellPadding: 3
-    }
-  })
-
-  autoTable(doc, {
-    startY: doc.lastAutoTable.finalY + 10,
-    head: [['Fecha', 'Citas', 'Pend.', 'Conc.', 'Canc.', 'Generado', 'Pagado']],
-    body: resumenDiasMes.value.length
-      ? resumenDiasMes.value.map((dia) => [
-        formatoFechaNormal(dia.fecha),
-        String(dia.total),
-        String(dia.pendientes),
-        String(dia.concluidas),
-        String(dia.canceladas),
-        `Bs ${money(dia.generado)}`,
-        `Bs ${money(dia.pagado)}`
-      ])
-      : [['Sin datos', '0', '0', '0', '0', 'Bs 0.00', 'Bs 0.00']],
-    theme: 'striped',
-    headStyles: {
-      fillColor: [21, 17, 31],
-      textColor: [255, 255, 255],
-      fontStyle: 'bold'
-    },
-    styles: {
-      fontSize: 9,
-      cellPadding: 2.5
-    }
-  })
-
-  autoTable(doc, {
-    startY: doc.lastAutoTable.finalY + 10,
-    head: [['Fecha', 'Hora', 'Cliente', 'Servicio', 'Precio', 'Estado', 'Pago']],
-    body: citasMes.value.length
-      ? citasMes.value.map((cita) => [
-        formatoFechaNormal(cita.fecha),
-        horaCorta(cita.hora),
-        limpiarTexto(cita.cliente?.nombre || 'Sin cliente'),
-        limpiarTexto(cita.servicio || 'Sin servicio'),
-        `Bs ${money(cita.precio)}`,
-        textoEstado(cita.estado),
-        textoPago(cita)
-      ])
-      : [['Sin datos', '-', '-', '-', 'Bs 0.00', '-', '-']],
-    theme: 'grid',
-    headStyles: {
-      fillColor: [156, 39, 176],
-      textColor: [255, 255, 255],
-      fontStyle: 'bold'
-    },
-    styles: {
-      fontSize: 8,
-      cellPadding: 2.2
-    },
-    columnStyles: {
-      3: {
-        cellWidth: 45
-      }
-    }
-  })
-
-  const mesNumero = String(fecha.value.getMonth() + 1).padStart(2, '0')
-  const nombreArchivo = `extracto_glamur_${anio.value}_${mesNumero}.pdf`
-
-  doc.save(nombreArchivo)
-
-  $q.notify({
-    type: 'positive',
-    message: 'PDF generado correctamente'
-  })
+function money(value) {
+  return Number(value || 0).toFixed(2)
 }
 
-onMounted(async () => {
-  await load()
+function horaBonita(hora) {
+  if (!hora) return '--:--'
+  return String(hora).slice(0, 5)
+}
+
+function fechaBonita(valor) {
+  if (!valor) return ''
+
+  const [year, month, day] = valor.split('-')
+
+  return `${day}/${month}/${year}`
+}
+
+async function descargarExtractoPDF() {
+  descargandoPdf.value = true
+
+  try {
+    const response = await api.get('/reportes/extracto-mensual', {
+      params: {
+        anio: anio.value,
+        mes: mesNumero.value
+      },
+      responseType: 'blob'
+    })
+
+    const blob = new Blob([response.data], {
+      type: 'application/pdf'
+    })
+
+    const url = window.URL.createObjectURL(blob)
+
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `extracto_glamur_${anio.value}_${String(mesNumero.value).padStart(2, '0')}.pdf`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+
+    window.URL.revokeObjectURL(url)
+
+    $q.notify({
+      type: 'positive',
+      message: 'Extracto PDF generado correctamente'
+    })
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: getErrorMessage(error)
+    })
+  } finally {
+    descargandoPdf.value = false
+  }
+}
+
+onMounted(() => {
+  load()
 })
 </script>
 
 <style scoped>
 .calendario-page {
   min-height: 100vh;
-  background:
-    radial-gradient(circle at top left, rgba(233, 30, 99, 0.10), transparent 32%),
-    linear-gradient(135deg, #f7f8ff, #fff7fb);
+  background: #faf7fb;
 }
 
 .calendar-hero {
-  background:
-    linear-gradient(135deg, #15111f, #68133f 48%, #e91e63);
-
-  color: white;
+  background: linear-gradient(135deg, #e91e63, #9c27b0);
   border-radius: 28px;
   padding: 28px;
-
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  gap: 18px;
-
-  box-shadow:
-    0 18px 45px rgba(21, 17, 31, 0.30);
-}
-
-.hero-badge {
-  display: inline-block;
-  padding: 8px 14px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.14);
-  font-size: 13px;
-  font-weight: 900;
-  margin-bottom: 12px;
-}
-
-.hero-title {
-  font-size: 32px;
-  font-weight: 900;
-  line-height: 1.1;
-}
-
-.hero-subtitle {
-  margin-top: 6px;
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.82);
-  font-weight: 600;
+  align-items: center;
+  box-shadow: 0 16px 40px rgba(233, 30, 99, 0.25);
 }
 
 .hero-actions {
@@ -809,426 +538,221 @@ onMounted(async () => {
 .btn-white {
   background: white;
   color: #c2185b;
-  border-radius: 16px;
   font-weight: 900;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+  border-radius: 16px;
+  padding: 10px 16px;
 }
 
 .btn-glamur {
-  background:
-    linear-gradient(135deg, #e91e63, #9c27b0);
-
+  background: linear-gradient(135deg, #e91e63, #9c27b0);
   color: white;
+  font-weight: 900;
   border-radius: 16px;
-  font-weight: 900;
-  box-shadow:
-    0 12px 28px rgba(233, 30, 99, 0.28);
-}
-
-.btn-pdf {
-  background:
-    linear-gradient(135deg, #15111f, #3b1747);
-
-  color: white;
-  border-radius: 16px;
-  font-weight: 900;
-  box-shadow:
-    0 12px 28px rgba(21, 17, 31, 0.28);
-}
-
-.month-bar {
-  background: white;
-  border-radius: 22px;
-  padding: 18px 20px;
-
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-
-  box-shadow:
-    0 14px 35px rgba(156, 39, 176, 0.10);
-}
-
-.month-title {
-  font-size: 24px;
-  font-weight: 900;
-  color: #15111f;
-}
-
-.month-subtitle {
-  font-size: 13px;
-  color: #6b6472;
-}
-
-.month-actions {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.summary-card {
-  border-radius: 22px;
-  background: white;
-  box-shadow:
-    0 14px 35px rgba(21, 17, 31, 0.08);
-  border: 1px solid rgba(0, 0, 0, 0.04);
-  min-height: 122px;
-}
-
-.summary-card.pending {
-  background: #fff8e1;
-}
-
-.summary-card.done {
-  background: #e8f5e9;
-}
-
-.summary-card.cancelled {
-  background: #ffebee;
-}
-
-.summary-card.generated {
-  background: #f3e5f5;
-}
-
-.summary-card.paid {
-  background: #e0f2f1;
-}
-
-.summary-label {
-  font-size: 13px;
-  font-weight: 800;
-  color: #6b6472;
-}
-
-.summary-number {
-  margin-top: 6px;
-  font-size: 34px;
-  font-weight: 900;
-  color: #15111f;
-}
-
-.summary-money {
-  margin-top: 10px;
-  font-size: 22px;
-  font-weight: 900;
-  color: #15111f;
-}
-
-.summary-caption {
-  font-size: 12px;
-  color: #777;
-}
-
-.legend-card {
-  background: white;
-  border-radius: 18px;
-  padding: 14px 16px;
-
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  flex-wrap: wrap;
-
-  box-shadow:
-    0 12px 30px rgba(21, 17, 31, 0.08);
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-
-  font-size: 13px;
-  font-weight: 800;
-  color: #4b4454;
-}
-
-.legend-spacer {
-  flex: 1;
-}
-
-.text-pdf {
-  color: #c2185b;
-}
-
-.dot {
-  width: 13px;
-  height: 13px;
-  border-radius: 50%;
-}
-
-.dot-pending {
-  background: #fb8c00;
-}
-
-.dot-done {
-  background: #43a047;
-}
-
-.dot-cancelled {
-  background: #e53935;
 }
 
 .calendar-card {
   border-radius: 26px;
   overflow: hidden;
-  background: white;
-  box-shadow:
-    0 18px 45px rgba(156, 39, 176, 0.12);
+  box-shadow: 0 14px 35px rgba(156, 39, 176, 0.12);
 }
 
-.week-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  background:
-    linear-gradient(135deg, #fce4ec, #f3e5f5);
-  border-bottom: 1px solid #ead7e7;
-}
-
-.week-name {
-  padding: 14px 8px;
-  text-align: center;
-  font-weight: 900;
-  color: #880e4f;
-  font-size: 13px;
-}
-
-.calendar-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-}
-
-.day-box {
-  min-height: 140px;
-  padding: 12px;
-  border-right: 1px solid #f0e6ef;
-  border-bottom: 1px solid #f0e6ef;
-  cursor: pointer;
-  transition: all 0.22s ease;
+.calendar-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
   background: white;
 }
 
-.day-box:hover {
-  background: #fff5fa;
-  transform: scale(1.01);
-  z-index: 2;
-  box-shadow:
-    0 12px 28px rgba(233, 30, 99, 0.12);
-}
-
-.day-box.empty {
-  background: #fafafa;
-  cursor: default;
-}
-
-.day-box.today {
-  background:
-    linear-gradient(135deg, #fff7fb, #fce4ec);
-}
-
-.day-box.selected {
-  outline: 2px solid #e91e63;
-}
-
-.day-box.hasCitas {
-  background:
-    linear-gradient(180deg, #ffffff, #fff8fc);
-}
-
-.day-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.day-number {
-  width: 34px;
-  height: 34px;
-  border-radius: 12px;
-
-  display: grid;
-  place-items: center;
-
-  font-size: 15px;
-  font-weight: 900;
-  color: #15111f;
-}
-
-.today .day-number {
-  background:
-    linear-gradient(135deg, #e91e63, #9c27b0);
-  color: white;
-}
-
-.day-count {
-  font-weight: 900;
-  color: white;
-  padding: 5px 9px;
-}
-
-.count-pending {
-  background: #fb8c00;
-}
-
-.count-done {
-  background: #43a047;
-}
-
-.count-cancelled {
-  background: #e53935;
-}
-
-.day-events {
-  margin-top: 10px;
-  display: grid;
-  gap: 6px;
-}
-
-.event-pill {
-  padding: 6px 8px;
-  border-radius: 12px;
-
-  display: flex;
-  align-items: center;
-  gap: 6px;
-
-  color: white;
-  font-size: 11px;
-  font-weight: 800;
-
-  overflow: hidden;
-}
-
-.event-time {
-  opacity: 0.95;
-  white-space: nowrap;
-}
-
-.event-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.more-events {
-  font-size: 11px;
-  font-weight: 900;
+.nav-btn {
+  background: #fce4ec;
   color: #c2185b;
 }
 
-.estado-pendiente {
-  background: #fb8c00 !important;
+.month-title {
+  min-width: 240px;
+  text-align: center;
+  font-size: 24px;
+  font-weight: 900;
+  color: #880e4f;
+  text-transform: capitalize;
 }
 
-.estado-concluida {
-  background: #43a047 !important;
+.legend {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
 }
 
-.estado-cancelada {
-  background: #e53935 !important;
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #555;
+  font-weight: 700;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.dot-green {
+  background: #2e7d32;
+}
+
+.dot-yellow {
+  background: #f9a825;
+}
+
+.dot-red {
+  background: #c62828;
+}
+
+.week-grid,
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(110px, 1fr));
+  gap: 10px;
+}
+
+.week-day {
+  text-align: center;
+  font-weight: 900;
+  color: #880e4f;
+  padding: 8px;
+  background: #fce4ec;
+  border-radius: 14px;
+}
+
+.day-box {
+  min-height: 118px;
+  border: 1px solid #ead7e2;
+  padding: 12px;
+  cursor: pointer;
+  border-radius: 20px;
+  background: white;
+  transition: all 0.22s ease;
+  box-shadow: 0 8px 20px rgba(156, 39, 176, 0.06);
+}
+
+.day-box:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 28px rgba(233, 30, 99, 0.16);
+}
+
+.empty-day {
+  background: transparent;
+  box-shadow: none;
+  border: none;
+  cursor: default;
+}
+
+.empty-day:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.day-number {
+  font-size: 20px;
+  font-weight: 900;
+  color: #2b1730;
+}
+
+.has-citas {
+  border-width: 2px;
+}
+
+.day-green {
+  border-color: #43a047;
+  background: #f1fff4;
+}
+
+.day-yellow {
+  border-color: #f9a825;
+  background: #fffaf0;
+}
+
+.day-red {
+  border-color: #e53935;
+  background: #fff5f5;
+}
+
+.day-summary {
+  margin-top: 10px;
+}
+
+.summary-badge {
+  font-weight: 900;
+}
+
+.mini-states {
+  display: flex;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.mini {
+  min-width: 24px;
+  height: 22px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  color: white;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.mini-green {
+  background: #2e7d32;
+}
+
+.mini-yellow {
+  background: #f9a825;
+}
+
+.mini-red {
+  background: #c62828;
 }
 
 .dialog-card {
-  width: 720px;
+  width: 640px;
   max-width: 96vw;
-  border-radius: 26px;
+  border-radius: 24px;
   overflow: hidden;
 }
 
 .dialog-header {
-  background:
-    linear-gradient(135deg, #e91e63, #9c27b0);
+  background: linear-gradient(135deg, #e91e63, #9c27b0);
   color: white;
-  padding: 22px;
-}
-
-.dialog-title {
-  font-size: 21px;
-  font-weight: 900;
-  text-transform: capitalize;
-}
-
-.dialog-subtitle {
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.82);
 }
 
 .dialog-body {
-  padding: 20px;
-  max-height: 60vh;
-  overflow-y: auto;
-  background: #fffafd;
-}
-
-.empty-day {
-  text-align: center;
-  padding: 34px 12px;
-}
-
-.empty-title {
-  margin-top: 8px;
-  font-size: 20px;
-  font-weight: 900;
-  color: #c2185b;
-}
-
-.empty-text {
-  margin-top: 4px;
-  color: #6b6472;
-}
-
-.appointment-card {
   background: white;
-  border: 1px solid #f1dce9;
+  padding: 20px;
+  max-height: 65vh;
+  overflow-y: auto;
+}
+
+.empty-box {
+  text-align: center;
+  padding: 28px 14px;
+  border: 1px dashed #e9b5ce;
   border-radius: 20px;
-  padding: 14px;
-
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 14px;
-
-  margin-bottom: 12px;
-
-  box-shadow:
-    0 10px 24px rgba(156, 39, 176, 0.08);
+  background: #fff7fb;
 }
 
-.appointment-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
+.cita-item {
+  border-radius: 16px;
+  margin-bottom: 8px;
+  background: #fff7fb;
 }
 
-.appointment-client {
-  font-size: 15px;
-  font-weight: 900;
-  color: #15111f;
-}
-
-.appointment-service {
-  font-size: 13px;
-  color: #6b6472;
-  max-width: 360px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.appointment-detail {
-  margin-top: 2px;
-  font-size: 12px;
-  color: #8a7f91;
-}
-
-.status-badge {
-  padding: 7px 10px;
-  color: white;
-  font-weight: 900;
+.estado-badge {
   text-transform: capitalize;
+  font-weight: 800;
 }
 
 .dialog-actions {
@@ -1238,17 +762,14 @@ onMounted(async () => {
 }
 
 @media (max-width: 900px) {
-  .calendar-grid,
-  .week-grid {
-    grid-template-columns: repeat(2, 1fr);
+  .week-grid,
+  .calendar-grid {
+    grid-template-columns: repeat(7, minmax(88px, 1fr));
+    overflow-x: auto;
   }
 
-  .week-grid {
-    display: none;
-  }
-
-  .day-box.empty {
-    display: none;
+  .calendar-card {
+    overflow-x: auto;
   }
 }
 
@@ -1258,66 +779,39 @@ onMounted(async () => {
   }
 
   .calendar-hero {
-    padding: 22px;
-    border-radius: 22px;
+    padding: 20px;
+    border-radius: 20px;
     flex-direction: column;
     align-items: flex-start;
+    gap: 14px;
   }
 
-  .hero-title {
-    font-size: 27px;
-  }
-
-  .hero-actions {
+  .hero-actions,
+  .btn-white {
     width: 100%;
   }
 
-  .hero-actions .q-btn {
-    flex: 1;
+  .calendar-toolbar {
+    gap: 10px;
   }
 
-  .month-bar {
-    flex-direction: column;
-    align-items: flex-start;
+  .month-title {
+    min-width: auto;
+    font-size: 19px;
   }
 
-  .month-actions {
-    width: 100%;
-    flex-direction: column;
-  }
-
-  .month-actions .q-btn {
-    width: 100%;
-  }
-
-  .legend-spacer {
-    display: none;
-  }
-
+  .week-grid,
   .calendar-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(7, 92px);
   }
 
   .day-box {
-    min-height: auto;
+    min-height: 105px;
+    padding: 10px;
   }
 
   .dialog-card {
     width: 100%;
-    max-width: 100%;
-    border-radius: 22px;
-  }
-
-  .dialog-body {
-    max-height: 64vh;
-  }
-
-  .appointment-card {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .appointment-service {
     max-width: 100%;
   }
 
