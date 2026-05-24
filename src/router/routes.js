@@ -2,27 +2,18 @@ const routes = [
   {
     path: '/login',
     name: 'login',
-    component: () => import('pages/LoginPage.vue'),
-    meta: {
-      guestOnly: true
-    }
+    component: () => import('pages/LoginPage.vue')
   },
 
   {
     path: '/register',
     name: 'register',
-    component: () => import('pages/RegisterPage.vue'),
-    meta: {
-      guestOnly: true
-    }
+    component: () => import('pages/RegisterPage.vue')
   },
 
   {
     path: '/',
     component: () => import('layouts/MainLayout.vue'),
-    meta: {
-      requiresAuth: true
-    },
 
     children: [
       {
@@ -33,43 +24,50 @@ const routes = [
       {
         path: 'dashboard',
         name: 'dashboard',
-        component: () => import('pages/DashboardPage.vue')
+        component: () => import('pages/DashboardPage.vue'),
+        meta: { requiresAuth: true }
       },
 
       {
         path: 'clientes',
         name: 'clientes',
-        component: () => import('pages/ClientesPage.vue')
+        component: () => import('pages/ClientesPage.vue'),
+        meta: { requiresAuth: true }
       },
 
       {
         path: 'citas',
         name: 'citas',
-        component: () => import('pages/CitasPage.vue')
+        component: () => import('pages/CitasPage.vue'),
+        meta: { requiresAuth: true }
       },
 
       {
         path: 'calendario',
         name: 'calendario',
-        component: () => import('pages/CalendarioPage.vue')
+        component: () => import('pages/CalendarioPage.vue'),
+        meta: { requiresAuth: true }
       },
 
       {
         path: 'pagos',
         name: 'pagos',
-        component: () => import('pages/PagosPage.vue')
+        component: () => import('pages/PagosPage.vue'),
+        meta: { requiresAuth: true }
       },
 
       {
         path: 'historial',
         name: 'historial',
-        component: () => import('pages/HistorialPage.vue')
+        component: () => import('pages/HistorialPage.vue'),
+        meta: { requiresAuth: true }
       },
 
       {
         path: 'historial-clientes',
         name: 'historial-clientes',
-        component: () => import('pages/HistorialClientesPage.vue')
+        component: () => import('pages/HistorialClientesPage.vue'),
+        meta: { requiresAuth: true }
       }
     ]
   },
