@@ -164,12 +164,17 @@ export default {
 }
 
 .premium-drawer {
-  background: linear-gradient(180deg, #120f1c 0%, #1b1024 55%, #25112d 100%);
-  color: white;
+  background: linear-gradient(180deg, #120f1c 0%, #1b1024 55%, #25112d 100%) !important;
+  color: white !important;
   border: none;
   box-shadow: 12px 0 35px rgba(20, 10, 30, 0.25);
   position: relative;
   overflow: hidden;
+}
+
+.premium-drawer :deep(.q-drawer__content) {
+  background: linear-gradient(180deg, #120f1c 0%, #1b1024 55%, #25112d 100%) !important;
+  color: white !important;
 }
 
 .drawer-bg-effect {
@@ -199,12 +204,13 @@ export default {
   margin-top: 14px;
   font-size: 27px;
   font-weight: 900;
+  color: white;
 }
 
 .drawer-subtitle {
   margin-top: 3px;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.58);
+  color: rgba(255, 255, 255, 0.65);
 }
 
 .menu-list {
@@ -214,7 +220,7 @@ export default {
 }
 
 .menu-header {
-  color: rgba(255, 255, 255, 0.42);
+  color: rgba(255, 255, 255, 0.55) !important;
   font-size: 11px;
   font-weight: 900;
   letter-spacing: 1.2px;
@@ -226,7 +232,8 @@ export default {
   min-height: 62px;
   margin-bottom: 12px;
   border-radius: 20px;
-  color: rgba(255, 255, 255, 0.82);
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.08);
   font-weight: 800;
   transition: all 0.25s ease;
   padding-left: 8px;
@@ -234,8 +241,8 @@ export default {
 }
 
 .menu-item:hover {
-  color: white;
-  background: rgba(255, 255, 255, 0.08);
+  color: white !important;
+  background: rgba(233, 30, 99, 0.22);
   transform: translateX(4px);
   box-shadow: 0 10px 24px rgba(233, 30, 99, 0.18);
 }
@@ -246,13 +253,15 @@ export default {
   border-radius: 16px;
   display: grid;
   place-items: center;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.12);
+  color: white !important;
 }
 
 .menu-label {
   font-size: 15px;
-  font-weight: 800;
+  font-weight: 900;
   letter-spacing: 0.2px;
+  color: #ffffff !important;
 }
 
 .menu-active {
@@ -262,7 +271,7 @@ export default {
 }
 
 .menu-active .menu-icon-box {
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .drawer-footer {
@@ -277,6 +286,8 @@ export default {
   gap: 12px;
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.08);
+  color: white;
+  z-index: 2;
 }
 
 .status-dot {
@@ -290,11 +301,12 @@ export default {
 .footer-title {
   font-size: 13px;
   font-weight: 900;
+  color: white;
 }
 
 .footer-subtitle {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.55);
+  color: rgba(255, 255, 255, 0.65);
 }
 
 .page-container {
