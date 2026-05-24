@@ -181,6 +181,8 @@
               option-value="id"
               emit-value
               map-options
+              use-input
+              input-debounce="0"
               label="Cliente *"
               outlined
               dense
@@ -188,9 +190,52 @@
               bg-color="white"
             />
 
+            <!-- SERVICIOS PREDETERMINADOS -->
+            <q-select
+              v-model="servicioSeleccionado"
+              :options="serviciosFiltrados"
+              option-label="label"
+              label="Servicio / combo *"
+              outlined
+              dense
+              rounded
+              bg-color="white"
+              use-input
+              input-debounce="0"
+              clearable
+              @filter="filtrarServicios"
+              @update:model-value="seleccionarServicio"
+            >
+              <template #option="scope">
+                <q-item v-bind="scope.itemProps">
+                  <q-item-section avatar>
+                    <q-avatar class="service-avatar" size="42px">
+                      <q-icon :name="scope.opt.icono" color="white" size="22px" />
+                    </q-avatar>
+                  </q-item-section>
+
+                  <q-item-section>
+                    <q-item-label class="text-weight-bold">
+                      {{ scope.opt.nombre }}
+                    </q-item-label>
+
+                    <q-item-label caption>
+                      {{ scope.opt.categoria }} · {{ scope.opt.descripcion }}
+                    </q-item-label>
+                  </q-item-section>
+
+                  <q-item-section side>
+                    <q-badge color="pink" rounded>
+                      Bs {{ money(scope.opt.precio) }}
+                    </q-badge>
+                  </q-item-section>
+                </q-item>
+              </template>
+            </q-select>
+
             <q-input
               v-model.trim="form.servicio"
-              label="Servicio *"
+              label="Nombre del servicio seleccionado *"
               outlined
               dense
               rounded
@@ -391,9 +436,7 @@
 
             <template #body-cell-metodo="props">
               <q-td :props="props">
-                <q-badge color="blue" rounded>
-                  {{ formatMetodo(props.row.metodo) }}
-                </q-badge>
+                {{ formatMetodo(props.row.metodo) }}
               </q-td>
             </template>
 
@@ -476,6 +519,93 @@ const metodosPago = [
   }
 ]
 
+const serviciosBase = [
+  {
+    id: 1,
+    categoria: 'Maquillaje y Cabello',
+    nombre: 'Maquillaje y Peinado',
+    descripcion: 'Maquillaje y peinado a elección',
+    precio: 150,
+    icono: 'face_retouching_natural',
+    label: 'Maquillaje y Peinado - Bs 150.00'
+  },
+  {
+    id: 2,
+    categoria: 'Maquillaje y Cabello',
+    nombre: 'Servicio VIP',
+    descripcion: 'Maquillaje con productos VIP',
+    precio: 200,
+    icono: 'workspace_premium',
+    label: 'Servicio VIP - Bs 200.00'
+  },
+  {
+    id: 3,
+    categoria: 'Cabello',
+    nombre: 'Cabello - Planchado o bucles',
+    descripcion: 'Peinado, planchado o bucles',
+    precio: 80,
+    icono: 'content_cut',
+    label: 'Cabello - Planchado o bucles - Bs 80.00'
+  },
+  {
+    id: 4,
+    categoria: 'Cejas Perfectas',
+    nombre: 'Laminado de cejas - Henna',
+    descripcion: 'Laminado de cejas con henna',
+    precio: 135,
+    icono: 'auto_awesome',
+    label: 'Laminado de cejas - Henna - Bs 135.00'
+  },
+  {
+    id: 5,
+    categoria: 'Cejas Perfectas',
+    nombre: 'Laminado de cejas - Diseño',
+    descripcion: 'Diseño y laminado de cejas',
+    precio: 80,
+    icono: 'auto_fix_high',
+    label: 'Laminado de cejas - Diseño - Bs 80.00'
+  },
+  {
+    id: 6,
+    categoria: 'Cejas Perfectas',
+    nombre: 'Henna y depilación de cejas',
+    descripcion: 'Henna con depilación de cejas',
+    precio: 80,
+    icono: 'spa',
+    label: 'Henna y depilación de cejas - Bs 80.00'
+  },
+  {
+    id: 7,
+    categoria: 'Uñas',
+    nombre: 'Uñas',
+    descripcion: 'Servicio básico de uñas',
+    precio: 50,
+    icono: 'back_hand',
+    label: 'Uñas - Bs 50.00'
+  },
+  {
+    id: 8,
+    categoria: 'Combo',
+    nombre: 'Combo Glamur Básico',
+    descripcion: 'Cejas + cabello',
+    precio: 130,
+    icono: 'local_offer',
+    label: 'Combo Glamur Básico - Bs 130.00'
+  },
+  {
+    id: 9,
+    categoria: 'Combo',
+    nombre: 'Combo Glamur Completo',
+    descripcion: 'Maquillaje + peinado + cejas',
+    precio: 250,
+    icono: 'redeem',
+    label: 'Combo Glamur Completo - Bs 250.00'
+  }
+]
+
+const serviciosFiltrados = ref([...serviciosBase])
+const servicioSeleccionado = ref(null)
+
 const columns = [
   {
     name: 'cliente',
@@ -539,7 +669,7 @@ const columnsHistorial = [
   {
     name: 'metodo',
     label: 'Método',
-    field: row => formatMetodo(row.metodo),
+    field: 'metodo',
     align: 'left'
   },
   {
@@ -564,14 +694,18 @@ function hoy() {
   return new Date().toISOString().slice(0, 10)
 }
 
-function formatMetodo(value) {
-  const metodo = String(value || '').toLowerCase()
+function normalizar(texto) {
+  return String(texto || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+}
 
+function formatMetodo(metodo) {
   if (metodo === 'qr') return 'QR'
   if (metodo === 'efectivo') return 'Efectivo'
   if (metodo === 'transferencia') return 'Transferencia'
-
-  return value || 'No definido'
+  return metodo || 'No definido'
 }
 
 function getErrorMessage(error) {
@@ -588,6 +722,41 @@ function colorEstado(estado) {
   if (estado === 'concluida') return 'green'
   if (estado === 'cancelada') return 'red'
   return 'orange'
+}
+
+function filtrarServicios(val, update) {
+  update(() => {
+    const texto = normalizar(val)
+
+    if (!texto) {
+      serviciosFiltrados.value = [...serviciosBase]
+      return
+    }
+
+    serviciosFiltrados.value = serviciosBase.filter(servicio => {
+      return normalizar(servicio.nombre).includes(texto) ||
+        normalizar(servicio.categoria).includes(texto) ||
+        normalizar(servicio.descripcion).includes(texto) ||
+        normalizar(servicio.label).includes(texto)
+    })
+  })
+}
+
+function seleccionarServicio(servicio) {
+  if (!servicio) {
+    form.value.servicio = ''
+    form.value.precio = 0
+    return
+  }
+
+  form.value.servicio = servicio.nombre
+  form.value.precio = Number(servicio.precio || 0)
+}
+
+function buscarServicio(nombre) {
+  return serviciosBase.find(servicio => {
+    return normalizar(servicio.nombre) === normalizar(nombre)
+  }) || null
 }
 
 async function load() {
@@ -625,6 +794,9 @@ async function loadClientes() {
 }
 
 function openDialog() {
+  servicioSeleccionado.value = null
+  serviciosFiltrados.value = [...serviciosBase]
+
   form.value = {
     id: null,
     cliente_id: null,
@@ -639,6 +811,10 @@ function openDialog() {
 }
 
 function edit(row) {
+  const servicioEncontrado = buscarServicio(row.servicio)
+
+  servicioSeleccionado.value = servicioEncontrado
+
   form.value = {
     id: row.id,
     cliente_id: row.cliente_id,
@@ -790,13 +966,11 @@ function remove(id) {
     title: 'Eliminar cita',
     message: '¿Seguro que deseas eliminar esta cita?',
     persistent: true,
-
     ok: {
       label: 'Eliminar',
       color: 'negative',
       unelevated: true
     },
-
     cancel: {
       label: 'Cancelar',
       color: 'grey-7',
@@ -921,6 +1095,20 @@ onMounted(async () => {
   justify-content: center;
   gap: 6px;
   flex-wrap: wrap;
+}
+
+/* SERVICE SELECT */
+
+.service-avatar {
+  background:
+    linear-gradient(
+      135deg,
+      #e91e63,
+      #9c27b0
+    );
+
+  box-shadow:
+    0 8px 18px rgba(233,30,99,0.25);
 }
 
 /* DIALOGS */
