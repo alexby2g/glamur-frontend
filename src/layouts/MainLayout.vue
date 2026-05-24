@@ -22,7 +22,10 @@
           </q-avatar>
 
           <div class="q-ml-sm">
-            <div class="top-title">Glamur</div>
+            <div class="top-title">
+              Glamur
+            </div>
+
             <div class="top-subtitle">
               Sistema de gestión
             </div>
@@ -122,7 +125,7 @@
 
     </q-drawer>
 
-    <!-- PAGE -->
+    <!-- CONTENT -->
     <q-page-container class="page-container">
       <router-view />
     </q-page-container>
@@ -187,6 +190,7 @@ export default {
 </script>
 
 <style scoped>
+
 /* GENERAL */
 
 .main-layout {
@@ -251,6 +255,7 @@ export default {
   background: #15111f !important;
   color: white !important;
   border: none;
+
   box-shadow:
     12px 0 35px rgba(20,10,30,0.28);
 }
@@ -316,10 +321,17 @@ export default {
 
   border-radius: 20px;
 
-  color: white !important;
+  color: #ffffff !important;
 
   background:
-    rgba(255,255,255,0.08);
+    linear-gradient(
+      135deg,
+      #241329,
+      #15111f
+    );
+
+  border:
+    1px solid rgba(233,30,99,0.38);
 
   font-weight: 800;
 
@@ -327,18 +339,25 @@ export default {
 
   padding-left: 8px;
   padding-right: 8px;
+
+  box-shadow:
+    0 10px 24px rgba(20,10,30,0.28);
 }
 
 .menu-item:hover {
   color: white !important;
 
   background:
-    rgba(233,30,99,0.25);
+    linear-gradient(
+      135deg,
+      #e91e63,
+      #9c27b0
+    );
 
-  transform: translateX(4px);
+  transform: translateX(5px);
 
   box-shadow:
-    0 10px 24px rgba(233,30,99,0.18);
+    0 14px 30px rgba(233,30,99,0.38);
 }
 
 /* ACTIVE */
@@ -353,8 +372,11 @@ export default {
       #9c27b0
     ) !important;
 
+  border:
+    1px solid rgba(255,255,255,0.28);
+
   box-shadow:
-    0 12px 28px rgba(233,30,99,0.35);
+    0 14px 34px rgba(233,30,99,0.45);
 }
 
 /* ICON */
@@ -369,14 +391,17 @@ export default {
   place-items: center;
 
   background:
-    rgba(255,255,255,0.12);
+    rgba(233,30,99,0.25);
 
   color: white;
+
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,0.12);
 }
 
 .menu-active .menu-icon-box {
   background:
-    rgba(255,255,255,0.20);
+    rgba(255,255,255,0.22);
 }
 
 /* LABEL */
@@ -435,7 +460,7 @@ export default {
   color: rgba(255,255,255,0.58);
 }
 
-/* PAGE */
+/* CONTENT */
 
 .page-container {
   background: #f6f7fb;
@@ -459,4 +484,5 @@ export default {
   }
 
 }
+
 </style>
