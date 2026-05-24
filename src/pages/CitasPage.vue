@@ -1,5 +1,7 @@
 <template>
   <q-page class="q-pa-md citas-page">
+
+    <!-- HERO -->
     <div class="page-hero q-mb-lg">
       <div>
         <div class="text-h4 text-weight-bold text-white">
@@ -7,18 +9,28 @@
         </div>
 
         <div class="text-subtitle2 text-white">
-          Gestión de reservas, pagos, combos y estados
+          Gestión de reservas, servicios, pagos y estados
         </div>
       </div>
 
-      <q-btn
-        class="btn-glamur-white"
-        label="Nueva Cita"
-        icon="add"
-        @click="openDialog()"
-      />
+      <div class="hero-actions">
+        <q-btn
+          class="btn-glamur-white"
+          label="Servicios"
+          icon="spa"
+          to="/servicios"
+        />
+
+        <q-btn
+          class="btn-glamur-white"
+          label="Nueva Cita"
+          icon="add"
+          @click="openDialog()"
+        />
+      </div>
     </div>
 
+    <!-- TABLA -->
     <q-table
       class="tabla-glamur"
       :rows="citas"
@@ -30,6 +42,8 @@
       bordered
       :rows-per-page-options="[5, 10, 20, 50]"
     >
+
+      <!-- CLIENTE -->
       <template #body-cell-cliente="props">
         <q-td :props="props">
           <div class="text-weight-bold text-pink-7">
@@ -37,11 +51,12 @@
           </div>
 
           <div class="text-caption text-grey-7">
-            Cliente Glamur
+            {{ props.row.cliente?.telefono || 'Sin teléfono' }}
           </div>
         </q-td>
       </template>
 
+      <!-- SERVICIO -->
       <template #body-cell-servicio="props">
         <q-td :props="props">
           <div class="text-weight-bold">
@@ -49,11 +64,12 @@
           </div>
 
           <div class="text-caption text-grey-7">
-            CEJAS Y PESTAÑAS
+            Servicio Glamur
           </div>
         </q-td>
       </template>
 
+      <!-- PRECIO -->
       <template #body-cell-precio="props">
         <q-td :props="props">
           <div class="text-weight-bold text-green-8">
@@ -62,6 +78,7 @@
         </q-td>
       </template>
 
+      <!-- ESTADO -->
       <template #body-cell-estado="props">
         <q-td :props="props" class="text-center">
           <q-badge
@@ -74,6 +91,7 @@
         </q-td>
       </template>
 
+      <!-- PAGO -->
       <template #body-cell-estado_pago="props">
         <q-td :props="props" class="text-center">
           <q-badge
@@ -86,9 +104,11 @@
         </q-td>
       </template>
 
+      <!-- ACCIONES -->
       <template #body-cell-actions="props">
         <q-td :props="props" class="text-center">
           <div class="acciones">
+
             <q-btn
               round
               unelevated
@@ -145,17 +165,21 @@
             >
               <q-tooltip>Eliminar cita</q-tooltip>
             </q-btn>
+
           </div>
         </q-td>
       </template>
+
     </q-table>
 
+    <!-- DIALOG NUEVA / EDITAR CITA -->
     <q-dialog
       v-model="dialog"
       persistent
       :maximized="$q.screen.lt.sm"
     >
       <q-card class="dialog-card dialog-card-main">
+
         <q-card-section class="dialog-header row items-center">
           <div class="text-h6 text-weight-bold">
             {{ form.id ? '✏️ Editar cita' : '🗓️ Nueva cita' }}
@@ -175,6 +199,8 @@
 
         <q-card-section class="dialog-body">
           <div class="q-gutter-md">
+
+            <!-- CLIENTE -->
             <q-select
               v-model="form.cliente_id"
               :options="clientesFiltrados"
@@ -223,17 +249,7 @@
               </template>
             </q-select>
 
-            <q-input
-              v-model="form.servicio"
-              label="Servicio"
-              outlined
-              dense
-              rounded
-              readonly
-              bg-color="white"
-              class="input-readonly"
-            />
-
+            <!-- SERVICIO / COMBO DESDE BACKEND -->
             <q-select
               v-model="form.servicioOption"
               :options="serviciosFiltrados"
@@ -241,7 +257,7 @@
               use-input
               input-debounce="0"
               clearable
-              label="Combo *"
+              label="Servicio o combo *"
               outlined
               dense
               rounded
@@ -272,6 +288,10 @@
                     </q-item-label>
 
                     <q-item-label caption>
+                      {{ scope.opt.servicio }}
+                    </q-item-label>
+
+                    <q-item-label caption>
                       {{ scope.opt.detalle }}
                     </q-item-label>
                   </q-item-section>
@@ -287,23 +307,32 @@
               <template #no-option>
                 <q-item>
                   <q-item-section class="text-grey">
-                    No hay combos registrados
+                    No hay servicios registrados
                   </q-item-section>
                 </q-item>
               </template>
             </q-select>
 
+            <!-- DETALLE SOLO INFORMATIVO -->
             <q-input
+              v-if="form.detalle"
               v-model="form.detalle"
-              label="Detalle del combo"
+              label="Detalle del servicio"
+              type="textarea"
+              autogrow
               outlined
               dense
               rounded
               readonly
               bg-color="white"
               class="input-readonly"
-            />
+            >
+              <template #prepend>
+                <q-icon name="description" color="pink" />
+              </template>
+            </q-input>
 
+            <!-- PRECIO -->
             <q-input
               v-model.number="form.precio"
               type="number"
@@ -319,6 +348,7 @@
               </template>
             </q-input>
 
+            <!-- FECHA Y HORA -->
             <div class="row q-col-gutter-md">
               <div class="col-12 col-sm-6">
                 <q-input
@@ -353,6 +383,7 @@
               </div>
             </div>
 
+            <!-- ESTADO -->
             <q-select
               v-model="form.estado"
               :options="estados"
@@ -370,6 +401,7 @@
                 <q-icon name="flag" color="pink" />
               </template>
             </q-select>
+
           </div>
         </q-card-section>
 
@@ -390,15 +422,18 @@
             @click="save"
           />
         </q-card-actions>
+
       </q-card>
     </q-dialog>
 
+    <!-- DIALOG PAGO -->
     <q-dialog
       v-model="dialogPago"
       persistent
       :maximized="$q.screen.lt.sm"
     >
       <q-card class="dialog-card-small dialog-card-main">
+
         <q-card-section class="dialog-header row items-center">
           <div class="text-h6 text-weight-bold">
             💰 Realizar pago
@@ -418,6 +453,7 @@
 
         <q-card-section class="dialog-body">
           <div class="q-gutter-md">
+
             <q-input
               v-model.number="pago.monto"
               type="number"
@@ -427,7 +463,11 @@
               rounded
               min="0"
               bg-color="white"
-            />
+            >
+              <template #prepend>
+                <q-icon name="payments" color="green" />
+              </template>
+            </q-input>
 
             <q-select
               v-model="pago.metodo"
@@ -454,6 +494,7 @@
                 Escanea el QR para realizar el pago.
               </div>
             </div>
+
           </div>
         </q-card-section>
 
@@ -474,14 +515,17 @@
             @click="confirmarPago"
           />
         </q-card-actions>
+
       </q-card>
     </q-dialog>
 
+    <!-- DIALOG HISTORIAL -->
     <q-dialog
       v-model="dialogHistorial"
       :maximized="$q.screen.lt.sm"
     >
       <q-card class="dialog-card-historial dialog-card-main">
+
         <q-card-section class="dialog-header row items-center">
           <div class="text-h6 text-weight-bold">
             📜 Historial de pagos
@@ -543,8 +587,10 @@
             v-close-popup
           />
         </q-card-actions>
+
       </q-card>
     </q-dialog>
+
   </q-page>
 </template>
 
@@ -578,87 +624,38 @@ const saving = ref(false)
 const savingPago = ref(false)
 
 const estados = [
-  { label: 'Pendiente', value: 'pendiente' },
-  { label: 'Concluida', value: 'concluida' },
-  { label: 'Cancelada', value: 'cancelada' }
+  {
+    label: 'Pendiente',
+    value: 'pendiente'
+  },
+  {
+    label: 'Concluida',
+    value: 'concluida'
+  },
+  {
+    label: 'Cancelada',
+    value: 'cancelada'
+  }
 ]
 
 const metodosPago = [
-  { label: 'Efectivo', value: 'efectivo' },
-  { label: 'QR', value: 'qr' },
-  { label: 'Transferencia', value: 'transferencia' }
-]
-
-const serviciosBase = [
   {
-    servicio: 'CEJAS Y PESTAÑAS',
-    combo: 'CLEAN BROWS',
-    detalle: 'Depilación + Visagismo',
-    precio: 25,
-    activo: true
+    label: 'Efectivo',
+    value: 'efectivo'
   },
   {
-    servicio: 'CEJAS Y PESTAÑAS',
-    combo: 'BROWS PRO',
-    detalle: 'Henna + Depilación y Visagismo',
-    precio: 80,
-    activo: true
+    label: 'QR',
+    value: 'qr'
   },
   {
-    servicio: 'CEJAS Y PESTAÑAS',
-    combo: 'LAMI BROWS',
-    detalle: 'Laminado + Vitaminas + Depilación y Visagismo',
-    precio: 80,
-    activo: true
-  },
-  {
-    servicio: 'CEJAS Y PESTAÑAS',
-    combo: 'LASH PERFECT',
-    detalle: 'Lifting + Tinte efecto rimel',
-    precio: 85,
-    activo: true
-  },
-  {
-    servicio: 'CEJAS Y PESTAÑAS',
-    combo: 'PERFECT BROWS',
-    detalle: 'Laminado + Henna + Depilación + Visagismo',
-    precio: 135,
-    activo: true
-  },
-  {
-    servicio: 'CEJAS Y PESTAÑAS',
-    combo: 'GLOW UP EXPRESS',
-    detalle: 'Laminado + Henna + Depilación y Visagismo + Lifting + Tinte efecto rimel',
-    precio: 220,
-    activo: true
-  },
-  {
-    servicio: 'CEJAS Y PESTAÑAS',
-    combo: 'PERFECT EXPRESS',
-    detalle: 'Henna + Depilación y Visagismo + Lifting + Tinte efecto rimel',
-    precio: 165,
-    activo: true
-  },
-  {
-    servicio: 'CEJAS Y PESTAÑAS',
-    combo: 'LASH & BROWS EXPRESS',
-    detalle: 'Laminado + Lifting + Tinte efecto rimel + Vitaminas + Depilación y Visagismo',
-    precio: 165,
-    activo: true
-  },
-  {
-    servicio: 'CEJAS Y PESTAÑAS',
-    combo: 'RETOQUE BROWS PRO',
-    detalle: 'Henna',
-    precio: 40,
-    activo: true
+    label: 'Transferencia',
+    value: 'transferencia'
   }
 ]
 
 const form = ref({
   id: null,
   cliente_id: null,
-  servicio: 'CEJAS Y PESTAÑAS',
   servicioOption: null,
   combo: '',
   detalle: '',
@@ -684,7 +681,7 @@ const columns = [
   },
   {
     name: 'servicio',
-    label: 'Servicio / Combo',
+    label: 'Servicio',
     field: 'servicio',
     align: 'left',
     sortable: true
@@ -771,6 +768,16 @@ function normalizar(valor) {
     .replace(/[\u0300-\u036f]/g, '')
 }
 
+function responseToArray(data) {
+  if (Array.isArray(data)) return data
+  if (Array.isArray(data?.data)) return data.data
+  if (Array.isArray(data?.servicios)) return data.servicios
+  if (Array.isArray(data?.clientes)) return data.clientes
+  if (Array.isArray(data?.citas)) return data.citas
+  if (Array.isArray(data?.pagos)) return data.pagos
+  return []
+}
+
 function getErrorMessage(error) {
   const data = error?.response?.data
 
@@ -781,13 +788,15 @@ function getErrorMessage(error) {
   return data?.message || data?.error || 'Ocurrió un error'
 }
 
-function responseToArray(data) {
-  if (Array.isArray(data)) return data
-  if (Array.isArray(data?.data)) return data.data
-  if (Array.isArray(data?.servicios)) return data.servicios
-  if (Array.isArray(data?.clientes)) return data.clientes
-  if (Array.isArray(data?.citas)) return data.citas
-  return []
+function mapServicio(item) {
+  return {
+    id: item.id,
+    servicio: item.servicio || item.categoria || 'CEJAS Y PESTAÑAS',
+    combo: item.combo || item.nombre || '',
+    detalle: item.detalle || item.descripcion || '',
+    precio: Number(item.precio || 0),
+    activo: item.activo !== false && item.activo !== 0 && item.activo !== '0'
+  }
 }
 
 function colorEstado(estado) {
@@ -832,6 +841,7 @@ async function load() {
 async function loadClientes() {
   try {
     const { data } = await api.get('/clientes')
+
     clientes.value = responseToArray(data)
     clientesFiltrados.value = clientes.value
   } catch (error) {
@@ -845,16 +855,20 @@ async function loadClientes() {
 async function loadServicios() {
   try {
     const { data } = await api.get('/servicios')
-    const respuesta = responseToArray(data)
 
-    servicios.value = respuesta.length > 0
-      ? respuesta.filter(item => item.activo !== false)
-      : serviciosBase
+    servicios.value = responseToArray(data)
+      .map(mapServicio)
+      .filter(item => item.activo)
 
     serviciosFiltrados.value = servicios.value
-  } catch (error) {
-    servicios.value = serviciosBase
-    serviciosFiltrados.value = serviciosBase
+  } catch {
+    servicios.value = []
+    serviciosFiltrados.value = []
+
+    $q.notify({
+      type: 'warning',
+      message: 'No se pudieron cargar los servicios. Revisa el backend o la ruta /servicios.'
+    })
   }
 }
 
@@ -898,7 +912,6 @@ function seleccionarServicio(servicio) {
   }
 
   form.value.servicioOption = servicio
-  form.value.servicio = servicio.servicio || 'CEJAS Y PESTAÑAS'
   form.value.combo = servicio.combo || ''
   form.value.detalle = servicio.detalle || ''
   form.value.precio = Number(servicio.precio || 0)
@@ -915,7 +928,6 @@ function openDialog(fechaSeleccionada = null) {
   form.value = {
     id: null,
     cliente_id: null,
-    servicio: 'CEJAS Y PESTAÑAS',
     servicioOption: null,
     combo: '',
     detalle: '',
@@ -936,7 +948,6 @@ function edit(row) {
   form.value = {
     id: row.id,
     cliente_id: row.cliente_id,
-    servicio: servicioEncontrado?.servicio || 'CEJAS Y PESTAÑAS',
     servicioOption: servicioEncontrado || null,
     combo: row.servicio || servicioEncontrado?.combo || '',
     detalle: servicioEncontrado?.detalle || '',
@@ -962,7 +973,7 @@ async function save() {
   if (!form.value.combo) {
     $q.notify({
       type: 'warning',
-      message: 'Selecciona un combo o servicio'
+      message: 'Selecciona un servicio o combo'
     })
 
     return
@@ -1125,7 +1136,7 @@ async function verHistorial(id) {
 function remove(id) {
   $q.dialog({
     title: 'Eliminar cita',
-    message: '¿Seguro que deseas eliminar esta cita? Se guardará en historial si el backend tiene recuperación activa.',
+    message: '¿Seguro que deseas eliminar esta cita?',
     persistent: true,
     ok: {
       label: 'Eliminar',
@@ -1195,6 +1206,13 @@ onMounted(async () => {
   justify-content: space-between;
   align-items: center;
   box-shadow: 0 16px 40px rgba(233, 30, 99, 0.25);
+}
+
+.hero-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .btn-glamur-white {
@@ -1349,6 +1367,11 @@ onMounted(async () => {
 
   .page-hero .text-h4 {
     font-size: 26px;
+  }
+
+  .hero-actions {
+    width: 100%;
+    flex-direction: column;
   }
 
   .btn-glamur-white {
