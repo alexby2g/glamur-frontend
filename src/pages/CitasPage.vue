@@ -811,6 +811,7 @@ async function loadClientes() {
 async function loadServicios() {
   try {
     const { data } = await api.get('/servicios')
+
     servicios.value = normalizarLista(data, 'servicios')
 
     if (!servicios.value.length) {
@@ -818,7 +819,7 @@ async function loadServicios() {
     }
 
     serviciosFiltrados.value = serviciosOptions.value
-  } catch (error) {
+  } catch {
     servicios.value = combosBase
     serviciosFiltrados.value = serviciosOptions.value
   }
