@@ -218,6 +218,12 @@ export default {
         },
 
         {
+          label: 'Servicios',
+          icon: 'spa',
+          to: '/servicios'
+        },
+
+        {
           label: 'Calendario',
           icon: 'calendar_month',
           to: '/calendario'
