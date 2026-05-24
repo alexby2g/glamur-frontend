@@ -49,7 +49,7 @@
     <q-drawer
       v-model="drawer"
       show-if-above
-      :width="245"
+      :width="250"
       class="premium-drawer"
     >
 
@@ -286,15 +286,15 @@ export default {
 
 .drawer-title {
   margin-top: 14px;
-  font-size: 27px;
+  font-size: 28px;
   font-weight: 900;
-  color: white;
+  color: #f8d7a1;
 }
 
 .drawer-subtitle {
   margin-top: 4px;
   font-size: 12px;
-  color: rgba(255,255,255,0.62);
+  color: rgba(255, 236, 200, 0.82);
 }
 
 /* MENU */
@@ -304,10 +304,10 @@ export default {
 }
 
 .menu-header {
-  color: rgba(255,255,255,0.48) !important;
+  color: #f8d7a1 !important;
   font-size: 11px;
   font-weight: 900;
-  letter-spacing: 1.2px;
+  letter-spacing: 1.4px;
   padding-left: 10px;
 }
 
@@ -315,23 +315,23 @@ export default {
 
 .menu-item {
   width: 100%;
-  min-height: 62px;
+  min-height: 64px;
 
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 
-  border-radius: 20px;
+  border-radius: 22px;
 
-  color: #ffffff !important;
+  color: white !important;
 
   background:
     linear-gradient(
       135deg,
-      #241329,
-      #15111f
+      #2a1b35,
+      #1c1428
     );
 
   border:
-    1px solid rgba(233,30,99,0.38);
+    1px solid rgba(248, 215, 161, 0.25);
 
   font-weight: 800;
 
@@ -341,7 +341,7 @@ export default {
   padding-right: 8px;
 
   box-shadow:
-    0 10px 24px rgba(20,10,30,0.28);
+    0 10px 24px rgba(20,10,30,0.30);
 }
 
 .menu-item:hover {
@@ -351,7 +351,7 @@ export default {
     linear-gradient(
       135deg,
       #e91e63,
-      #9c27b0
+      #b8860b
     );
 
   transform: translateX(5px);
@@ -369,11 +369,11 @@ export default {
     linear-gradient(
       135deg,
       #e91e63,
-      #9c27b0
+      #b8860b
     ) !important;
 
   border:
-    1px solid rgba(255,255,255,0.28);
+    1px solid rgba(248, 215, 161, 0.45);
 
   box-shadow:
     0 14px 34px rgba(233,30,99,0.45);
@@ -391,7 +391,7 @@ export default {
   place-items: center;
 
   background:
-    rgba(233,30,99,0.25);
+    rgba(233,30,99,0.22);
 
   color: white;
 
@@ -401,7 +401,7 @@ export default {
 
 .menu-active .menu-icon-box {
   background:
-    rgba(255,255,255,0.22);
+    rgba(255,255,255,0.20);
 }
 
 /* LABEL */
@@ -434,7 +434,7 @@ export default {
     rgba(255,255,255,0.08);
 
   border:
-    1px solid rgba(255,255,255,0.08);
+    1px solid rgba(248,215,161,0.15);
 }
 
 .status-dot {
@@ -452,12 +452,12 @@ export default {
 .footer-title {
   font-size: 13px;
   font-weight: 900;
-  color: white;
+  color: #f8d7a1;
 }
 
 .footer-subtitle {
   font-size: 11px;
-  color: rgba(255,255,255,0.58);
+  color: rgba(255, 236, 200, 0.75);
 }
 
 /* CONTENT */
