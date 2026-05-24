@@ -3,7 +3,6 @@
 
     <!-- HERO -->
     <div class="page-hero q-mb-lg">
-
       <div>
         <div class="text-h4 text-weight-bold text-white">
           📅 Citas
@@ -20,7 +19,6 @@
         icon="add"
         @click="openDialog"
       />
-
     </div>
 
     <!-- TABLA -->
@@ -33,12 +31,12 @@
       no-data-label="No hay citas registradas"
       flat
       bordered
+      :rows-per-page-options="[5, 10, 20, 50]"
     >
 
       <!-- CLIENTE -->
       <template #body-cell-cliente="props">
         <q-td :props="props">
-
           <div class="text-weight-bold text-pink-7">
             {{ props.row.cliente?.nombre || 'Sin cliente' }}
           </div>
@@ -46,25 +44,21 @@
           <div class="text-caption text-grey-7">
             Cliente Glamur
           </div>
-
         </q-td>
       </template>
 
       <!-- PRECIO -->
       <template #body-cell-precio="props">
         <q-td :props="props">
-
           <div class="text-weight-bold text-green-8">
-            Bs {{ Number(props.row.precio || 0).toFixed(2) }}
+            Bs {{ money(props.row.precio) }}
           </div>
-
         </q-td>
       </template>
 
       <!-- ESTADO -->
       <template #body-cell-estado="props">
         <q-td :props="props" class="text-center">
-
           <q-badge
             rounded
             class="estado-badge"
@@ -72,14 +66,12 @@
           >
             {{ props.row.estado || 'pendiente' }}
           </q-badge>
-
         </q-td>
       </template>
 
       <!-- ESTADO PAGO -->
       <template #body-cell-estado_pago="props">
         <q-td :props="props" class="text-center">
-
           <q-badge
             rounded
             class="estado-badge"
@@ -87,14 +79,12 @@
           >
             {{ props.row.estado_pago || 'pendiente' }}
           </q-badge>
-
         </q-td>
       </template>
 
       <!-- ACCIONES -->
       <template #body-cell-actions="props">
         <q-td :props="props" class="text-center">
-
           <div class="acciones">
 
             <q-btn
@@ -140,7 +130,7 @@
               icon="history"
               @click="verHistorial(props.row.id)"
             >
-              <q-tooltip>Historial</q-tooltip>
+              <q-tooltip>Historial de pagos</q-tooltip>
             </q-btn>
 
             <q-btn
@@ -155,20 +145,16 @@
             </q-btn>
 
           </div>
-
         </q-td>
       </template>
 
     </q-table>
 
-    <!-- DIALOG NUEVA CITA -->
+    <!-- DIALOG NUEVA / EDITAR CITA -->
     <q-dialog v-model="dialog" persistent>
-
       <q-card class="dialog-card">
 
-        <!-- HEADER -->
         <q-card-section class="dialog-header row items-center">
-
           <div class="text-h6 text-weight-bold">
             {{ form.id ? '✏️ Editar cita' : '📅 Nueva cita' }}
           </div>
@@ -183,12 +169,9 @@
             color="white"
             v-close-popup
           />
-
         </q-card-section>
 
-        <!-- FORM -->
         <q-card-section class="dialog-body">
-
           <div class="q-gutter-md">
 
             <q-select
@@ -226,9 +209,7 @@
             />
 
             <div class="row q-col-gutter-md">
-
               <div class="col-12 col-sm-6">
-
                 <q-input
                   v-model="form.fecha"
                   type="date"
@@ -238,11 +219,9 @@
                   rounded
                   bg-color="white"
                 />
-
               </div>
 
               <div class="col-12 col-sm-6">
-
                 <q-input
                   v-model="form.hora"
                   type="time"
@@ -252,9 +231,7 @@
                   rounded
                   bg-color="white"
                 />
-
               </div>
-
             </div>
 
             <q-select
@@ -268,12 +245,9 @@
             />
 
           </div>
-
         </q-card-section>
 
-        <!-- ACTIONS -->
         <q-card-actions align="right" class="dialog-actions">
-
           <q-btn
             flat
             label="Cancelar"
@@ -287,11 +261,149 @@
             :loading="saving"
             @click="save"
           />
-
         </q-card-actions>
 
       </q-card>
+    </q-dialog>
 
+    <!-- DIALOG PAGO -->
+    <q-dialog v-model="dialogPago" persistent>
+      <q-card class="dialog-card-small">
+
+        <q-card-section class="dialog-header row items-center">
+          <div class="text-h6 text-weight-bold">
+            💰 Realizar pago
+          </div>
+
+          <q-space />
+
+          <q-btn
+            icon="close"
+            flat
+            round
+            dense
+            color="white"
+            v-close-popup
+          />
+        </q-card-section>
+
+        <q-card-section class="dialog-body">
+          <div class="q-gutter-md">
+
+            <q-input
+              v-model.number="pago.monto"
+              type="number"
+              label="Monto Bs."
+              outlined
+              dense
+              rounded
+              min="0"
+              bg-color="white"
+            />
+
+            <q-select
+              v-model="pago.metodo"
+              :options="['efectivo', 'qr', 'transferencia']"
+              label="Método de pago"
+              outlined
+              dense
+              rounded
+              bg-color="white"
+            />
+
+            <div v-if="pago.metodo === 'qr'" class="qr-box">
+              <q-img
+                src="~assets/qr.jpg"
+                class="qr-img"
+                fit="contain"
+              />
+              <div class="text-caption text-grey-7 q-mt-sm">
+                Escanea el QR para realizar el pago.
+              </div>
+            </div>
+
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="right" class="dialog-actions">
+          <q-btn
+            flat
+            label="Cancelar"
+            color="grey-7"
+            v-close-popup
+          />
+
+          <q-btn
+            class="btn-glamur"
+            label="Confirmar pago"
+            :loading="savingPago"
+            @click="confirmarPago"
+          />
+        </q-card-actions>
+
+      </q-card>
+    </q-dialog>
+
+    <!-- DIALOG HISTORIAL -->
+    <q-dialog v-model="dialogHistorial">
+      <q-card class="dialog-card-historial">
+
+        <q-card-section class="dialog-header row items-center">
+          <div class="text-h6 text-weight-bold">
+            📜 Historial de pagos
+          </div>
+
+          <q-space />
+
+          <q-btn
+            icon="close"
+            flat
+            round
+            dense
+            color="white"
+            v-close-popup
+          />
+        </q-card-section>
+
+        <q-card-section class="dialog-body">
+          <q-table
+            class="tabla-glamur tabla-historial"
+            :rows="historial"
+            :columns="columnsHistorial"
+            row-key="id"
+            dense
+            flat
+            bordered
+            no-data-label="Esta cita no tiene pagos registrados"
+          >
+            <template #body-cell-monto="props">
+              <q-td :props="props">
+                <b class="text-green-8">
+                  Bs {{ money(props.row.monto) }}
+                </b>
+              </q-td>
+            </template>
+
+            <template #body-cell-estado="props">
+              <q-td :props="props">
+                <q-badge color="green" rounded>
+                  {{ props.row.estado || 'pagado' }}
+                </q-badge>
+              </q-td>
+            </template>
+          </q-table>
+        </q-card-section>
+
+        <q-card-actions align="right" class="dialog-actions">
+          <q-btn
+            flat
+            label="Cerrar"
+            color="grey-7"
+            v-close-popup
+          />
+        </q-card-actions>
+
+      </q-card>
     </q-dialog>
 
   </q-page>
@@ -310,11 +422,15 @@ const $q = useQuasar()
 
 const citas = ref([])
 const clientes = ref([])
+const historial = ref([])
 
 const dialog = ref(false)
+const dialogPago = ref(false)
+const dialogHistorial = ref(false)
 
 const loading = ref(false)
 const saving = ref(false)
+const savingPago = ref(false)
 
 const form = ref({
   id: null,
@@ -326,56 +442,57 @@ const form = ref({
   estado: 'pendiente'
 })
 
+const pago = ref({
+  cita_id: null,
+  monto: 0,
+  metodo: 'efectivo'
+})
+
 const columns = [
   {
     name: 'cliente',
     label: 'Cliente',
-    field: row => row.cliente?.nombre || '',
-    align: 'left'
+    field: row => row.cliente?.nombre || 'Sin cliente',
+    align: 'left',
+    sortable: true
   },
-
   {
     name: 'servicio',
     label: 'Servicio',
     field: 'servicio',
     align: 'left'
   },
-
   {
     name: 'precio',
     label: 'Precio',
     field: 'precio',
     align: 'left'
   },
-
   {
     name: 'fecha',
     label: 'Fecha',
     field: 'fecha',
-    align: 'left'
+    align: 'left',
+    sortable: true
   },
-
   {
     name: 'hora',
     label: 'Hora',
     field: 'hora',
     align: 'left'
   },
-
   {
     name: 'estado',
     label: 'Estado',
     field: 'estado',
     align: 'center'
   },
-
   {
     name: 'estado_pago',
     label: 'Pago',
     field: 'estado_pago',
     align: 'center'
   },
-
   {
     name: 'actions',
     label: 'Acciones',
@@ -384,17 +501,58 @@ const columns = [
   }
 ]
 
-function hoy () {
+const columnsHistorial = [
+  {
+    name: 'monto',
+    label: 'Monto',
+    field: 'monto',
+    align: 'left'
+  },
+  {
+    name: 'metodo',
+    label: 'Método',
+    field: row => row.metodo || 'No definido',
+    align: 'left'
+  },
+  {
+    name: 'estado',
+    label: 'Estado',
+    field: 'estado',
+    align: 'left'
+  },
+  {
+    name: 'fecha_pago',
+    label: 'Fecha pago',
+    field: row => row.fecha_pago || 'Sin fecha',
+    align: 'left'
+  }
+]
+
+function money(value) {
+  return Number(value || 0).toFixed(2)
+}
+
+function hoy() {
   return new Date().toISOString().slice(0, 10)
 }
 
-function colorEstado (estado) {
+function getErrorMessage(error) {
+  const data = error?.response?.data
+
+  if (data?.errors) {
+    return Object.values(data.errors).flat().join(' ')
+  }
+
+  return data?.message || data?.error || 'Ocurrió un error'
+}
+
+function colorEstado(estado) {
   if (estado === 'concluida') return 'green'
   if (estado === 'cancelada') return 'red'
   return 'orange'
 }
 
-async function load () {
+async function load() {
   loading.value = true
 
   try {
@@ -403,21 +561,32 @@ async function load () {
     citas.value = Array.isArray(data)
       ? data
       : (data?.data || [])
-
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: getErrorMessage(error)
+    })
   } finally {
     loading.value = false
   }
 }
 
-async function loadClientes () {
-  const { data } = await api.get('/clientes')
+async function loadClientes() {
+  try {
+    const { data } = await api.get('/clientes')
 
-  clientes.value = Array.isArray(data)
-    ? data
-    : (data?.data || [])
+    clientes.value = Array.isArray(data)
+      ? data
+      : (data?.data || [])
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: getErrorMessage(error)
+    })
+  }
 }
 
-function openDialog () {
+function openDialog() {
   form.value = {
     id: null,
     cliente_id: null,
@@ -431,61 +600,186 @@ function openDialog () {
   dialog.value = true
 }
 
-function edit (row) {
+function edit(row) {
   form.value = {
     id: row.id,
     cliente_id: row.cliente_id,
-    servicio: row.servicio,
-    precio: row.precio,
-    fecha: row.fecha,
-    hora: row.hora,
-    estado: row.estado
+    servicio: row.servicio || '',
+    precio: Number(row.precio || 0),
+    fecha: row.fecha || hoy(),
+    hora: row.hora ? String(row.hora).slice(0, 5) : '',
+    estado: row.estado || 'pendiente'
   }
 
   dialog.value = true
 }
 
-async function save () {
+async function save() {
+  if (!form.value.cliente_id || !form.value.servicio || !form.value.fecha || !form.value.hora) {
+    $q.notify({
+      type: 'warning',
+      message: 'Completa cliente, servicio, fecha y hora'
+    })
+
+    return
+  }
+
   saving.value = true
 
   try {
+    const payload = {
+      cliente_id: form.value.cliente_id,
+      servicio: form.value.servicio,
+      precio: Number(form.value.precio || 0),
+      fecha: form.value.fecha,
+      hora: String(form.value.hora).slice(0, 5),
+      estado: form.value.estado
+    }
+
     if (form.value.id) {
-      await api.put(`/citas/${form.value.id}`, form.value)
+      await api.put(`/citas/${form.value.id}`, payload)
 
       $q.notify({
         type: 'positive',
-        message: 'Cita actualizada'
+        message: 'Cita actualizada correctamente'
       })
-
     } else {
-      await api.post('/citas', form.value)
+      await api.post('/citas', payload)
 
       $q.notify({
         type: 'positive',
-        message: 'Cita registrada'
+        message: 'Cita registrada correctamente'
       })
     }
 
     dialog.value = false
 
     await load()
-
   } catch (error) {
-
     $q.notify({
       type: 'negative',
-      message: error.response?.data?.message || 'Error'
+      message: getErrorMessage(error)
     })
-
   } finally {
     saving.value = false
   }
 }
 
-function pagar () {}
-function finalizar () {}
-function verHistorial () {}
-function remove () {}
+async function finalizar(id) {
+  try {
+    await api.put(`/citas/finalizar/${id}`)
+
+    $q.notify({
+      type: 'positive',
+      message: 'Cita finalizada correctamente'
+    })
+
+    await load()
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: getErrorMessage(error)
+    })
+  }
+}
+
+function pagar(row) {
+  pago.value = {
+    cita_id: row.id,
+    monto: Number(row.precio || 0),
+    metodo: 'efectivo'
+  }
+
+  dialogPago.value = true
+}
+
+async function confirmarPago() {
+  if (!pago.value.cita_id || Number(pago.value.monto || 0) <= 0) {
+    $q.notify({
+      type: 'warning',
+      message: 'El monto del pago debe ser mayor a 0'
+    })
+
+    return
+  }
+
+  savingPago.value = true
+
+  try {
+    await api.post('/pagos', {
+      cita_id: pago.value.cita_id,
+      monto: Number(pago.value.monto || 0),
+      metodo: pago.value.metodo
+    })
+
+    dialogPago.value = false
+
+    $q.notify({
+      type: 'positive',
+      message: 'Pago registrado correctamente'
+    })
+
+    await load()
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: getErrorMessage(error)
+    })
+  } finally {
+    savingPago.value = false
+  }
+}
+
+async function verHistorial(id) {
+  try {
+    const { data } = await api.get(`/pagos/historial/${id}`)
+
+    historial.value = Array.isArray(data)
+      ? data
+      : (data?.data || [])
+
+    dialogHistorial.value = true
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: getErrorMessage(error)
+    })
+  }
+}
+
+function remove(id) {
+  $q.dialog({
+    title: 'Eliminar cita',
+    message: '¿Seguro que deseas eliminar esta cita?',
+    cancel: true,
+    persistent: true,
+    ok: {
+      label: 'Eliminar',
+      color: 'negative'
+    },
+    cancel: {
+      label: 'Cancelar',
+      color: 'grey-7',
+      flat: true
+    }
+  }).onOk(async () => {
+    try {
+      await api.delete(`/citas/${id}`)
+
+      $q.notify({
+        type: 'positive',
+        message: 'Cita eliminada correctamente'
+      })
+
+      await load()
+    } catch (error) {
+      $q.notify({
+        type: 'negative',
+        message: getErrorMessage(error)
+      })
+    }
+  })
+}
 
 onMounted(async () => {
   await Promise.all([
@@ -496,7 +790,6 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-
 .citas-page {
   min-height: 100vh;
   background: #faf7fb;
@@ -513,7 +806,6 @@ onMounted(async () => {
     );
 
   border-radius: 28px;
-
   padding: 28px;
 
   display: flex;
@@ -524,7 +816,7 @@ onMounted(async () => {
     0 16px 40px rgba(233,30,99,0.25);
 }
 
-/* BUTTON */
+/* BUTTONS */
 
 .btn-glamur-white {
   background: white;
@@ -574,6 +866,10 @@ onMounted(async () => {
   font-size: 13px;
 }
 
+.tabla-glamur :deep(.q-table tbody tr:hover) {
+  background: #fff0f6;
+}
+
 .estado-badge {
   padding: 6px 10px;
   font-weight: 800;
@@ -587,13 +883,29 @@ onMounted(async () => {
   flex-wrap: wrap;
 }
 
-/* DIALOG */
+/* DIALOGS */
+
+.dialog-card,
+.dialog-card-small,
+.dialog-card-historial {
+  border-radius: 24px;
+  overflow: hidden;
+}
 
 .dialog-card {
   width: 560px;
   max-width: 96vw;
-  border-radius: 24px;
-  overflow: hidden;
+  max-height: 92vh;
+}
+
+.dialog-card-small {
+  width: 440px;
+  max-width: 96vw;
+}
+
+.dialog-card-historial {
+  width: 720px;
+  max-width: 96vw;
 }
 
 .dialog-header {
@@ -610,6 +922,8 @@ onMounted(async () => {
 .dialog-body {
   background: #ffffff;
   padding: 24px;
+  max-height: 70vh;
+  overflow-y: auto;
 }
 
 .dialog-actions {
@@ -618,10 +932,23 @@ onMounted(async () => {
   border-top: 1px solid #eee;
 }
 
+.qr-box {
+  text-align: center;
+  padding: 12px;
+  border: 1px dashed #e91e63;
+  border-radius: 18px;
+  background: #fff7fb;
+}
+
+.qr-img {
+  width: 230px;
+  max-width: 100%;
+  border-radius: 14px;
+}
+
 /* MOBILE */
 
 @media (max-width: 600px) {
-
   .citas-page {
     padding: 10px;
   }
@@ -635,14 +962,25 @@ onMounted(async () => {
     gap: 14px;
   }
 
+  .page-hero .text-h4 {
+    font-size: 26px;
+  }
+
   .btn-glamur-white {
     width: 100%;
   }
 
-  .dialog-card {
+  .dialog-card,
+  .dialog-card-small,
+  .dialog-card-historial {
     width: 100%;
     max-width: 100%;
     border-radius: 20px;
+  }
+
+  .dialog-body {
+    padding: 18px;
+    max-height: 68vh;
   }
 
   .dialog-actions {
@@ -654,6 +992,8 @@ onMounted(async () => {
     width: 100%;
   }
 
+  .acciones .q-btn {
+    margin-bottom: 4px;
+  }
 }
-
 </style>
