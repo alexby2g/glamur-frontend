@@ -1,34 +1,283 @@
 <template>
-  <q-page class="flex flex-center bg-grey-2">
-    <q-card style="width:350px" class="shadow-10">
-      <q-card-section class="text-center">
-        <h5>Glamur</h5>
-        <p>Iniciar Sesión</p>
+  <q-page class="login-page">
+
+    <div class="login-bg-effect one"></div>
+    <div class="login-bg-effect two"></div>
+
+    <q-card class="login-card">
+
+      <q-card-section class="login-header">
+        <q-avatar class="login-logo" size="76px">
+          <q-icon name="spa" color="white" size="42px" />
+        </q-avatar>
+
+        <div class="login-title">
+          Glamur
+        </div>
+
+        <div class="login-subtitle">
+          Iniciar sesión en el sistema
+        </div>
       </q-card-section>
 
-      <q-card-section>
-        <q-input v-model="email" label="Email" outlined />
-        <q-input v-model="password" type="password" label="Password" outlined class="q-mt-md"/>
+      <q-card-section class="login-body">
+
+        <q-form @submit.prevent="login" class="q-gutter-md">
+
+          <q-input
+            v-model.trim="form.usuario"
+            label="Usuario"
+            outlined
+            rounded
+            bg-color="white"
+            autocomplete="username"
+          >
+            <template #prepend>
+              <q-icon name="person" color="pink" />
+            </template>
+          </q-input>
+
+          <q-input
+            v-model="form.password"
+            :type="showPassword ? 'text' : 'password'"
+            label="Contraseña"
+            outlined
+            rounded
+            bg-color="white"
+            autocomplete="current-password"
+          >
+            <template #prepend>
+              <q-icon name="lock" color="pink" />
+            </template>
+
+            <template #append>
+              <q-icon
+                :name="showPassword ? 'visibility_off' : 'visibility'"
+                class="cursor-pointer"
+                color="grey-7"
+                @click="showPassword = !showPassword"
+              />
+            </template>
+          </q-input>
+
+          <q-btn
+            type="submit"
+            label="Ingresar"
+            icon="login"
+            class="btn-login full-width"
+            :loading="loading"
+            unelevated
+          />
+
+        </q-form>
+
       </q-card-section>
 
-      <q-card-actions align="center">
-        <q-btn label="Ingresar" color="primary" @click="login"/>
-      </q-card-actions>
+      <q-card-section class="login-footer">
+        Usuario inicial: <b>admin</b> · Contraseña: <b>admin123</b>
+      </q-card-section>
+
     </q-card>
+
   </q-page>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useQuasar } from 'quasar'
+import { api } from 'boot/axios'
 
-defineOptions({ name: 'LoginPage' })
+defineOptions({
+  name: 'LoginPage'
+})
 
-const email = ref('')
-const password = ref('')
 const router = useRouter()
+const $q = useQuasar()
 
-function login(){
-  router.push('/dashboard')
+const loading = ref(false)
+const showPassword = ref(false)
+
+const form = ref({
+  usuario: '',
+  password: ''
+})
+
+function getErrorMessage(error) {
+  const data = error?.response?.data
+
+  if (data?.errors) {
+    return Object.values(data.errors).flat().join(' ')
+  }
+
+  return data?.message || data?.error || 'No se pudo iniciar sesión'
 }
+
+async function login() {
+  if (!form.value.usuario.trim()) {
+    $q.notify({
+      type: 'warning',
+      message: 'Ingrese su usuario'
+    })
+
+    return
+  }
+
+  if (!form.value.password) {
+    $q.notify({
+      type: 'warning',
+      message: 'Ingrese su contraseña'
+    })
+
+    return
+  }
+
+  loading.value = true
+
+  try {
+    const { data } = await api.post('/login', {
+      usuario: form.value.usuario.trim(),
+      password: form.value.password
+    })
+
+    localStorage.setItem('glamur_token', data.token)
+    localStorage.setItem('glamur_user', JSON.stringify(data.usuario))
+
+    $q.notify({
+      type: 'positive',
+      message: 'Inicio de sesión correcto'
+    })
+
+    router.replace('/dashboard')
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: getErrorMessage(error)
+    })
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(async () => {
+  const token = localStorage.getItem('glamur_token')
+
+  if (!token) return
+
+  try {
+    await api.get('/me')
+    router.replace('/dashboard')
+  } catch {
+    localStorage.removeItem('glamur_token')
+    localStorage.removeItem('glamur_user')
+  }
+})
 </script>
+
+<style scoped>
+.login-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background:
+    radial-gradient(circle at top left, rgba(233, 30, 99, 0.22), transparent 34%),
+    radial-gradient(circle at bottom right, rgba(156, 39, 176, 0.22), transparent 34%),
+    linear-gradient(135deg, #120f1c 0%, #241329 55%, #e91e63 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.login-bg-effect {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(8px);
+}
+
+.login-bg-effect.one {
+  width: 240px;
+  height: 240px;
+  background: rgba(233, 30, 99, 0.22);
+  top: -70px;
+  left: -70px;
+}
+
+.login-bg-effect.two {
+  width: 300px;
+  height: 300px;
+  background: rgba(156, 39, 176, 0.20);
+  bottom: -100px;
+  right: -100px;
+}
+
+.login-card {
+  width: 430px;
+  max-width: 96vw;
+  border-radius: 30px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.35);
+  position: relative;
+  z-index: 1;
+}
+
+.login-header {
+  text-align: center;
+  padding: 34px 26px 18px;
+  background: linear-gradient(135deg, #15111f, #241329 45%, #e91e63);
+  color: white;
+}
+
+.login-logo {
+  background: linear-gradient(135deg, #e91e63, #9c27b0);
+  box-shadow: 0 18px 40px rgba(233, 30, 99, 0.45);
+}
+
+.login-title {
+  margin-top: 16px;
+  font-size: 34px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+}
+
+.login-subtitle {
+  margin-top: 4px;
+  font-size: 14px;
+  opacity: 0.78;
+}
+
+.login-body {
+  padding: 28px;
+}
+
+.btn-login {
+  margin-top: 8px;
+  min-height: 48px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #e91e63, #9c27b0);
+  color: white;
+  font-weight: 900;
+  box-shadow: 0 14px 30px rgba(233, 30, 99, 0.28);
+}
+
+.login-footer {
+  padding: 0 28px 24px;
+  text-align: center;
+  font-size: 12px;
+  color: #777;
+}
+
+@media (max-width: 600px) {
+  .login-card {
+    border-radius: 24px;
+  }
+
+  .login-title {
+    font-size: 30px;
+  }
+
+  .login-body {
+    padding: 22px;
+  }
+}
+</style>
