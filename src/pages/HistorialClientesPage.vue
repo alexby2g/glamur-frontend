@@ -4,7 +4,11 @@
     <section class="hero">
       <div>
         <div class="badge">Historial inteligente</div>
-        <div class="title">📜 Historial de Clientes</div>
+
+        <div class="title">
+          📜 Historial de Clientes
+        </div>
+
         <div class="subtitle">
           Busca por nombre o teléfono y revisa citas, pagos y actividad del cliente.
         </div>
@@ -14,6 +18,7 @@
     <q-card class="search-card">
       <q-card-section>
         <div class="row q-col-gutter-md items-center">
+
           <div class="col-12 col-md-9">
             <q-input
               v-model="buscar"
@@ -39,6 +44,7 @@
               @click="buscarHistorial"
             />
           </div>
+
         </div>
       </q-card-section>
     </q-card>
@@ -52,13 +58,21 @@
 
     <div v-if="clientes.length === 0 && !loading" class="empty-box">
       <q-icon name="manage_search" size="70px" color="pink-4" />
-      <div class="empty-title">Busca un cliente</div>
+
+      <div class="empty-title">
+        Busca un cliente
+      </div>
+
       <div class="empty-text">
         Escribe su nombre o teléfono para ver su historial completo.
       </div>
     </div>
 
-    <div class="q-mt-md" v-for="cliente in clientes" :key="cliente.id">
+    <div
+      v-for="cliente in clientes"
+      :key="cliente.id"
+      class="q-mt-md"
+    >
       <q-card class="cliente-card">
 
         <q-card-section>
@@ -66,47 +80,73 @@
 
             <div class="col-12 col-md-4">
               <div class="cliente-header">
+
                 <q-avatar class="cliente-avatar" size="64px">
                   <q-icon name="person" color="white" size="34px" />
                 </q-avatar>
 
                 <div>
-                  <div class="cliente-nombre">{{ cliente.nombre }}</div>
+                  <div class="cliente-nombre">
+                    {{ cliente.nombre }}
+                  </div>
+
                   <div class="cliente-info">
                     📞 {{ cliente.telefono || 'Sin teléfono' }}
                   </div>
+
                   <div class="cliente-info">
                     ✉️ {{ cliente.email || 'Sin correo' }}
                   </div>
                 </div>
+
               </div>
             </div>
 
             <div class="col-6 col-md-2">
               <div class="mini-stat">
-                <div class="mini-value">{{ cliente.total_citas || 0 }}</div>
-                <div class="mini-label">Citas</div>
+                <div class="mini-value">
+                  {{ cliente.total_citas || 0 }}
+                </div>
+
+                <div class="mini-label">
+                  Citas
+                </div>
               </div>
             </div>
 
             <div class="col-6 col-md-2">
               <div class="mini-stat warning">
-                <div class="mini-value">{{ cliente.citas_pendientes || 0 }}</div>
-                <div class="mini-label">Pendientes</div>
+                <div class="mini-value">
+                  {{ cliente.citas_pendientes || 0 }}
+                </div>
+
+                <div class="mini-label">
+                  Pendientes
+                </div>
               </div>
             </div>
 
             <div class="col-6 col-md-2">
               <div class="mini-stat success">
-                <div class="mini-value">{{ cliente.citas_concluidas || 0 }}</div>
-                <div class="mini-label">Concluidas</div>
+                <div class="mini-value">
+                  {{ cliente.citas_concluidas || 0 }}
+                </div>
+
+                <div class="mini-label">
+                  Concluidas
+                </div>
               </div>
             </div>
 
             <div class="col-6 col-md-2">
               <div class="mini-stat money">
-                <div class="mini-value">Bs {{ money(cliente.total_pagado) }}</div>
-                <div class="mini-label">Pagado</div>
+                <div class="mini-value">
+                  Bs {{ money(cliente.total_pagado) }}
+                </div>
+
+                <div class="mini-label">
+                  Pagado
+                </div>
               </div>
             </div>
 
@@ -129,8 +169,12 @@
           </q-tabs>
 
           <q-tab-panels v-model="tab[cliente.id]" animated>
+
             <q-tab-panel name="citas">
-              <div v-if="cliente.citas?.length === 0" class="text-grey-7">
+              <div
+                v-if="!cliente.citas || cliente.citas.length === 0"
+                class="text-grey-7"
+              >
                 Este cliente no tiene citas registradas.
               </div>
 
@@ -139,12 +183,16 @@
                   v-for="cita in cliente.citas"
                   :key="cita.id"
                   :title="cita.servicio || 'Servicio sin nombre'"
-                  :subtitle="formatDate(cita.fecha) + ' - ' + (cita.hora || '')"
+                  :subtitle="formatDate(cita.fecha) + ' - ' + formatHour(cita.hora)"
                   :icon="iconEstado(cita.estado)"
                   :color="colorEstado(cita.estado)"
                 >
                   <div class="timeline-box">
-                    <q-badge :color="colorEstado(cita.estado)" class="q-mb-sm">
+
+                    <q-badge
+                      :color="colorEstado(cita.estado)"
+                      class="q-mb-sm"
+                    >
                       {{ cita.estado || 'Sin estado' }}
                     </q-badge>
 
@@ -159,6 +207,13 @@
                     <div>
                       <b>Método pago:</b> {{ cita.metodo_pago || 'No definido' }}
                     </div>
+
+                    <div v-if="cita.pagos && cita.pagos.length > 0" class="q-mt-sm">
+                      <q-badge color="green">
+                        {{ cita.pagos.length }} pago(s) registrado(s)
+                      </q-badge>
+                    </div>
+
                   </div>
                 </q-timeline-entry>
               </q-timeline>
@@ -166,28 +221,51 @@
 
             <q-tab-panel name="pagos">
               <q-table
+                class="tabla-pagos"
                 flat
                 bordered
                 :rows="cliente.pagos || []"
                 :columns="columnsPagos"
                 row-key="id"
+                :rows-per-page-options="[5, 10, 20]"
                 no-data-label="Este cliente no tiene pagos registrados"
               >
+                <template #body-cell-fecha_pago="props">
+                  <q-td :props="props">
+                    {{ formatDate(props.row.fecha_pago || props.row.created_at) }}
+                  </q-td>
+                </template>
+
+                <template #body-cell-servicio="props">
+                  <q-td :props="props">
+                    <div class="text-weight-bold text-pink-7">
+                      {{ props.row.servicio || 'Servicio no definido' }}
+                    </div>
+
+                    <div class="text-caption text-grey-7">
+                      Cita: {{ formatDate(props.row.fecha_cita) }} {{ formatHour(props.row.hora_cita) }}
+                    </div>
+                  </q-td>
+                </template>
+
                 <template #body-cell-monto="props">
                   <q-td :props="props">
-                    <b class="text-green-8">Bs {{ money(props.row.monto) }}</b>
+                    <b class="text-green-8">
+                      Bs {{ money(props.row.monto) }}
+                    </b>
                   </q-td>
                 </template>
 
                 <template #body-cell-estado="props">
                   <q-td :props="props">
-                    <q-badge color="green">
-                      {{ props.row.estado || 'Pagado' }}
+                    <q-badge color="green" rounded>
+                      {{ props.row.estado || 'pagado' }}
                     </q-badge>
                   </q-td>
                 </template>
               </q-table>
             </q-tab-panel>
+
           </q-tab-panels>
         </q-card-section>
 
@@ -202,6 +280,10 @@ import { ref } from 'vue'
 import { api } from 'boot/axios'
 import { useQuasar, date } from 'quasar'
 
+defineOptions({
+  name: 'HistorialClientesPage'
+})
+
 const $q = useQuasar()
 
 const buscar = ref('')
@@ -212,8 +294,14 @@ const tab = ref({})
 const columnsPagos = [
   {
     name: 'fecha_pago',
-    label: 'Fecha',
-    field: row => formatDate(row.fecha_pago),
+    label: 'Fecha pago',
+    field: 'fecha_pago',
+    align: 'left'
+  },
+  {
+    name: 'servicio',
+    label: 'Servicio',
+    field: 'servicio',
     align: 'left'
   },
   {
@@ -242,7 +330,14 @@ function money(value) {
 
 function formatDate(value) {
   if (!value) return 'Sin fecha'
+
   return date.formatDate(value, 'DD/MM/YYYY')
+}
+
+function formatHour(value) {
+  if (!value) return ''
+
+  return String(value).slice(0, 5)
 }
 
 function colorEstado(estado) {
@@ -265,12 +360,23 @@ function iconEstado(estado) {
   return 'event'
 }
 
+function getErrorMessage(error) {
+  const data = error?.response?.data
+
+  if (data?.errors) {
+    return Object.values(data.errors).flat().join(' ')
+  }
+
+  return data?.message || data?.error || 'No se pudo cargar el historial'
+}
+
 async function buscarHistorial() {
   if (!buscar.value.trim()) {
     $q.notify({
       type: 'warning',
       message: 'Ingrese un nombre o teléfono para buscar'
     })
+
     return
   }
 
@@ -289,12 +395,19 @@ async function buscarHistorial() {
     clientes.value.forEach(cliente => {
       tab.value[cliente.id] = 'citas'
     })
+
+    if (clientes.value.length > 0) {
+      $q.notify({
+        type: 'positive',
+        message: 'Historial cargado correctamente'
+      })
+    }
   } catch (error) {
     clientes.value = []
 
     $q.notify({
       type: 'negative',
-      message: error.response?.data?.message || 'No se pudo cargar el historial'
+      message: getErrorMessage(error)
     })
   } finally {
     loading.value = false
@@ -433,6 +546,11 @@ async function buscarHistorial() {
   padding: 14px;
   border-radius: 16px;
   border: 1px solid #eee;
+}
+
+.tabla-pagos {
+  border-radius: 18px;
+  overflow: hidden;
 }
 
 @media (max-width: 600px) {
