@@ -10,17 +10,18 @@
           round
           icon="menu"
           color="white"
+          class="menu-toggle"
           @click="drawer = !drawer"
         />
 
         <q-toolbar-title class="row items-center no-wrap">
-          <q-avatar class="logo-avatar" size="38px">
+          <q-avatar class="top-logo" size="40px">
             <q-icon name="spa" color="white" size="24px" />
           </q-avatar>
 
           <div class="q-ml-sm">
-            <div class="app-title">Glamur</div>
-            <div class="app-subtitle">Sistema de gestión</div>
+            <div class="top-title">Glamur</div>
+            <div class="top-subtitle">Sistema de gestión</div>
           </div>
         </q-toolbar-title>
 
@@ -30,6 +31,7 @@
           dense
           icon="notifications"
           color="white"
+          class="top-action"
         />
 
       </q-toolbar>
@@ -38,14 +40,15 @@
     <q-drawer
       v-model="drawer"
       show-if-above
-      bordered
-      class="main-drawer"
-      :width="270"
+      :width="285"
+      class="premium-drawer"
     >
 
+      <div class="drawer-bg-effect"></div>
+
       <div class="drawer-brand">
-        <q-avatar class="drawer-logo" size="64px">
-          <q-icon name="spa" color="white" size="36px" />
+        <q-avatar class="drawer-logo" size="70px">
+          <q-icon name="spa" color="white" size="38px" />
         </q-avatar>
 
         <div class="drawer-title">Glamur</div>
@@ -55,7 +58,7 @@
       <q-list class="menu-list">
 
         <q-item-label header class="menu-header">
-          Menú Principal
+          NAVEGACIÓN
         </q-item-label>
 
         <q-item
@@ -67,24 +70,32 @@
           active-class="menu-active"
         >
           <q-item-section avatar>
-            <q-icon :name="item.icon" />
+            <div class="menu-icon-box">
+              <q-icon :name="item.icon" size="21px" />
+            </div>
           </q-item-section>
 
           <q-item-section>
-            {{ item.label }}
+            <div class="menu-label">
+              {{ item.label }}
+            </div>
           </q-item-section>
         </q-item>
 
       </q-list>
 
       <div class="drawer-footer">
-        <q-icon name="cloud_done" color="positive" />
-        <span>Conectado online</span>
+        <div class="status-dot"></div>
+
+        <div>
+          <div class="footer-title">Servidor online</div>
+          <div class="footer-subtitle">Render + Neon activo</div>
+        </div>
       </div>
 
     </q-drawer>
 
-    <q-page-container>
+    <q-page-container class="page-container">
       <router-view />
     </q-page-container>
 
@@ -137,117 +148,193 @@ export default {
 
 <style scoped>
 .main-layout {
-  background: #f7f7fb;
+  background: #f6f7fb;
 }
 
 .main-header {
-  background: linear-gradient(135deg, #e91e63, #9c27b0);
-  box-shadow: 0 8px 28px rgba(156, 39, 176, 0.25);
+  background: linear-gradient(135deg, #15111f, #241329 45%, #e91e63);
+  box-shadow: 0 10px 30px rgba(15, 10, 25, 0.35);
 }
 
 .toolbar {
-  min-height: 68px;
+  min-height: 70px;
+  padding: 0 18px;
 }
 
-.logo-avatar {
-  background: rgba(255, 255, 255, 0.18);
+.menu-toggle {
+  background: rgba(255, 255, 255, 0.08);
 }
 
-.app-title {
+.top-logo {
+  background: linear-gradient(135deg, #e91e63, #9c27b0);
+  box-shadow: 0 8px 22px rgba(233, 30, 99, 0.4);
+}
+
+.top-title {
+  font-size: 21px;
   font-weight: 900;
-  font-size: 20px;
+  color: white;
   line-height: 20px;
 }
 
-.app-subtitle {
+.top-subtitle {
   font-size: 11px;
-  opacity: 0.85;
+  color: rgba(255, 255, 255, 0.75);
 }
 
-.main-drawer {
-  background:
-    radial-gradient(circle at top, rgba(233, 30, 99, 0.13), transparent 35%),
-    #ffffff;
+.top-action {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.premium-drawer {
+  background: linear-gradient(180deg, #120f1c 0%, #1b1024 55%, #25112d 100%);
+  color: white;
+  border: none;
+  box-shadow: 12px 0 35px rgba(20, 10, 30, 0.25);
+  position: relative;
+  overflow: hidden;
+}
+
+.drawer-bg-effect {
+  position: absolute;
+  width: 220px;
+  height: 220px;
+  background: rgba(233, 30, 99, 0.23);
+  border-radius: 50%;
+  top: -90px;
+  right: -90px;
+  filter: blur(8px);
 }
 
 .drawer-brand {
-  padding: 26px 18px 18px;
+  position: relative;
+  z-index: 1;
+  padding: 32px 22px 22px;
   text-align: center;
 }
 
 .drawer-logo {
   background: linear-gradient(135deg, #e91e63, #9c27b0);
-  box-shadow: 0 12px 25px rgba(233, 30, 99, 0.28);
+  box-shadow: 0 16px 35px rgba(233, 30, 99, 0.45);
 }
 
 .drawer-title {
-  margin-top: 12px;
-  font-size: 24px;
+  margin-top: 14px;
+  font-size: 27px;
   font-weight: 900;
-  color: #c2185b;
+  letter-spacing: 0.4px;
 }
 
 .drawer-subtitle {
+  margin-top: 3px;
   font-size: 12px;
-  color: #777;
+  color: rgba(255, 255, 255, 0.58);
 }
 
 .menu-list {
-  padding: 0 12px;
+  position: relative;
+  z-index: 1;
+  padding: 0 14px;
 }
 
 .menu-header {
-  color: #999;
-  font-weight: 800;
-  font-size: 12px;
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 1.2px;
+  padding-left: 10px;
 }
 
 .menu-item {
-  margin-bottom: 8px;
-  border-radius: 16px;
-  color: #555;
-  font-weight: 700;
+  min-height: 52px;
+  margin-bottom: 9px;
+  border-radius: 18px;
+  color: rgba(255, 255, 255, 0.72);
+  font-weight: 800;
   transition: all 0.22s ease;
 }
 
 .menu-item:hover {
-  background: rgba(233, 30, 99, 0.08);
-  color: #c2185b;
+  color: white;
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateX(4px);
+}
+
+.menu-icon-box {
+  width: 38px;
+  height: 38px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.menu-label {
+  font-size: 14px;
 }
 
 .menu-active {
-  background: linear-gradient(135deg, #e91e63, #9c27b0) !important;
   color: white !important;
-  box-shadow: 0 10px 24px rgba(233, 30, 99, 0.25);
+  background: linear-gradient(135deg, #e91e63, #9c27b0) !important;
+  box-shadow: 0 12px 28px rgba(233, 30, 99, 0.36);
+}
+
+.menu-active .menu-icon-box {
+  background: rgba(255, 255, 255, 0.18);
 }
 
 .drawer-footer {
   position: absolute;
-  bottom: 16px;
   left: 16px;
   right: 16px;
-  padding: 12px;
-  border-radius: 16px;
-  background: #f4fff7;
-  color: #2e7d32;
-  font-size: 13px;
-  font-weight: 800;
+  bottom: 18px;
+  padding: 14px;
+  border-radius: 18px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.status-dot {
+  width: 13px;
+  height: 13px;
+  background: #00e676;
+  border-radius: 50%;
+  box-shadow: 0 0 18px rgba(0, 230, 118, 0.85);
+}
+
+.footer-title {
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.footer-subtitle {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.page-container {
+  background: #f6f7fb;
 }
 
 @media (max-width: 600px) {
   .toolbar {
-    min-height: 60px;
+    min-height: 62px;
+    padding: 0 10px;
   }
 
-  .app-title {
+  .top-title {
     font-size: 18px;
   }
 
-  .app-subtitle {
+  .top-subtitle {
     display: none;
+  }
+
+  .premium-drawer {
+    width: 270px;
   }
 }
 </style>
