@@ -1,326 +1,299 @@
 <template>
   <q-page class="historial-page">
 
-    <section class="hero">
+    <div class="page-header">
       <div>
-        <div class="badge">Historial inteligente</div>
-
-        <div class="title">
-          📜 Historial de Clientes
+        <div class="page-title">
+          Historial
         </div>
 
-        <div class="subtitle">
-          Busca por nombre o teléfono y revisa citas, pagos y actividad del cliente.
+        <div class="page-subtitle">
+          Clientes y citas/servicios eliminados del sistema
         </div>
       </div>
-    </section>
 
-    <q-card class="search-card">
-      <q-card-section>
-        <div class="row q-col-gutter-md items-center">
+      <div class="header-actions">
+        <q-btn
+          class="btn-restore-all"
+          icon="restore"
+          label="Recuperar todo"
+          :loading="restoringAll"
+          @click="restaurarTodo"
+        />
 
-          <div class="col-12 col-md-9">
-            <q-input
-              v-model="buscar"
-              outlined
-              rounded
-              dense
-              placeholder="Buscar por nombre o teléfono..."
-              debounce="500"
-              @keyup.enter="buscarHistorial"
-            >
-              <template #prepend>
-                <q-icon name="search" color="pink" />
-              </template>
-            </q-input>
-          </div>
-
-          <div class="col-12 col-md-3">
-            <q-btn
-              class="btn-search full-width"
-              icon="search"
-              label="Buscar"
-              :loading="loading"
-              @click="buscarHistorial"
-            />
-          </div>
-
-        </div>
-      </q-card-section>
-    </q-card>
+        <q-btn
+          class="btn-clean"
+          icon="delete_sweep"
+          label="Limpiar historial"
+          :loading="cleaning"
+          @click="limpiarHistorial"
+        />
+      </div>
+    </div>
 
     <q-linear-progress
       v-if="loading"
       indeterminate
       color="pink"
-      class="q-my-md"
+      class="q-mb-md"
     />
 
-    <div v-if="clientes.length === 0 && !loading" class="empty-box">
-      <q-icon name="manage_search" size="70px" color="pink-4" />
+    <div class="row q-col-gutter-lg">
 
-      <div class="empty-title">
-        Busca un cliente
+      <!-- CLIENTES ELIMINADOS -->
+      <div class="col-12 col-md-6">
+        <q-card class="historial-card">
+
+          <q-card-section class="card-title-row">
+            <div>
+              <div class="card-title">
+                Clientes eliminados
+              </div>
+
+              <div class="card-subtitle">
+                Clientes enviados al historial
+              </div>
+            </div>
+
+            <q-badge color="pink" rounded>
+              {{ clientesEliminados.length }}
+            </q-badge>
+          </q-card-section>
+
+          <q-separator />
+
+          <q-card-section>
+            <q-table
+              class="tabla-historial"
+              :rows="clientesEliminados"
+              :columns="columnsClientes"
+              row-key="id"
+              flat
+              bordered
+              dense
+              :rows-per-page-options="[5, 10, 20]"
+              no-data-label="No hay clientes eliminados"
+            >
+              <template #body-cell-nombre="props">
+                <q-td :props="props">
+                  <div class="text-weight-bold text-pink-8">
+                    {{ props.row.nombre || 'Sin nombre' }}
+                  </div>
+
+                  <div class="text-caption text-grey-7">
+                    {{ props.row.telefono || 'Sin teléfono' }}
+                  </div>
+                </q-td>
+              </template>
+
+              <template #body-cell-deleted_at="props">
+                <q-td :props="props">
+                  {{ formatDate(props.row.deleted_at) }}
+                </q-td>
+              </template>
+
+              <template #body-cell-actions="props">
+                <q-td :props="props" class="text-center">
+                  <q-btn
+                    round
+                    unelevated
+                    size="sm"
+                    color="positive"
+                    icon="restore"
+                    :loading="restoringId === `cliente-${props.row.id}`"
+                    @click="restaurarCliente(props.row)"
+                  >
+                    <q-tooltip>Recuperar cliente</q-tooltip>
+                  </q-btn>
+                </q-td>
+              </template>
+            </q-table>
+          </q-card-section>
+
+        </q-card>
       </div>
 
-      <div class="empty-text">
-        Escribe su nombre o teléfono para ver su historial completo.
+      <!-- CITAS ELIMINADAS -->
+      <div class="col-12 col-md-6">
+        <q-card class="historial-card">
+
+          <q-card-section class="card-title-row">
+            <div>
+              <div class="card-title">
+                Citas / servicios borrados
+              </div>
+
+              <div class="card-subtitle">
+                Citas eliminadas que pueden recuperarse
+              </div>
+            </div>
+
+            <q-badge color="purple" rounded>
+              {{ citasEliminadas.length }}
+            </q-badge>
+          </q-card-section>
+
+          <q-separator />
+
+          <q-card-section>
+            <q-table
+              class="tabla-historial"
+              :rows="citasEliminadas"
+              :columns="columnsCitas"
+              row-key="id"
+              flat
+              bordered
+              dense
+              :rows-per-page-options="[5, 10, 20]"
+              no-data-label="No hay servicios eliminados"
+            >
+              <template #body-cell-servicio="props">
+                <q-td :props="props">
+                  <div class="text-weight-bold text-purple-8">
+                    {{ props.row.servicio || 'Servicio sin nombre' }}
+                  </div>
+
+                  <div class="text-caption text-grey-7">
+                    Cliente: {{ props.row.cliente?.nombre || 'Sin cliente' }}
+                  </div>
+                </q-td>
+              </template>
+
+              <template #body-cell-precio="props">
+                <q-td :props="props">
+                  <b class="text-green-8">
+                    Bs {{ money(props.row.precio) }}
+                  </b>
+                </q-td>
+              </template>
+
+              <template #body-cell-deleted_at="props">
+                <q-td :props="props">
+                  {{ formatDate(props.row.deleted_at) }}
+                </q-td>
+              </template>
+
+              <template #body-cell-actions="props">
+                <q-td :props="props" class="text-center">
+                  <q-btn
+                    round
+                    unelevated
+                    size="sm"
+                    color="positive"
+                    icon="restore"
+                    :loading="restoringId === `cita-${props.row.id}`"
+                    @click="restaurarCita(props.row)"
+                  >
+                    <q-tooltip>Recuperar cita</q-tooltip>
+                  </q-btn>
+                </q-td>
+              </template>
+            </q-table>
+          </q-card-section>
+
+        </q-card>
       </div>
+
     </div>
 
     <div
-      v-for="cliente in clientes"
-      :key="cliente.id"
-      class="q-mt-md"
+      v-if="!loading && clientesEliminados.length === 0 && citasEliminadas.length === 0"
+      class="empty-state"
     >
-      <q-card class="cliente-card">
+      <q-icon name="history" size="80px" color="pink-4" />
 
-        <q-card-section>
-          <div class="row q-col-gutter-md items-center">
+      <div class="empty-title">
+        No hay elementos en el historial
+      </div>
 
-            <div class="col-12 col-md-4">
-              <div class="cliente-header">
-
-                <q-avatar class="cliente-avatar" size="64px">
-                  <q-icon name="person" color="white" size="34px" />
-                </q-avatar>
-
-                <div>
-                  <div class="cliente-nombre">
-                    {{ cliente.nombre }}
-                  </div>
-
-                  <div class="cliente-info">
-                    📞 {{ cliente.telefono || 'Sin teléfono' }}
-                  </div>
-
-                  <div class="cliente-info">
-                    ✉️ {{ cliente.email || 'Sin correo' }}
-                  </div>
-                </div>
-
-              </div>
-            </div>
-
-            <div class="col-6 col-md-2">
-              <div class="mini-stat">
-                <div class="mini-value">
-                  {{ cliente.total_citas || 0 }}
-                </div>
-
-                <div class="mini-label">
-                  Citas
-                </div>
-              </div>
-            </div>
-
-            <div class="col-6 col-md-2">
-              <div class="mini-stat warning">
-                <div class="mini-value">
-                  {{ cliente.citas_pendientes || 0 }}
-                </div>
-
-                <div class="mini-label">
-                  Pendientes
-                </div>
-              </div>
-            </div>
-
-            <div class="col-6 col-md-2">
-              <div class="mini-stat success">
-                <div class="mini-value">
-                  {{ cliente.citas_concluidas || 0 }}
-                </div>
-
-                <div class="mini-label">
-                  Concluidas
-                </div>
-              </div>
-            </div>
-
-            <div class="col-6 col-md-2">
-              <div class="mini-stat money">
-                <div class="mini-value">
-                  Bs {{ money(cliente.total_pagado) }}
-                </div>
-
-                <div class="mini-label">
-                  Pagado
-                </div>
-              </div>
-            </div>
-
-          </div>
-        </q-card-section>
-
-        <q-separator />
-
-        <q-card-section>
-          <q-tabs
-            v-model="tab[cliente.id]"
-            dense
-            class="text-pink-7"
-            active-color="pink"
-            indicator-color="pink"
-            align="left"
-          >
-            <q-tab name="citas" icon="event" label="Citas" />
-            <q-tab name="pagos" icon="payments" label="Pagos" />
-          </q-tabs>
-
-          <q-tab-panels v-model="tab[cliente.id]" animated>
-
-            <q-tab-panel name="citas">
-              <div
-                v-if="!cliente.citas || cliente.citas.length === 0"
-                class="text-grey-7"
-              >
-                Este cliente no tiene citas registradas.
-              </div>
-
-              <q-timeline color="pink" v-else>
-                <q-timeline-entry
-                  v-for="cita in cliente.citas"
-                  :key="cita.id"
-                  :title="cita.servicio || 'Servicio sin nombre'"
-                  :subtitle="formatDate(cita.fecha) + ' - ' + formatHour(cita.hora)"
-                  :icon="iconEstado(cita.estado)"
-                  :color="colorEstado(cita.estado)"
-                >
-                  <div class="timeline-box">
-
-                    <q-badge
-                      :color="colorEstado(cita.estado)"
-                      class="q-mb-sm"
-                    >
-                      {{ cita.estado || 'Sin estado' }}
-                    </q-badge>
-
-                    <div>
-                      <b>Precio:</b> Bs {{ money(cita.precio) }}
-                    </div>
-
-                    <div>
-                      <b>Estado pago:</b> {{ cita.estado_pago || 'No definido' }}
-                    </div>
-
-                    <div>
-                      <b>Método pago:</b> {{ cita.metodo_pago || 'No definido' }}
-                    </div>
-
-                    <div v-if="cita.pagos && cita.pagos.length > 0" class="q-mt-sm">
-                      <q-badge color="green">
-                        {{ cita.pagos.length }} pago(s) registrado(s)
-                      </q-badge>
-                    </div>
-
-                  </div>
-                </q-timeline-entry>
-              </q-timeline>
-            </q-tab-panel>
-
-            <q-tab-panel name="pagos">
-              <q-table
-                class="tabla-pagos"
-                flat
-                bordered
-                :rows="cliente.pagos || []"
-                :columns="columnsPagos"
-                row-key="id"
-                :rows-per-page-options="[5, 10, 20]"
-                no-data-label="Este cliente no tiene pagos registrados"
-              >
-                <template #body-cell-fecha_pago="props">
-                  <q-td :props="props">
-                    {{ formatDate(props.row.fecha_pago || props.row.created_at) }}
-                  </q-td>
-                </template>
-
-                <template #body-cell-servicio="props">
-                  <q-td :props="props">
-                    <div class="text-weight-bold text-pink-7">
-                      {{ props.row.servicio || 'Servicio no definido' }}
-                    </div>
-
-                    <div class="text-caption text-grey-7">
-                      Cita: {{ formatDate(props.row.fecha_cita) }} {{ formatHour(props.row.hora_cita) }}
-                    </div>
-                  </q-td>
-                </template>
-
-                <template #body-cell-monto="props">
-                  <q-td :props="props">
-                    <b class="text-green-8">
-                      Bs {{ money(props.row.monto) }}
-                    </b>
-                  </q-td>
-                </template>
-
-                <template #body-cell-estado="props">
-                  <q-td :props="props">
-                    <q-badge color="green" rounded>
-                      {{ props.row.estado || 'pagado' }}
-                    </q-badge>
-                  </q-td>
-                </template>
-              </q-table>
-            </q-tab-panel>
-
-          </q-tab-panels>
-        </q-card-section>
-
-      </q-card>
+      <div class="empty-text">
+        Cuando elimines clientes o citas, aparecerán aquí para poder recuperarlos.
+      </div>
     </div>
 
   </q-page>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { api } from 'boot/axios'
 import { useQuasar, date } from 'quasar'
 
 defineOptions({
-  name: 'HistorialClientesPage'
+  name: 'HistorialPage'
 })
 
 const $q = useQuasar()
 
-const buscar = ref('')
 const loading = ref(false)
-const clientes = ref([])
-const tab = ref({})
+const cleaning = ref(false)
+const restoringAll = ref(false)
+const restoringId = ref(null)
 
-const columnsPagos = [
+const clientesEliminados = ref([])
+const citasEliminadas = ref([])
+
+const columnsClientes = [
   {
-    name: 'fecha_pago',
-    label: 'Fecha pago',
-    field: 'fecha_pago',
+    name: 'nombre',
+    label: 'Cliente',
+    field: 'nombre',
+    align: 'left',
+    sortable: true
+  },
+  {
+    name: 'email',
+    label: 'Correo',
+    field: row => row.email || 'Sin correo',
     align: 'left'
   },
+  {
+    name: 'deleted_at',
+    label: 'Eliminado',
+    field: 'deleted_at',
+    align: 'left',
+    sortable: true
+  },
+  {
+    name: 'actions',
+    label: 'Acciones',
+    field: 'actions',
+    align: 'center'
+  }
+]
+
+const columnsCitas = [
   {
     name: 'servicio',
     label: 'Servicio',
     field: 'servicio',
+    align: 'left',
+    sortable: true
+  },
+  {
+    name: 'fecha',
+    label: 'Fecha',
+    field: row => row.fecha || 'Sin fecha',
     align: 'left'
   },
   {
-    name: 'monto',
-    label: 'Monto',
-    field: 'monto',
+    name: 'precio',
+    label: 'Precio',
+    field: 'precio',
     align: 'left'
   },
   {
-    name: 'metodo',
-    label: 'Método',
-    field: row => row.metodo || 'No definido',
-    align: 'left'
+    name: 'deleted_at',
+    label: 'Eliminado',
+    field: 'deleted_at',
+    align: 'left',
+    sortable: true
   },
   {
-    name: 'estado',
-    label: 'Estado',
-    field: 'estado',
-    align: 'left'
+    name: 'actions',
+    label: 'Acciones',
+    field: 'actions',
+    align: 'center'
   }
 ]
 
@@ -331,33 +304,7 @@ function money(value) {
 function formatDate(value) {
   if (!value) return 'Sin fecha'
 
-  return date.formatDate(value, 'DD/MM/YYYY')
-}
-
-function formatHour(value) {
-  if (!value) return ''
-
-  return String(value).slice(0, 5)
-}
-
-function colorEstado(estado) {
-  const e = String(estado || '').toLowerCase()
-
-  if (e.includes('concluida') || e.includes('finalizada')) return 'green'
-  if (e.includes('pendiente')) return 'orange'
-  if (e.includes('cancelada')) return 'red'
-
-  return 'pink'
-}
-
-function iconEstado(estado) {
-  const e = String(estado || '').toLowerCase()
-
-  if (e.includes('concluida') || e.includes('finalizada')) return 'check_circle'
-  if (e.includes('pendiente')) return 'schedule'
-  if (e.includes('cancelada')) return 'cancel'
-
-  return 'event'
+  return date.formatDate(value, 'DD/MM/YYYY HH:mm')
 }
 
 function getErrorMessage(error) {
@@ -367,44 +314,18 @@ function getErrorMessage(error) {
     return Object.values(data.errors).flat().join(' ')
   }
 
-  return data?.message || data?.error || 'No se pudo cargar el historial'
+  return data?.message || data?.error || 'Ocurrió un error'
 }
 
-async function buscarHistorial() {
-  if (!buscar.value.trim()) {
-    $q.notify({
-      type: 'warning',
-      message: 'Ingrese un nombre o teléfono para buscar'
-    })
-
-    return
-  }
-
+async function loadHistorial() {
   loading.value = true
-  clientes.value = []
 
   try {
-    const res = await api.get('/clientes/historial/buscar', {
-      params: {
-        buscar: buscar.value.trim()
-      }
-    })
+    const { data } = await api.get('/historial/eliminados')
 
-    clientes.value = res.data?.clientes || []
-
-    clientes.value.forEach(cliente => {
-      tab.value[cliente.id] = 'citas'
-    })
-
-    if (clientes.value.length > 0) {
-      $q.notify({
-        type: 'positive',
-        message: 'Historial cargado correctamente'
-      })
-    }
+    clientesEliminados.value = data?.clientes_eliminados || []
+    citasEliminadas.value = data?.citas_eliminadas || []
   } catch (error) {
-    clientes.value = []
-
     $q.notify({
       type: 'negative',
       message: getErrorMessage(error)
@@ -413,6 +334,178 @@ async function buscarHistorial() {
     loading.value = false
   }
 }
+
+function restaurarCliente(cliente) {
+  $q.dialog({
+    title: 'Recuperar cliente',
+    message: `¿Deseas recuperar al cliente "${cliente.nombre}" y sus citas eliminadas?`,
+    persistent: true,
+    ok: {
+      label: 'Recuperar',
+      color: 'positive',
+      unelevated: true
+    },
+    cancel: {
+      label: 'Cancelar',
+      color: 'grey-7',
+      flat: true
+    }
+  }).onOk(async () => {
+    restoringId.value = `cliente-${cliente.id}`
+
+    try {
+      await api.put(`/historial/clientes/${cliente.id}/restaurar`)
+
+      $q.notify({
+        type: 'positive',
+        message: 'Cliente recuperado correctamente'
+      })
+
+      await loadHistorial()
+    } catch (error) {
+      $q.notify({
+        type: 'negative',
+        message: getErrorMessage(error)
+      })
+    } finally {
+      restoringId.value = null
+    }
+  })
+}
+
+function restaurarCita(cita) {
+  $q.dialog({
+    title: 'Recuperar cita',
+    message: `¿Deseas recuperar el servicio "${cita.servicio}"?`,
+    persistent: true,
+    ok: {
+      label: 'Recuperar',
+      color: 'positive',
+      unelevated: true
+    },
+    cancel: {
+      label: 'Cancelar',
+      color: 'grey-7',
+      flat: true
+    }
+  }).onOk(async () => {
+    restoringId.value = `cita-${cita.id}`
+
+    try {
+      await api.put(`/historial/citas/${cita.id}/restaurar`)
+
+      $q.notify({
+        type: 'positive',
+        message: 'Cita recuperada correctamente'
+      })
+
+      await loadHistorial()
+    } catch (error) {
+      $q.notify({
+        type: 'negative',
+        message: getErrorMessage(error)
+      })
+    } finally {
+      restoringId.value = null
+    }
+  })
+}
+
+function restaurarTodo() {
+  if (clientesEliminados.value.length === 0 && citasEliminadas.value.length === 0) {
+    $q.notify({
+      type: 'warning',
+      message: 'No hay elementos para recuperar'
+    })
+
+    return
+  }
+
+  $q.dialog({
+    title: 'Recuperar todo',
+    message: '¿Deseas recuperar todos los clientes y citas eliminadas?',
+    persistent: true,
+    ok: {
+      label: 'Recuperar todo',
+      color: 'positive',
+      unelevated: true
+    },
+    cancel: {
+      label: 'Cancelar',
+      color: 'grey-7',
+      flat: true
+    }
+  }).onOk(async () => {
+    restoringAll.value = true
+
+    try {
+      await api.put('/historial/restaurar-todo')
+
+      $q.notify({
+        type: 'positive',
+        message: 'Todo el historial fue recuperado correctamente'
+      })
+
+      await loadHistorial()
+    } catch (error) {
+      $q.notify({
+        type: 'negative',
+        message: getErrorMessage(error)
+      })
+    } finally {
+      restoringAll.value = false
+    }
+  })
+}
+
+function limpiarHistorial() {
+  if (clientesEliminados.value.length === 0 && citasEliminadas.value.length === 0) {
+    $q.notify({
+      type: 'warning',
+      message: 'No hay historial para limpiar'
+    })
+
+    return
+  }
+
+  $q.dialog({
+    title: 'Limpiar historial',
+    message: 'Esto eliminará definitivamente los clientes y citas del historial. Esta acción no se puede deshacer.',
+    persistent: true,
+    ok: {
+      label: 'Eliminar definitivamente',
+      color: 'negative',
+      unelevated: true
+    },
+    cancel: {
+      label: 'Cancelar',
+      color: 'grey-7',
+      flat: true
+    }
+  }).onOk(async () => {
+    cleaning.value = true
+
+    try {
+      await api.delete('/historial/limpiar')
+
+      $q.notify({
+        type: 'positive',
+        message: 'Historial limpiado correctamente'
+      })
+
+      await loadHistorial()
+    } catch (error) {
+      $q.notify({
+        type: 'negative',
+        message: getErrorMessage(error)
+      })
+    } finally {
+      cleaning.value = false
+    }
+  })
+}
+
+onMounted(loadHistorial)
 </script>
 
 <style scoped>
@@ -420,155 +513,133 @@ async function buscarHistorial() {
   min-height: 100vh;
   padding: 24px;
   background:
-    radial-gradient(circle at top left, rgba(233, 30, 99, 0.14), transparent 32%),
-    linear-gradient(180deg, #fff7fb 0%, #f7f7fb 100%);
+    radial-gradient(circle at top left, rgba(233, 30, 99, 0.10), transparent 32%),
+    linear-gradient(180deg, #f5f7ff 0%, #fff7fb 100%);
 }
 
-.hero {
-  background: linear-gradient(135deg, #15111f, #241329 45%, #e91e63);
-  border-radius: 30px;
-  padding: 30px;
-  color: white;
-  box-shadow: 0 18px 45px rgba(20, 10, 30, 0.28);
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 26px;
 }
 
-.badge {
-  display: inline-block;
-  padding: 7px 14px;
-  border-radius: 999px;
-  font-weight: 800;
-  background: rgba(255, 255, 255, 0.16);
-}
-
-.title {
-  margin-top: 10px;
-  font-size: 32px;
+.page-title {
+  font-size: 36px;
   font-weight: 900;
+  color: #1565c0;
+  line-height: 1.1;
 }
 
-.subtitle {
-  opacity: 0.8;
-  margin-top: 4px;
+.page-subtitle {
+  margin-top: 6px;
+  color: #5f6775;
+  font-size: 15px;
 }
 
-.search-card,
-.cliente-card {
-  border-radius: 26px;
-  box-shadow: 0 14px 35px rgba(156, 39, 176, 0.12);
+.header-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-restore-all {
+  background: linear-gradient(135deg, #00a86b, #00897b);
+  color: white;
+  font-weight: 900;
+  border-radius: 16px;
+  padding: 10px 16px;
+  box-shadow: 0 10px 25px rgba(0, 137, 123, 0.25);
+}
+
+.btn-clean {
+  background: linear-gradient(135deg, #283593, #c62828);
+  color: white;
+  font-weight: 900;
+  border-radius: 16px;
+  padding: 10px 16px;
+  box-shadow: 0 10px 25px rgba(198, 40, 40, 0.25);
+}
+
+.historial-card {
+  border-radius: 24px;
+  overflow: hidden;
+  background: white;
+  box-shadow: 0 16px 40px rgba(80, 70, 120, 0.13);
   border: 1px solid rgba(233, 30, 99, 0.08);
 }
 
-.search-card {
-  margin-top: 18px;
+.card-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.btn-search {
-  border-radius: 16px;
-  padding: 10px;
-  color: white;
+.card-title {
+  font-size: 21px;
   font-weight: 900;
-  background: linear-gradient(135deg, #e91e63, #9c27b0);
+  color: #111827;
 }
 
-.empty-box {
-  margin-top: 40px;
+.card-subtitle {
+  margin-top: 4px;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.tabla-historial {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.tabla-historial :deep(.q-table thead tr) {
+  background: linear-gradient(135deg, #fce4ec, #f3e5f5);
+  color: #880e4f;
+}
+
+.tabla-historial :deep(.q-table th) {
+  font-weight: 900;
+}
+
+.empty-state {
+  margin-top: 60px;
   text-align: center;
-  color: #777;
+  color: #6b7280;
 }
 
 .empty-title {
+  margin-top: 12px;
   font-size: 24px;
   font-weight: 900;
   color: #c2185b;
 }
 
 .empty-text {
+  margin-top: 4px;
   font-size: 14px;
 }
 
-.cliente-header {
-  display: flex;
-  gap: 14px;
-  align-items: center;
-}
-
-.cliente-avatar {
-  background: linear-gradient(135deg, #e91e63, #9c27b0);
-  box-shadow: 0 12px 28px rgba(233, 30, 99, 0.32);
-}
-
-.cliente-nombre {
-  font-size: 20px;
-  font-weight: 900;
-  color: #222;
-}
-
-.cliente-info {
-  font-size: 13px;
-  color: #777;
-}
-
-.mini-stat {
-  padding: 16px;
-  border-radius: 20px;
-  text-align: center;
-  background: #fdf2f8;
-  color: #c2185b;
-}
-
-.mini-stat.warning {
-  background: #fff7ed;
-  color: #c2410c;
-}
-
-.mini-stat.success {
-  background: #f0fdf4;
-  color: #15803d;
-}
-
-.mini-stat.money {
-  background: #ecfdf5;
-  color: #047857;
-}
-
-.mini-value {
-  font-size: 20px;
-  font-weight: 900;
-}
-
-.mini-label {
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.timeline-box {
-  background: #fafafa;
-  padding: 14px;
-  border-radius: 16px;
-  border: 1px solid #eee;
-}
-
-.tabla-pagos {
-  border-radius: 18px;
-  overflow: hidden;
-}
-
-@media (max-width: 600px) {
+@media (max-width: 700px) {
   .historial-page {
-    padding: 12px;
+    padding: 14px;
   }
 
-  .hero {
-    padding: 22px;
-    border-radius: 22px;
-  }
-
-  .title {
-    font-size: 25px;
-  }
-
-  .cliente-header {
+  .page-header {
+    flex-direction: column;
     align-items: flex-start;
+  }
+
+  .page-title {
+    font-size: 30px;
+  }
+
+  .header-actions {
+    width: 100%;
+  }
+
+  .header-actions .q-btn {
+    width: 100%;
   }
 }
 </style>
