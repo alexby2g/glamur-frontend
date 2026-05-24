@@ -250,13 +250,16 @@ export default {
   padding-left: 10px;
 }
 
-.menu-item {
-  min-height: 52px;
-  margin-bottom: 9px;
-  border-radius: 18px;
-  color: rgba(255, 255, 255, 0.72);
+..menu-item {
+  width: 100%;
+  min-height: 62px;
+  margin-bottom: 12px;
+  border-radius: 20px;
+  color: rgba(255, 255, 255, 0.78);
   font-weight: 800;
-  transition: all 0.22s ease;
+  transition: all 0.25s ease;
+  padding-left: 10px;
+  padding-right: 10px;
 }
 
 .menu-item:hover {
@@ -266,16 +269,12 @@ export default {
 }
 
 .menu-icon-box {
-  width: 38px;
-  height: 38px;
-  border-radius: 14px;
-  display: grid;
-  place-items: center;
-  background: rgba(255, 255, 255, 0.08);
-}
+  width: 44px;
+  height: 44px;
 
-.menu-label {
-  font-size: 14px;
+..menu-label {
+  font-size: 15px;
+  font-weight: 800;
 }
 
 .menu-active {
