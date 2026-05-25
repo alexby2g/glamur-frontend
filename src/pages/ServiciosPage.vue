@@ -1,5 +1,6 @@
 <template>
   <q-page class="q-pa-md servicios-page">
+    <!-- HERO -->
     <div class="page-hero q-mb-lg">
       <div>
         <div class="text-h4 text-weight-bold text-white">
@@ -16,6 +17,7 @@
           class="btn-glamur-white"
           icon="playlist_add"
           label="Cargar combos base"
+          :loading="loadingBase"
           @click="confirmarCargarBase"
         />
 
@@ -28,6 +30,7 @@
       </div>
     </div>
 
+    <!-- BUSCADOR -->
     <q-card class="search-card q-mb-md">
       <q-input
         v-model="search"
@@ -43,6 +46,7 @@
       </q-input>
     </q-card>
 
+    <!-- TABLA -->
     <q-card class="table-card">
       <q-table
         :rows="filteredServicios"
@@ -54,6 +58,7 @@
         :rows-per-page-options="[5, 10, 20, 50]"
         no-data-label="No hay servicios registrados"
       >
+        <!-- SERVICIO -->
         <template #body-cell-servicio="props">
           <q-td :props="props">
             <div class="text-weight-bold text-pink-7">
@@ -61,23 +66,25 @@
             </div>
 
             <div class="text-caption text-grey-7">
-              Categoría del servicio
+              Servicio principal
             </div>
           </q-td>
         </template>
 
+        <!-- COMBO -->
         <template #body-cell-combo="props">
           <q-td :props="props">
-            <div class="text-weight-bold">
+            <div class="text-weight-bold text-dark">
               {{ props.row.combo }}
             </div>
 
             <div class="text-caption text-grey-7">
-              {{ props.row.detalle }}
+              {{ props.row.detalle || 'Sin detalle registrado' }}
             </div>
           </q-td>
         </template>
 
+        <!-- PRECIO -->
         <template #body-cell-precio="props">
           <q-td :props="props">
             <q-badge color="green" rounded class="precio-badge">
@@ -86,6 +93,7 @@
           </q-td>
         </template>
 
+        <!-- ESTADO -->
         <template #body-cell-activo="props">
           <q-td :props="props" class="text-center">
             <q-badge
@@ -98,6 +106,7 @@
           </q-td>
         </template>
 
+        <!-- ACCIONES -->
         <template #body-cell-actions="props">
           <q-td :props="props" class="text-center">
             <div class="acciones">
@@ -128,6 +137,7 @@
       </q-table>
     </q-card>
 
+    <!-- MODAL NUEVO / EDITAR -->
     <q-dialog
       v-model="dialog"
       persistent
@@ -385,7 +395,11 @@ const filteredServicios = computed(() => {
   return servicios.value.filter(item => {
     return normalizar(item.servicio).includes(texto) ||
       normalizar(item.combo).includes(texto) ||
-      normalizar(item.detalle).includes(texto)
+      normalizar(item.detalle).includes(texto) ||
+      normalizar(item.nombre).includes(texto) ||
+      normalizar(item.descripcion).includes(texto) ||
+      normalizar(item.categoria).includes(texto) ||
+      normalizar(item.grupo).includes(texto)
   })
 })
 
@@ -407,6 +421,70 @@ function responseToArray(data) {
   return []
 }
 
+function booleanValue(value) {
+  return value === true || value === 1 || value === '1' || value === 'true'
+}
+
+function normalizarServicioRow(row) {
+  const servicio = row.servicio || row.grupo || row.categoria || 'CEJAS Y PESTAÑAS'
+  const combo = row.combo || row.nombre || ''
+  const detalle = row.detalle || row.descripcion || ''
+
+  return {
+    ...row,
+
+    // Campos usados por el frontend
+    servicio,
+    combo,
+    detalle,
+
+    // Campos compatibles con backend
+    grupo: row.grupo || servicio,
+    categoria: row.categoria || servicio,
+    nombre: row.nombre || combo,
+    descripcion: row.descripcion || detalle,
+
+    precio: Number(row.precio || 0),
+    activo: booleanValue(row.activo)
+  }
+}
+
+function crearPayloadDesdeForm() {
+  return {
+    // Backend
+    grupo: form.value.servicio,
+    categoria: form.value.servicio,
+    nombre: form.value.combo,
+    descripcion: form.value.detalle,
+
+    // Compatibilidad con frontend anterior
+    servicio: form.value.servicio,
+    combo: form.value.combo,
+    detalle: form.value.detalle,
+
+    precio: Number(form.value.precio || 0),
+    activo: form.value.activo
+  }
+}
+
+function crearPayloadDesdeCombo(combo) {
+  return {
+    // Backend
+    grupo: combo.servicio,
+    categoria: combo.servicio,
+    nombre: combo.combo,
+    descripcion: combo.detalle,
+
+    // Compatibilidad con frontend anterior
+    servicio: combo.servicio,
+    combo: combo.combo,
+    detalle: combo.detalle,
+
+    precio: Number(combo.precio || 0),
+    activo: combo.activo
+  }
+}
+
 function getErrorMessage(error) {
   const data = error?.response?.data
 
@@ -422,7 +500,7 @@ async function load() {
 
   try {
     const { data } = await api.get('/servicios')
-    servicios.value = responseToArray(data)
+    servicios.value = responseToArray(data).map(normalizarServicioRow)
   } catch (error) {
     $q.notify({
       type: 'negative',
@@ -447,13 +525,15 @@ function openDialog() {
 }
 
 function edit(row) {
+  const item = normalizarServicioRow(row)
+
   form.value = {
-    id: row.id,
-    servicio: row.servicio || 'CEJAS Y PESTAÑAS',
-    combo: row.combo || '',
-    detalle: row.detalle || '',
-    precio: Number(row.precio || 0),
-    activo: row.activo !== false
+    id: item.id,
+    servicio: item.servicio || 'CEJAS Y PESTAÑAS',
+    combo: item.combo || '',
+    detalle: item.detalle || '',
+    precio: Number(item.precio || 0),
+    activo: item.activo !== false
   }
 
   dialog.value = true
@@ -499,13 +579,7 @@ async function save() {
   saving.value = true
 
   try {
-    const payload = {
-      servicio: form.value.servicio,
-      combo: form.value.combo,
-      detalle: form.value.detalle,
-      precio: Number(form.value.precio || 0),
-      activo: form.value.activo
-    }
+    const payload = crearPayloadDesdeForm()
 
     if (form.value.id) {
       await api.put(`/servicios/${form.value.id}`, payload)
@@ -536,9 +610,11 @@ async function save() {
 }
 
 function remove(row) {
+  const item = normalizarServicioRow(row)
+
   $q.dialog({
     title: 'Eliminar servicio',
-    message: `¿Seguro que deseas eliminar el combo "${row.combo}"?`,
+    message: `¿Seguro que deseas eliminar el combo "${item.combo}"?`,
     persistent: true,
     ok: {
       label: 'Eliminar',
@@ -552,7 +628,7 @@ function remove(row) {
     }
   }).onOk(async () => {
     try {
-      await api.delete(`/servicios/${row.id}`)
+      await api.delete(`/servicios/${item.id}`)
 
       $q.notify({
         type: 'positive',
@@ -593,15 +669,22 @@ async function cargarCombosBase() {
   loadingBase.value = true
 
   try {
-    for (const combo of combosBase) {
-      const existente = servicios.value.find(item => {
-        return normalizar(item.combo) === normalizar(combo.combo)
-      })
+    try {
+      await api.post('/servicios/cargar-base')
+    } catch {
+      for (const combo of combosBase) {
+        const payload = crearPayloadDesdeCombo(combo)
 
-      if (existente?.id) {
-        await api.put(`/servicios/${existente.id}`, combo)
-      } else {
-        await api.post('/servicios', combo)
+        const existente = servicios.value.find(item => {
+          return normalizar(item.combo) === normalizar(combo.combo) ||
+            normalizar(item.nombre) === normalizar(combo.combo)
+        })
+
+        if (existente?.id) {
+          await api.put(`/servicios/${existente.id}`, payload)
+        } else {
+          await api.post('/servicios', payload)
+        }
       }
     }
 
@@ -750,58 +833,82 @@ onMounted(load)
   border-top: 1px solid #eee;
   position: sticky;
   bottom: 0;
-  z-index: 4;
-  box-shadow: 0 -8px 18px rgba(20, 10, 30, 0.06);
+  z-index: 3;
 }
 
-@media (max-width: 600px) {
+/* TABLET Y CELULAR */
+@media (max-width: 768px) {
   .servicios-page {
-    padding: 10px;
+    padding: 12px;
   }
 
   .page-hero {
-    padding: 20px;
-    border-radius: 20px;
+    padding: 22px;
+    border-radius: 24px;
     flex-direction: column;
-    align-items: flex-start;
-    gap: 14px;
+    align-items: stretch;
+    gap: 18px;
   }
 
   .page-hero .text-h4 {
-    font-size: 26px;
-  }
-
-  .hero-actions,
-  .btn-glamur-white {
-    width: 100%;
+    font-size: 28px;
+    line-height: 1.15;
   }
 
   .hero-actions {
-    flex-direction: column;
+    width: 100%;
+  }
+
+  .hero-actions .q-btn {
+    width: 100%;
+  }
+
+  .search-card {
+    padding: 12px;
   }
 
   .dialog-card {
     width: 100%;
     max-width: 100%;
-    height: 100vh;
-    max-height: 100vh;
     border-radius: 0;
   }
 
   .dialog-body {
     padding: 18px;
-    padding-bottom: 110px;
   }
 
   .dialog-actions {
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: 1fr;
     gap: 10px;
-    padding: 12px 16px 18px;
   }
 
   .dialog-actions .q-btn {
-    flex: 1;
-    min-width: 140px;
+    width: 100%;
+  }
+}
+
+/* CELULAR PEQUEÑO */
+@media (max-width: 480px) {
+  .page-hero .text-h4 {
+    font-size: 25px;
+  }
+
+  .page-hero .text-subtitle2 {
+    font-size: 13px;
+  }
+
+  .btn-glamur-white,
+  .btn-glamur,
+  .btn-cancelar {
+    padding: 10px 14px;
+    font-size: 13px;
+  }
+
+  .table-card :deep(.q-table th),
+  .table-card :deep(.q-table td) {
+    font-size: 12px;
+    padding: 8px;
   }
 }
 </style>
