@@ -202,7 +202,7 @@
 
         <!-- CUERPO CON SCROLL -->
         <q-card-section class="dialog-body">
-          <div class="q-gutter-md">
+          <div class="form-stack">
 
             <!-- CLIENTE -->
             <q-select
@@ -217,9 +217,9 @@
               clearable
               label="Cliente *"
               outlined
-              dense
               rounded
               bg-color="white"
+              class="form-field"
               @filter="filtrarClientes"
             >
               <template #prepend>
@@ -253,7 +253,7 @@
               </template>
             </q-select>
 
-            <!-- SERVICIO / COMBO DESDE BACKEND -->
+            <!-- SERVICIO / COMBO -->
             <q-select
               v-model="form.servicioOption"
               :options="serviciosFiltrados"
@@ -263,9 +263,9 @@
               clearable
               label="Servicio o combo *"
               outlined
-              dense
               rounded
               bg-color="white"
+              class="form-field"
               @filter="filtrarServicios"
               @update:model-value="seleccionarServicio"
               @clear="limpiarServicio"
@@ -317,19 +317,16 @@
               </template>
             </q-select>
 
-            <!-- DETALLE SOLO INFORMATIVO -->
+            <!-- DETALLE DEL SERVICIO -->
             <q-input
               v-if="form.detalle"
               v-model="form.detalle"
               label="Detalle del servicio"
-              type="textarea"
-              autogrow
               outlined
-              dense
               rounded
               readonly
               bg-color="white"
-              class="input-readonly"
+              class="form-field input-readonly"
             >
               <template #prepend>
                 <q-icon name="description" color="pink" />
@@ -342,10 +339,10 @@
               type="number"
               label="Precio Bs. *"
               outlined
-              dense
               rounded
               min="0"
               bg-color="white"
+              class="form-field"
             >
               <template #prepend>
                 <q-icon name="payments" color="green" />
@@ -353,38 +350,34 @@
             </q-input>
 
             <!-- FECHA Y HORA -->
-            <div class="row q-col-gutter-md">
-              <div class="col-12 col-sm-6">
-                <q-input
-                  v-model="form.fecha"
-                  type="date"
-                  label="Fecha *"
-                  outlined
-                  dense
-                  rounded
-                  bg-color="white"
-                >
-                  <template #prepend>
-                    <q-icon name="event" color="pink" />
-                  </template>
-                </q-input>
-              </div>
+            <div class="form-row">
+              <q-input
+                v-model="form.fecha"
+                type="date"
+                label="Fecha *"
+                outlined
+                rounded
+                bg-color="white"
+                class="form-field"
+              >
+                <template #prepend>
+                  <q-icon name="event" color="pink" />
+                </template>
+              </q-input>
 
-              <div class="col-12 col-sm-6">
-                <q-input
-                  v-model="form.hora"
-                  type="time"
-                  label="Hora *"
-                  outlined
-                  dense
-                  rounded
-                  bg-color="white"
-                >
-                  <template #prepend>
-                    <q-icon name="schedule" color="pink" />
-                  </template>
-                </q-input>
-              </div>
+              <q-input
+                v-model="form.hora"
+                type="time"
+                label="Hora *"
+                outlined
+                rounded
+                bg-color="white"
+                class="form-field"
+              >
+                <template #prepend>
+                  <q-icon name="schedule" color="pink" />
+                </template>
+              </q-input>
             </div>
 
             <!-- ESTADO -->
@@ -397,9 +390,9 @@
               map-options
               label="Estado"
               outlined
-              dense
               rounded
               bg-color="white"
+              class="form-field"
             >
               <template #prepend>
                 <q-icon name="flag" color="pink" />
@@ -409,7 +402,7 @@
           </div>
         </q-card-section>
 
-        <!-- BOTONES SIEMPRE VISIBLES -->
+        <!-- BOTONES FIJOS -->
         <q-card-actions align="right" class="dialog-actions">
           <q-btn
             class="btn-cancelar"
@@ -459,17 +452,17 @@
         </q-card-section>
 
         <q-card-section class="dialog-body">
-          <div class="q-gutter-md">
+          <div class="form-stack">
 
             <q-input
               v-model.number="pago.monto"
               type="number"
               label="Monto Bs."
               outlined
-              dense
               rounded
               min="0"
               bg-color="white"
+              class="form-field"
             >
               <template #prepend>
                 <q-icon name="payments" color="green" />
@@ -485,9 +478,9 @@
               map-options
               label="Método de pago"
               outlined
-              dense
               rounded
               bg-color="white"
+              class="form-field"
             />
 
             <div v-if="pago.metodo === 'qr'" class="qr-box">
@@ -633,33 +626,15 @@ const saving = ref(false)
 const savingPago = ref(false)
 
 const estados = [
-  {
-    label: 'Pendiente',
-    value: 'pendiente'
-  },
-  {
-    label: 'Concluida',
-    value: 'concluida'
-  },
-  {
-    label: 'Cancelada',
-    value: 'cancelada'
-  }
+  { label: 'Pendiente', value: 'pendiente' },
+  { label: 'Concluida', value: 'concluida' },
+  { label: 'Cancelada', value: 'cancelada' }
 ]
 
 const metodosPago = [
-  {
-    label: 'Efectivo',
-    value: 'efectivo'
-  },
-  {
-    label: 'QR',
-    value: 'qr'
-  },
-  {
-    label: 'Transferencia',
-    value: 'transferencia'
-  }
+  { label: 'Efectivo', value: 'efectivo' },
+  { label: 'QR', value: 'qr' },
+  { label: 'Transferencia', value: 'transferencia' }
 ]
 
 const form = ref({
@@ -870,13 +845,13 @@ async function loadServicios() {
       .filter(item => item.activo)
 
     serviciosFiltrados.value = servicios.value
-  } catch {
+  } catch (error) {
     servicios.value = []
     serviciosFiltrados.value = []
 
     $q.notify({
       type: 'warning',
-      message: 'No se pudieron cargar los servicios. Revisa el backend o la ruta /servicios.'
+      message: getErrorMessage(error)
     })
   }
 }
@@ -954,13 +929,22 @@ function edit(row) {
     return normalizar(item.combo) === normalizar(row.servicio)
   })
 
+  const servicioTemporal = servicioEncontrado || {
+    id: null,
+    servicio: 'Servicio guardado',
+    combo: row.servicio || '',
+    detalle: '',
+    precio: Number(row.precio || 0),
+    activo: true
+  }
+
   form.value = {
     id: row.id,
     cliente_id: row.cliente_id,
-    servicioOption: servicioEncontrado || null,
-    combo: row.servicio || servicioEncontrado?.combo || '',
-    detalle: servicioEncontrado?.detalle || '',
-    precio: Number(row.precio || servicioEncontrado?.precio || 0),
+    servicioOption: servicioTemporal,
+    combo: row.servicio || servicioTemporal.combo || '',
+    detalle: servicioTemporal.detalle || '',
+    precio: Number(row.precio || servicioTemporal.precio || 0),
     fecha: row.fecha || hoy(),
     hora: row.hora ? String(row.hora).slice(0, 5) : '',
     estado: row.estado || 'pendiente'
@@ -1294,6 +1278,46 @@ onMounted(async () => {
   flex-wrap: wrap;
 }
 
+/* FORMULARIO */
+
+.form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.form-field {
+  width: 100%;
+}
+
+.form-field :deep(.q-field__control) {
+  min-height: 58px;
+}
+
+.form-field :deep(.q-field__prepend) {
+  padding-right: 10px;
+}
+
+.form-field :deep(.q-field__native),
+.form-field :deep(.q-field__input) {
+  font-size: 15px;
+  line-height: 1.25;
+}
+
+.input-readonly :deep(.q-field__control) {
+  border-style: dashed;
+}
+
+.input-readonly :deep(.q-field__native) {
+  color: #222;
+}
+
 /* DIALOGS DESKTOP */
 
 .dialog-card,
@@ -1355,10 +1379,6 @@ onMounted(async () => {
   flex: 0 0 auto;
   z-index: 4;
   box-shadow: 0 -8px 18px rgba(20, 10, 30, 0.06);
-}
-
-.input-readonly :deep(.q-field__control) {
-  border-style: dashed;
 }
 
 .qr-box {
@@ -1433,14 +1453,53 @@ onMounted(async () => {
     min-height: 0 !important;
     overflow-y: auto !important;
     overflow-x: hidden !important;
-    padding: 24px 18px 20px !important;
+    padding: 26px 30px 28px !important;
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  .form-stack {
+    gap: 20px;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .form-field {
+    margin: 0;
+  }
+
+  .form-field :deep(.q-field__control) {
+    min-height: 74px;
+    border-radius: 34px;
+  }
+
+  .form-field :deep(.q-field__prepend) {
+    min-width: 46px;
+    padding-right: 12px;
+  }
+
+  .form-field :deep(.q-field__append) {
+    padding-left: 8px;
+  }
+
+  .form-field :deep(.q-field__label) {
+    font-size: 15px;
+  }
+
+  .form-field :deep(.q-field__native),
+  .form-field :deep(.q-field__input) {
+    font-size: 24px;
+    line-height: 1.2;
+    padding-top: 8px;
   }
 
   .dialog-actions {
     flex: 0 0 auto !important;
-    padding: 14px 16px calc(16px + env(safe-area-inset-bottom)) !important;
-    gap: 12px;
+    padding: 14px 30px calc(16px + env(safe-area-inset-bottom)) !important;
+    gap: 14px;
     display: flex;
     flex-wrap: nowrap;
     justify-content: space-between;
@@ -1448,8 +1507,9 @@ onMounted(async () => {
 
   .dialog-actions .q-btn {
     flex: 1;
-    min-height: 54px;
+    min-height: 62px;
     font-size: 15px;
+    border-radius: 18px;
   }
 
   .acciones .q-btn {
@@ -1458,6 +1518,7 @@ onMounted(async () => {
 }
 
 /* ARREGLO GLOBAL PARA Q-DIALOG MAXIMIZADO EN CELULAR */
+
 :global(.q-dialog__inner--maximized) {
   padding: 0 !important;
   overflow: hidden !important;
