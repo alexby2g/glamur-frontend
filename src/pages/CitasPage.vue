@@ -176,7 +176,7 @@
     <q-dialog
       v-model="dialog"
       persistent
-      :maximized="$q.screen.lt.sm"
+      :maximized="$q.screen.lt.md"
       transition-show="slide-up"
       transition-hide="slide-down"
     >
@@ -428,7 +428,7 @@
     <q-dialog
       v-model="dialogPago"
       persistent
-      :maximized="$q.screen.lt.sm"
+      :maximized="$q.screen.lt.md"
       transition-show="slide-up"
       transition-hide="slide-down"
     >
@@ -522,7 +522,7 @@
     <!-- DIALOG HISTORIAL -->
     <q-dialog
       v-model="dialogHistorial"
-      :maximized="$q.screen.lt.sm"
+      :maximized="$q.screen.lt.md"
       transition-show="slide-up"
       transition-hide="slide-down"
     >
@@ -1283,31 +1283,61 @@ onMounted(async () => {
 .form-stack {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
 .form-row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: 14px;
 }
 
 .form-field {
   width: 100%;
+  margin: 0;
 }
 
 .form-field :deep(.q-field__control) {
   min-height: 58px;
+  border-radius: 28px;
 }
 
 .form-field :deep(.q-field__prepend) {
-  padding-right: 10px;
+  min-width: 42px;
+  padding-right: 8px;
+}
+
+.form-field :deep(.q-field__append) {
+  padding-left: 6px;
+}
+
+.form-field :deep(.q-field__marginal) {
+  height: 58px;
+}
+
+.form-field :deep(.q-icon) {
+  font-size: 25px;
+}
+
+.form-field :deep(.q-field__label) {
+  font-size: 13px;
+  line-height: 1.1;
 }
 
 .form-field :deep(.q-field__native),
-.form-field :deep(.q-field__input) {
-  font-size: 15px;
+.form-field :deep(.q-field__input),
+.form-field :deep(input) {
+  font-size: 16px;
   line-height: 1.25;
+  font-weight: 500;
+  color: #222;
+  min-height: 24px;
+}
+
+.form-field :deep(.q-field__native span) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .input-readonly :deep(.q-field__control) {
@@ -1328,7 +1358,7 @@ onMounted(async () => {
 }
 
 .dialog-card {
-  width: 560px;
+  width: 620px;
   max-width: 96vw;
   height: auto;
   max-height: 92dvh;
@@ -1363,7 +1393,7 @@ onMounted(async () => {
 
 .dialog-body {
   background: #ffffff;
-  padding: 24px;
+  padding: 22px;
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
@@ -1373,12 +1403,16 @@ onMounted(async () => {
 }
 
 .dialog-actions {
-  padding: 16px 22px;
+  padding: 14px 20px;
   background: white;
   border-top: 1px solid #eee;
   flex: 0 0 auto;
   z-index: 4;
   box-shadow: 0 -8px 18px rgba(20, 10, 30, 0.06);
+}
+
+.dialog-actions .q-btn {
+  min-height: 46px;
 }
 
 .qr-box {
@@ -1397,21 +1431,21 @@ onMounted(async () => {
 
 /* MOBILE / TABLET */
 
-@media (max-width: 600px) {
+@media (max-width: 900px) {
   .citas-page {
     padding: 10px;
   }
 
   .page-hero {
     padding: 20px;
-    border-radius: 20px;
+    border-radius: 22px;
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
     gap: 14px;
   }
 
   .page-hero .text-h4 {
-    font-size: 26px;
+    font-size: 28px;
   }
 
   .hero-actions {
@@ -1423,25 +1457,23 @@ onMounted(async () => {
     width: 100%;
   }
 
+  .tabla-glamur {
+    border-radius: 20px;
+  }
+
   .dialog-card,
   .dialog-card-small,
   .dialog-card-historial {
-    width: 100vw !important;
-    max-width: 100vw !important;
-    height: 100dvh !important;
-    max-height: 100dvh !important;
-    border-radius: 0 !important;
-  }
-
-  .dialog-card-main {
-    display: flex !important;
-    flex-direction: column !important;
-    overflow: hidden !important;
+    width: 100%;
+    max-width: 100%;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
   }
 
   .dialog-header {
-    min-height: 74px;
-    padding: 18px 20px;
+    min-height: 70px;
+    padding: 16px 18px;
   }
 
   .dialog-header .text-h6 {
@@ -1453,53 +1485,66 @@ onMounted(async () => {
     min-height: 0 !important;
     overflow-y: auto !important;
     overflow-x: hidden !important;
-    padding: 26px 30px 28px !important;
+    padding: 22px 30px 26px !important;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
   }
 
   .form-stack {
-    gap: 20px;
+    gap: 14px;
   }
 
   .form-row {
     grid-template-columns: 1fr;
-    gap: 20px;
-  }
-
-  .form-field {
-    margin: 0;
+    gap: 14px;
   }
 
   .form-field :deep(.q-field__control) {
-    min-height: 74px;
-    border-radius: 34px;
+    min-height: 62px;
+    border-radius: 28px;
+  }
+
+  .form-field :deep(.q-field__marginal) {
+    height: 62px;
   }
 
   .form-field :deep(.q-field__prepend) {
-    min-width: 46px;
-    padding-right: 12px;
+    min-width: 44px;
+    padding-right: 8px;
   }
 
   .form-field :deep(.q-field__append) {
-    padding-left: 8px;
+    padding-left: 6px;
+  }
+
+  .form-field :deep(.q-icon) {
+    font-size: 27px;
   }
 
   .form-field :deep(.q-field__label) {
-    font-size: 15px;
+    font-size: 13px;
+    line-height: 1.1;
   }
 
   .form-field :deep(.q-field__native),
-  .form-field :deep(.q-field__input) {
-    font-size: 24px;
+  .form-field :deep(.q-field__input),
+  .form-field :deep(input) {
+    font-size: 18px;
     line-height: 1.2;
-    padding-top: 8px;
+    font-weight: 600;
+    padding-top: 4px;
+  }
+
+  .input-readonly :deep(.q-field__native),
+  .input-readonly :deep(input) {
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 
   .dialog-actions {
     flex: 0 0 auto !important;
-    padding: 14px 30px calc(16px + env(safe-area-inset-bottom)) !important;
-    gap: 14px;
+    padding: 12px 30px calc(14px + env(safe-area-inset-bottom)) !important;
+    gap: 12px;
     display: flex;
     flex-wrap: nowrap;
     justify-content: space-between;
@@ -1507,8 +1552,8 @@ onMounted(async () => {
 
   .dialog-actions .q-btn {
     flex: 1;
-    min-height: 62px;
-    font-size: 15px;
+    min-height: 56px;
+    font-size: 14px;
     border-radius: 18px;
   }
 
@@ -1517,7 +1562,81 @@ onMounted(async () => {
   }
 }
 
-/* ARREGLO GLOBAL PARA Q-DIALOG MAXIMIZADO EN CELULAR */
+@media (max-width: 420px) {
+  .dialog-body {
+    padding: 20px 20px 24px !important;
+  }
+
+  .dialog-actions {
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+  }
+
+  .form-field :deep(.q-field__control) {
+    min-height: 60px;
+  }
+
+  .form-field :deep(.q-field__marginal) {
+    height: 60px;
+  }
+
+  .form-field :deep(.q-field__native),
+  .form-field :deep(.q-field__input),
+  .form-field :deep(input) {
+    font-size: 17px;
+  }
+
+  .dialog-actions .q-btn {
+    min-height: 54px;
+    font-size: 13px;
+  }
+}
+
+/* Teléfono en horizontal: campos más bajos y scroll correcto */
+@media (max-height: 520px) and (orientation: landscape) {
+  .dialog-header {
+    min-height: 56px;
+    padding: 10px 18px;
+  }
+
+  .dialog-header .text-h6 {
+    font-size: 20px;
+  }
+
+  .dialog-body {
+    padding: 14px 26px 16px !important;
+  }
+
+  .form-stack {
+    gap: 10px;
+  }
+
+  .form-field :deep(.q-field__control) {
+    min-height: 52px;
+    border-radius: 24px;
+  }
+
+  .form-field :deep(.q-field__marginal) {
+    height: 52px;
+  }
+
+  .form-field :deep(.q-field__native),
+  .form-field :deep(.q-field__input),
+  .form-field :deep(input) {
+    font-size: 16px;
+  }
+
+  .dialog-actions {
+    padding-top: 8px !important;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .dialog-actions .q-btn {
+    min-height: 48px;
+  }
+}
+
+/* ARREGLO GLOBAL PARA Q-DIALOG MAXIMIZADO EN CELULAR / TABLET */
 
 :global(.q-dialog__inner--maximized) {
   padding: 0 !important;
