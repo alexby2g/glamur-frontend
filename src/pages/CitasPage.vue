@@ -40,6 +40,7 @@
       no-data-label="No hay citas registradas"
       flat
       bordered
+      binary-state-sort
       :rows-per-page-options="[5, 10, 20, 50]"
     >
 
@@ -249,7 +250,7 @@
               </template>
             </q-select>
 
-            <!-- SERVICIO / COMBO DESDE BACKEND -->
+            <!-- COMBO DESDE BACKEND -->
             <q-select
               v-model="form.servicioOption"
               :options="serviciosFiltrados"
@@ -257,7 +258,7 @@
               use-input
               input-debounce="0"
               clearable
-              label="Servicio o combo *"
+              label="Combo *"
               outlined
               dense
               rounded
@@ -270,9 +271,9 @@
                 <q-icon name="spa" color="pink" />
               </template>
 
-              <template #selected-item="scope">
-                <div class="text-weight-bold">
-                  {{ scope.opt.combo }}
+              <template #selected>
+                <div v-if="form.servicioOption" class="ellipsis text-weight-bold">
+                  {{ form.servicioOption.combo }}
                 </div>
               </template>
 
@@ -312,25 +313,6 @@
                 </q-item>
               </template>
             </q-select>
-
-            <!-- DETALLE SOLO INFORMATIVO -->
-            <q-input
-              v-if="form.detalle"
-              v-model="form.detalle"
-              label="Detalle del servicio"
-              type="textarea"
-              autogrow
-              outlined
-              dense
-              rounded
-              readonly
-              bg-color="white"
-              class="input-readonly"
-            >
-              <template #prepend>
-                <q-icon name="description" color="pink" />
-              </template>
-            </q-input>
 
             <!-- PRECIO -->
             <q-input
@@ -624,33 +606,15 @@ const saving = ref(false)
 const savingPago = ref(false)
 
 const estados = [
-  {
-    label: 'Pendiente',
-    value: 'pendiente'
-  },
-  {
-    label: 'Concluida',
-    value: 'concluida'
-  },
-  {
-    label: 'Cancelada',
-    value: 'cancelada'
-  }
+  { label: 'Pendiente', value: 'pendiente' },
+  { label: 'Concluida', value: 'concluida' },
+  { label: 'Cancelada', value: 'cancelada' }
 ]
 
 const metodosPago = [
-  {
-    label: 'Efectivo',
-    value: 'efectivo'
-  },
-  {
-    label: 'QR',
-    value: 'qr'
-  },
-  {
-    label: 'Transferencia',
-    value: 'transferencia'
-  }
+  { label: 'Efectivo', value: 'efectivo' },
+  { label: 'QR', value: 'qr' },
+  { label: 'Transferencia', value: 'transferencia' }
 ]
 
 const form = ref({
@@ -861,13 +825,13 @@ async function loadServicios() {
       .filter(item => item.activo)
 
     serviciosFiltrados.value = servicios.value
-  } catch {
+  } catch (error) {
     servicios.value = []
     serviciosFiltrados.value = []
 
     $q.notify({
       type: 'warning',
-      message: 'No se pudieron cargar los servicios. Revisa el backend o la ruta /servicios.'
+      message: getErrorMessage(error)
     })
   }
 }
@@ -945,13 +909,22 @@ function edit(row) {
     return normalizar(item.combo) === normalizar(row.servicio)
   })
 
+  const servicioSeleccionado = servicioEncontrado || {
+    id: null,
+    servicio: 'Servicio Glamur',
+    combo: row.servicio || '',
+    detalle: '',
+    precio: Number(row.precio || 0),
+    activo: true
+  }
+
   form.value = {
     id: row.id,
     cliente_id: row.cliente_id,
-    servicioOption: servicioEncontrado || null,
-    combo: row.servicio || servicioEncontrado?.combo || '',
-    detalle: servicioEncontrado?.detalle || '',
-    precio: Number(row.precio || servicioEncontrado?.precio || 0),
+    servicioOption: servicioSeleccionado,
+    combo: row.servicio || servicioSeleccionado.combo || '',
+    detalle: servicioSeleccionado.detalle || '',
+    precio: Number(row.precio || servicioSeleccionado.precio || 0),
     fecha: row.fecha || hoy(),
     hora: row.hora ? String(row.hora).slice(0, 5) : '',
     estado: row.estado || 'pendiente'
@@ -973,7 +946,7 @@ async function save() {
   if (!form.value.combo) {
     $q.notify({
       type: 'warning',
-      message: 'Selecciona un servicio o combo'
+      message: 'Selecciona un combo'
     })
 
     return
@@ -1252,6 +1225,10 @@ onMounted(async () => {
   overflow-x: auto;
 }
 
+.tabla-glamur :deep(.q-table) {
+  min-width: 920px;
+}
+
 .tabla-glamur :deep(.q-table thead tr) {
   background: linear-gradient(135deg, #fce4ec, #f3e5f5);
   color: #880e4f;
@@ -1260,6 +1237,11 @@ onMounted(async () => {
 .tabla-glamur :deep(.q-table th) {
   font-weight: 900;
   font-size: 13px;
+  white-space: nowrap;
+}
+
+.tabla-glamur :deep(.q-table td) {
+  white-space: nowrap;
 }
 
 .tabla-glamur :deep(.q-table tbody tr:hover) {
@@ -1276,7 +1258,7 @@ onMounted(async () => {
   display: flex;
   justify-content: center;
   gap: 6px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .dialog-card,
@@ -1334,10 +1316,6 @@ onMounted(async () => {
   box-shadow: 0 -8px 18px rgba(20, 10, 30, 0.06);
 }
 
-.input-readonly :deep(.q-field__control) {
-  border-style: dashed;
-}
-
 .qr-box {
   text-align: center;
   padding: 12px;
@@ -1378,6 +1356,18 @@ onMounted(async () => {
     width: 100%;
   }
 
+  .tabla-glamur {
+    border-radius: 18px;
+  }
+
+  .tabla-glamur :deep(.q-table) {
+    min-width: 860px;
+  }
+
+  .acciones {
+    gap: 5px;
+  }
+
   .dialog-card,
   .dialog-card-small,
   .dialog-card-historial {
@@ -1386,6 +1376,10 @@ onMounted(async () => {
     height: 100vh;
     max-height: 100vh;
     border-radius: 0;
+  }
+
+  .dialog-header {
+    padding: 18px;
   }
 
   .dialog-body {
@@ -1402,10 +1396,6 @@ onMounted(async () => {
   .dialog-actions .q-btn {
     flex: 1;
     min-width: 140px;
-  }
-
-  .acciones .q-btn {
-    margin-bottom: 4px;
   }
 }
 </style>
