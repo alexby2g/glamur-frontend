@@ -40,7 +40,6 @@
       no-data-label="No hay citas registradas"
       flat
       bordered
-      binary-state-sort
       :rows-per-page-options="[5, 10, 20, 50]"
     >
 
@@ -178,9 +177,12 @@
       v-model="dialog"
       persistent
       :maximized="$q.screen.lt.sm"
+      transition-show="slide-up"
+      transition-hide="slide-down"
     >
       <q-card class="dialog-card dialog-card-main">
 
+        <!-- HEADER FIJO -->
         <q-card-section class="dialog-header row items-center">
           <div class="text-h6 text-weight-bold">
             {{ form.id ? '✏️ Editar cita' : '🗓️ Nueva cita' }}
@@ -198,6 +200,7 @@
           />
         </q-card-section>
 
+        <!-- CUERPO CON SCROLL -->
         <q-card-section class="dialog-body">
           <div class="q-gutter-md">
 
@@ -250,7 +253,7 @@
               </template>
             </q-select>
 
-            <!-- COMBO DESDE BACKEND -->
+            <!-- SERVICIO / COMBO DESDE BACKEND -->
             <q-select
               v-model="form.servicioOption"
               :options="serviciosFiltrados"
@@ -258,7 +261,7 @@
               use-input
               input-debounce="0"
               clearable
-              label="Combo *"
+              label="Servicio o combo *"
               outlined
               dense
               rounded
@@ -271,9 +274,9 @@
                 <q-icon name="spa" color="pink" />
               </template>
 
-              <template #selected>
-                <div v-if="form.servicioOption" class="ellipsis text-weight-bold">
-                  {{ form.servicioOption.combo }}
+              <template #selected-item="scope">
+                <div class="text-weight-bold">
+                  {{ scope.opt.combo }}
                 </div>
               </template>
 
@@ -313,6 +316,25 @@
                 </q-item>
               </template>
             </q-select>
+
+            <!-- DETALLE SOLO INFORMATIVO -->
+            <q-input
+              v-if="form.detalle"
+              v-model="form.detalle"
+              label="Detalle del servicio"
+              type="textarea"
+              autogrow
+              outlined
+              dense
+              rounded
+              readonly
+              bg-color="white"
+              class="input-readonly"
+            >
+              <template #prepend>
+                <q-icon name="description" color="pink" />
+              </template>
+            </q-input>
 
             <!-- PRECIO -->
             <q-input
@@ -387,6 +409,7 @@
           </div>
         </q-card-section>
 
+        <!-- BOTONES SIEMPRE VISIBLES -->
         <q-card-actions align="right" class="dialog-actions">
           <q-btn
             class="btn-cancelar"
@@ -413,6 +436,8 @@
       v-model="dialogPago"
       persistent
       :maximized="$q.screen.lt.sm"
+      transition-show="slide-up"
+      transition-hide="slide-down"
     >
       <q-card class="dialog-card-small dialog-card-main">
 
@@ -505,6 +530,8 @@
     <q-dialog
       v-model="dialogHistorial"
       :maximized="$q.screen.lt.sm"
+      transition-show="slide-up"
+      transition-hide="slide-down"
     >
       <q-card class="dialog-card-historial dialog-card-main">
 
@@ -606,15 +633,33 @@ const saving = ref(false)
 const savingPago = ref(false)
 
 const estados = [
-  { label: 'Pendiente', value: 'pendiente' },
-  { label: 'Concluida', value: 'concluida' },
-  { label: 'Cancelada', value: 'cancelada' }
+  {
+    label: 'Pendiente',
+    value: 'pendiente'
+  },
+  {
+    label: 'Concluida',
+    value: 'concluida'
+  },
+  {
+    label: 'Cancelada',
+    value: 'cancelada'
+  }
 ]
 
 const metodosPago = [
-  { label: 'Efectivo', value: 'efectivo' },
-  { label: 'QR', value: 'qr' },
-  { label: 'Transferencia', value: 'transferencia' }
+  {
+    label: 'Efectivo',
+    value: 'efectivo'
+  },
+  {
+    label: 'QR',
+    value: 'qr'
+  },
+  {
+    label: 'Transferencia',
+    value: 'transferencia'
+  }
 ]
 
 const form = ref({
@@ -825,13 +870,13 @@ async function loadServicios() {
       .filter(item => item.activo)
 
     serviciosFiltrados.value = servicios.value
-  } catch (error) {
+  } catch {
     servicios.value = []
     serviciosFiltrados.value = []
 
     $q.notify({
       type: 'warning',
-      message: getErrorMessage(error)
+      message: 'No se pudieron cargar los servicios. Revisa el backend o la ruta /servicios.'
     })
   }
 }
@@ -909,22 +954,13 @@ function edit(row) {
     return normalizar(item.combo) === normalizar(row.servicio)
   })
 
-  const servicioSeleccionado = servicioEncontrado || {
-    id: null,
-    servicio: 'Servicio Glamur',
-    combo: row.servicio || '',
-    detalle: '',
-    precio: Number(row.precio || 0),
-    activo: true
-  }
-
   form.value = {
     id: row.id,
     cliente_id: row.cliente_id,
-    servicioOption: servicioSeleccionado,
-    combo: row.servicio || servicioSeleccionado.combo || '',
-    detalle: servicioSeleccionado.detalle || '',
-    precio: Number(row.precio || servicioSeleccionado.precio || 0),
+    servicioOption: servicioEncontrado || null,
+    combo: row.servicio || servicioEncontrado?.combo || '',
+    detalle: servicioEncontrado?.detalle || '',
+    precio: Number(row.precio || servicioEncontrado?.precio || 0),
     fecha: row.fecha || hoy(),
     hora: row.hora ? String(row.hora).slice(0, 5) : '',
     estado: row.estado || 'pendiente'
@@ -946,7 +982,7 @@ async function save() {
   if (!form.value.combo) {
     $q.notify({
       type: 'warning',
-      message: 'Selecciona un combo'
+      message: 'Selecciona un servicio o combo'
     })
 
     return
@@ -1171,6 +1207,8 @@ onMounted(async () => {
   background: #faf7fb;
 }
 
+/* HERO */
+
 .page-hero {
   background: linear-gradient(135deg, #e91e63, #9c27b0);
   border-radius: 28px;
@@ -1187,6 +1225,8 @@ onMounted(async () => {
   flex-wrap: wrap;
   justify-content: flex-end;
 }
+
+/* BOTONES */
 
 .btn-glamur-white {
   background: white;
@@ -1214,6 +1254,8 @@ onMounted(async () => {
   padding: 10px 18px;
 }
 
+/* TABLA */
+
 .tabla-glamur {
   border-radius: 24px;
   overflow: hidden;
@@ -1225,10 +1267,6 @@ onMounted(async () => {
   overflow-x: auto;
 }
 
-.tabla-glamur :deep(.q-table) {
-  min-width: 920px;
-}
-
 .tabla-glamur :deep(.q-table thead tr) {
   background: linear-gradient(135deg, #fce4ec, #f3e5f5);
   color: #880e4f;
@@ -1237,11 +1275,6 @@ onMounted(async () => {
 .tabla-glamur :deep(.q-table th) {
   font-weight: 900;
   font-size: 13px;
-  white-space: nowrap;
-}
-
-.tabla-glamur :deep(.q-table td) {
-  white-space: nowrap;
 }
 
 .tabla-glamur :deep(.q-table tbody tr:hover) {
@@ -1258,8 +1291,10 @@ onMounted(async () => {
   display: flex;
   justify-content: center;
   gap: 6px;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
 }
+
+/* DIALOGS DESKTOP */
 
 .dialog-card,
 .dialog-card-small,
@@ -1271,49 +1306,59 @@ onMounted(async () => {
 .dialog-card {
   width: 560px;
   max-width: 96vw;
-  max-height: 92vh;
+  height: auto;
+  max-height: 92dvh;
 }
 
 .dialog-card-small {
   width: 440px;
   max-width: 96vw;
-  max-height: 92vh;
+  height: auto;
+  max-height: 92dvh;
 }
 
 .dialog-card-historial {
   width: 720px;
   max-width: 96vw;
-  max-height: 92vh;
+  height: auto;
+  max-height: 92dvh;
 }
 
 .dialog-card-main {
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .dialog-header {
   background: linear-gradient(135deg, #e91e63, #9c27b0);
   color: white;
-  position: sticky;
-  top: 0;
+  flex: 0 0 auto;
   z-index: 3;
 }
 
 .dialog-body {
   background: #ffffff;
   padding: 24px;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
-  flex: 1;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .dialog-actions {
   padding: 16px 22px;
   background: white;
   border-top: 1px solid #eee;
-  position: sticky;
-  bottom: 0;
+  flex: 0 0 auto;
   z-index: 4;
   box-shadow: 0 -8px 18px rgba(20, 10, 30, 0.06);
+}
+
+.input-readonly :deep(.q-field__control) {
+  border-style: dashed;
 }
 
 .qr-box {
@@ -1329,6 +1374,8 @@ onMounted(async () => {
   max-width: 100%;
   border-radius: 14px;
 }
+
+/* MOBILE / TABLET */
 
 @media (max-width: 600px) {
   .citas-page {
@@ -1356,46 +1403,73 @@ onMounted(async () => {
     width: 100%;
   }
 
-  .tabla-glamur {
-    border-radius: 18px;
-  }
-
-  .tabla-glamur :deep(.q-table) {
-    min-width: 860px;
-  }
-
-  .acciones {
-    gap: 5px;
-  }
-
   .dialog-card,
   .dialog-card-small,
   .dialog-card-historial {
-    width: 100%;
-    max-width: 100%;
-    height: 100vh;
-    max-height: 100vh;
-    border-radius: 0;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    border-radius: 0 !important;
+  }
+
+  .dialog-card-main {
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
   }
 
   .dialog-header {
-    padding: 18px;
+    min-height: 74px;
+    padding: 18px 20px;
+  }
+
+  .dialog-header .text-h6 {
+    font-size: 22px;
   }
 
   .dialog-body {
-    padding: 18px;
-    padding-bottom: 110px;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding: 24px 18px 20px !important;
+    -webkit-overflow-scrolling: touch;
   }
 
   .dialog-actions {
-    flex-wrap: wrap;
-    gap: 10px;
-    padding: 12px 16px 18px;
+    flex: 0 0 auto !important;
+    padding: 14px 16px calc(16px + env(safe-area-inset-bottom)) !important;
+    gap: 12px;
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: space-between;
   }
 
   .dialog-actions .q-btn {
     flex: 1;
-    min-width: 140px;
+    min-height: 54px;
+    font-size: 15px;
   }
+
+  .acciones .q-btn {
+    margin-bottom: 4px;
+  }
+}
+
+/* ARREGLO GLOBAL PARA Q-DIALOG MAXIMIZADO EN CELULAR */
+:global(.q-dialog__inner--maximized) {
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+:global(.q-dialog__inner--maximized > .q-card) {
+  width: 100vw !important;
+  max-width: 100vw !important;
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
 }
 </style>
