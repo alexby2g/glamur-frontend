@@ -138,6 +138,10 @@
                   {{ resumenDia(dia).canceladas }}
                 </span>
               </div>
+
+              <div class="day-total">
+                Total: Bs {{ money(totalDia(dia.citas)) }}
+              </div>
             </div>
 
             <div
@@ -196,55 +200,70 @@
             </div>
           </div>
 
-          <q-list
-            v-else
-            separator
-            class="citas-list"
-          >
-            <q-item
-              v-for="cita in citasDia"
-              :key="cita.id"
-              class="cita-item"
+          <div v-else>
+            <div class="day-total-card q-mb-md">
+              <div>
+                <div class="total-label">
+                  Total generado este día
+                </div>
+
+                <div class="total-value">
+                  Bs {{ money(totalDia(citasDia)) }}
+                </div>
+              </div>
+
+              <q-icon name="payments" size="34px" color="green-7" />
+            </div>
+
+            <q-list
+              separator
+              class="citas-list"
             >
-              <q-item-section avatar>
-                <q-avatar :color="colorEstado(cita.estado)" text-color="white">
-                  <q-icon name="event" />
-                </q-avatar>
-              </q-item-section>
+              <q-item
+                v-for="cita in citasDia"
+                :key="cita.id"
+                class="cita-item"
+              >
+                <q-item-section avatar>
+                  <q-avatar :color="colorEstado(cita.estado)" text-color="white">
+                    <q-icon name="event" />
+                  </q-avatar>
+                </q-item-section>
 
-              <q-item-section>
-                <q-item-label class="text-weight-bold">
-                  {{ horaBonita(cita.hora) }} - {{ cita.cliente?.nombre || 'Sin cliente' }}
-                </q-item-label>
+                <q-item-section>
+                  <q-item-label class="text-weight-bold">
+                    {{ horaBonita(cita.hora) }} - {{ cita.cliente?.nombre || 'Sin cliente' }}
+                  </q-item-label>
 
-                <q-item-label caption>
-                  {{ cita.servicio }}
-                </q-item-label>
+                  <q-item-label caption>
+                    {{ cita.servicio }}
+                  </q-item-label>
 
-                <q-item-label caption>
-                  Bs {{ money(cita.precio) }}
-                </q-item-label>
-              </q-item-section>
+                  <q-item-label caption>
+                    Bs {{ money(cita.precio) }}
+                  </q-item-label>
+                </q-item-section>
 
-              <q-item-section side>
-                <q-badge
-                  rounded
-                  :color="colorEstado(cita.estado)"
-                  class="estado-badge"
-                >
-                  {{ cita.estado || 'pendiente' }}
-                </q-badge>
+                <q-item-section side>
+                  <q-badge
+                    rounded
+                    :color="colorEstado(cita.estado)"
+                    class="estado-badge"
+                  >
+                    {{ cita.estado || 'pendiente' }}
+                  </q-badge>
 
-                <q-badge
-                  rounded
-                  class="estado-badge q-mt-xs"
-                  :color="cita.estado_pago === 'pagado' ? 'green' : 'orange'"
-                >
-                  {{ cita.estado_pago || 'pendiente' }}
-                </q-badge>
-              </q-item-section>
-            </q-item>
-          </q-list>
+                  <q-badge
+                    rounded
+                    class="estado-badge q-mt-xs"
+                    :color="cita.estado_pago === 'pagado' ? 'green' : 'orange'"
+                  >
+                    {{ cita.estado_pago || 'pendiente' }}
+                  </q-badge>
+                </q-item-section>
+              </q-item>
+            </q-list>
+          </div>
 
         </q-card-section>
 
@@ -377,20 +396,42 @@ async function load() {
   }
 }
 
+function estadoNormalizado(estado) {
+  return String(estado || 'pendiente').toLowerCase().trim()
+}
+
+function esConcluida(estado) {
+  const valor = estadoNormalizado(estado)
+
+  return valor === 'concluida' ||
+    valor === 'finalizada' ||
+    valor === 'realizada'
+}
+
+function esPendiente(estado) {
+  return estadoNormalizado(estado) === 'pendiente'
+}
+
+function esCancelada(estado) {
+  return estadoNormalizado(estado) === 'cancelada'
+}
+
 function resumenDia(dia) {
-  const pendientes = dia.citas.filter((cita) => cita.estado === 'pendiente').length
-
-  const concluidas = dia.citas.filter((cita) => {
-    return cita.estado === 'concluida' || cita.estado === 'finalizada' || cita.estado === 'realizada'
-  }).length
-
-  const canceladas = dia.citas.filter((cita) => cita.estado === 'cancelada').length
+  const pendientes = dia.citas.filter((cita) => esPendiente(cita.estado)).length
+  const concluidas = dia.citas.filter((cita) => esConcluida(cita.estado)).length
+  const canceladas = dia.citas.filter((cita) => esCancelada(cita.estado)).length
 
   return {
     pendientes,
     concluidas,
     canceladas
   }
+}
+
+function totalDia(listaCitas) {
+  return listaCitas.reduce((total, cita) => {
+    return total + Number(cita.precio || 0)
+  }, 0)
 }
 
 function claseDia(dia) {
@@ -417,8 +458,8 @@ function colorPrincipalDia(dia) {
 }
 
 function colorEstado(estado) {
-  if (estado === 'concluida' || estado === 'finalizada' || estado === 'realizada') return 'green'
-  if (estado === 'cancelada') return 'red'
+  if (esConcluida(estado)) return 'green'
+  if (esCancelada(estado)) return 'red'
 
   return 'orange'
 }
@@ -628,7 +669,7 @@ onMounted(() => {
 }
 
 .day-box {
-  min-height: 118px;
+  min-height: 130px;
   border: 1px solid #ead7e2;
   padding: 12px;
   cursor: pointer;
@@ -717,6 +758,17 @@ onMounted(() => {
   background: #c62828;
 }
 
+.day-total {
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 900;
+  color: #1b5e20;
+  background: rgba(76, 175, 80, 0.12);
+  border-radius: 10px;
+  padding: 5px 7px;
+  display: inline-block;
+}
+
 .dialog-card {
   width: 640px;
   max-width: 96vw;
@@ -742,6 +794,28 @@ onMounted(() => {
   border: 1px dashed #e9b5ce;
   border-radius: 20px;
   background: #fff7fb;
+}
+
+.day-total-card {
+  background: linear-gradient(135deg, #f1fff4, #ffffff);
+  border: 1px solid #c8e6c9;
+  border-radius: 20px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.total-label {
+  font-size: 13px;
+  font-weight: 800;
+  color: #4b4b4b;
+}
+
+.total-value {
+  font-size: 24px;
+  font-weight: 900;
+  color: #2e7d32;
 }
 
 .cita-item {
@@ -802,12 +876,17 @@ onMounted(() => {
 
   .week-grid,
   .calendar-grid {
-    grid-template-columns: repeat(7, 92px);
+    grid-template-columns: repeat(7, 96px);
   }
 
   .day-box {
-    min-height: 105px;
+    min-height: 118px;
     padding: 10px;
+  }
+
+  .day-total {
+    font-size: 11px;
+    padding: 4px 6px;
   }
 
   .dialog-card {
