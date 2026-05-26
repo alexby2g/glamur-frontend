@@ -310,15 +310,19 @@ const columnsCitas = [
   IMPORTANTE:
   Si tus rutas del backend tienen otro nombre, solo cambia estas rutas.
 */
-const rutas = {
-  clientesEliminados: '/clientes/eliminados',
-  recuperarCliente: id => `/clientes/recuperar/${id}`,
-  eliminarClienteDefinitivo: id => `/clientes/eliminados/${id}`,
+  const rutas = {
+    historialEliminados: '/historial/eliminados',
 
-  citasEliminadas: '/citas/eliminadas',
-  recuperarCita: id => `/citas/recuperar/${id}`,
-  eliminarCitaDefinitiva: id => `/citas/eliminadas/${id}`
-}
+    recuperarCliente: id => `/historial/clientes/${id}/restaurar`,
+    recuperarCita: id => `/historial/citas/${id}/restaurar`,
+    recuperarPago: id => `/historial/pagos/${id}/restaurar`,
+
+    eliminarClienteDefinitivo: id => `/historial/clientes/${id}/eliminar`,
+    eliminarCitaDefinitiva: id => `/historial/citas/${id}/eliminar`,
+    eliminarPagoDefinitivo: id => `/historial/pagos/${id}/eliminar`,
+
+    limpiarHistorial: '/historial/limpiar'
+  }
 
 function responseToArray(data) {
   if (Array.isArray(data)) return data
