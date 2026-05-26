@@ -219,9 +219,45 @@
               {{ contactosFiltrados.length }} contacto(s)
             </q-chip>
 
-            <q-chip color="purple" text-color="white" icon="check_circle">
-              {{ contactosSeleccionados.length }} seleccionado(s)
+            <q-chip color="green" text-color="white" icon="person_add">
+              {{ contactosNuevosFiltrados.length }} nuevo(s)
             </q-chip>
+
+            <q-chip color="orange" text-color="white" icon="verified_user">
+              {{ contactosExistentesFiltrados.length }} existente(s)
+            </q-chip>
+
+            <q-chip color="purple" text-color="white" icon="check_circle">
+              {{ contactosSeleccionadosNuevos.length }} seleccionado(s)
+            </q-chip>
+          </div>
+
+          <div class="contactos-actions row q-col-gutter-sm q-mt-sm">
+            <div class="col-12 col-sm-6">
+              <q-btn
+                class="full-width"
+                color="green"
+                icon="select_all"
+                label="Seleccionar nuevos"
+                unelevated
+                rounded
+                :disable="contactosNuevosFiltrados.length === 0"
+                @click="seleccionarContactosNuevos"
+              />
+            </div>
+
+            <div class="col-12 col-sm-6">
+              <q-btn
+                class="full-width"
+                color="grey-7"
+                icon="clear_all"
+                label="Limpiar selección"
+                unelevated
+                rounded
+                :disable="contactosSeleccionados.length === 0"
+                @click="limpiarSeleccionContactos"
+              />
+            </div>
           </div>
         </q-card-section>
 
@@ -238,7 +274,15 @@
             selection="multiple"
             v-model:selected="contactosSeleccionados"
             :rows-per-page-options="[5, 10, 20, 50]"
+            @update:selected="normalizarSeleccionContactos"
           >
+            <template #body-selection="props">
+              <q-checkbox
+                v-model="props.selected"
+                color="pink"
+                :disable="clienteYaExiste(props.row.telefono)"
+              />
+            </template>
             <template #body-cell-nombre="props">
               <q-td :props="props">
                 <div class="contacto-nombre">
@@ -312,7 +356,7 @@
             class="btn-glamur"
             icon="save"
             label="Guardar seleccionados"
-            :disable="contactosSeleccionados.length === 0"
+            :disable="contactosSeleccionadosNuevos.length === 0"
             :loading="savingContactos"
             @click="guardarContactosSeleccionados"
           />
@@ -412,6 +456,18 @@ const contactosFiltrados = computed(() => {
 
     return nombre.includes(texto) || telefono.includes(texto)
   })
+})
+
+const contactosNuevosFiltrados = computed(() => {
+  return contactosFiltrados.value.filter((contacto) => !clienteYaExiste(contacto.telefono))
+})
+
+const contactosExistentesFiltrados = computed(() => {
+  return contactosFiltrados.value.filter((contacto) => clienteYaExiste(contacto.telefono))
+})
+
+const contactosSeleccionadosNuevos = computed(() => {
+  return contactosSeleccionados.value.filter((contacto) => !clienteYaExiste(contacto.telefono))
 })
 
 function getErrorMessage(error) {
@@ -699,19 +755,38 @@ async function cargarContactosTelefono() {
   }
 }
 
-async function guardarContactosSeleccionados() {
+function normalizarSeleccionContactos(lista) {
+  contactosSeleccionados.value = (lista || []).filter((contacto) => {
+    return !clienteYaExiste(contacto.telefono)
+  })
+}
+
+function seleccionarContactosNuevos() {
+  contactosSeleccionados.value = [...contactosNuevosFiltrados.value]
+
   if (contactosSeleccionados.value.length === 0) {
     $q.notify({
       type: 'warning',
-      message: 'Selecciona al menos un contacto'
+      message: 'No hay contactos nuevos para seleccionar'
+    })
+  }
+}
+
+function limpiarSeleccionContactos() {
+  contactosSeleccionados.value = []
+}
+
+async function guardarContactosSeleccionados() {
+  if (contactosSeleccionadosNuevos.value.length === 0) {
+    $q.notify({
+      type: 'warning',
+      message: 'Selecciona al menos un contacto nuevo'
     })
 
     return
   }
 
-  const contactosNuevos = contactosSeleccionados.value.filter((contacto) => {
-    return !clienteYaExiste(contacto.telefono)
-  })
+  const contactosNuevos = [...contactosSeleccionadosNuevos.value]
 
   if (contactosNuevos.length === 0) {
     $q.notify({
@@ -890,6 +965,10 @@ onMounted(load)
   gap: 8px;
   flex-wrap: wrap;
   margin-top: 10px;
+}
+
+.contactos-actions {
+  width: 100%;
 }
 
 .contactos-body {
