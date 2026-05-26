@@ -34,14 +34,39 @@
       </div>
     </div>
 
+    <!-- BUSCADOR CLIENTES -->
+    <q-card class="buscador-card q-mb-md" flat bordered>
+      <div class="buscador-row">
+        <q-input
+          v-model="busquedaCliente"
+          class="buscador-input"
+          outlined
+          rounded
+          dense
+          clearable
+          bg-color="white"
+          debounce="200"
+          placeholder="Buscar por nombre, teléfono o código de cliente..."
+        >
+          <template #prepend>
+            <q-icon name="search" color="pink" />
+          </template>
+        </q-input>
+
+        <q-badge class="buscador-badge" rounded>
+          {{ clientesFiltradosTabla.length }} de {{ clientes.length }}
+        </q-badge>
+      </div>
+    </q-card>
+
     <!-- TABLA CLIENTES -->
     <q-card class="card-table">
       <q-table
-        :rows="clientes"
+        :rows="clientesFiltradosTabla"
         :columns="columns"
         row-key="id"
         :loading="loading"
-        no-data-label="No hay clientes registrados"
+        :no-data-label="busquedaCliente ? 'No se encontraron clientes con esa búsqueda' : 'No hay clientes registrados'"
         flat
         bordered
         :rows-per-page-options="[5, 10, 20, 50]"
@@ -393,6 +418,7 @@ defineOptions({
 const $q = useQuasar()
 
 const clientes = ref([])
+const busquedaCliente = ref('')
 const dialog = ref(false)
 const loading = ref(false)
 const saving = ref(false)
@@ -453,6 +479,24 @@ const columnsContactos = [
     align: 'center'
   }
 ]
+
+const clientesFiltradosTabla = computed(() => {
+  const texto = normalizarTexto(busquedaCliente.value)
+
+  if (!texto) {
+    return clientes.value
+  }
+
+  return clientes.value.filter((cliente) => {
+    const datos = [
+      cliente.id,
+      cliente.nombre,
+      cliente.telefono
+    ]
+
+    return datos.some((dato) => normalizarTexto(dato).includes(texto))
+  })
+})
 
 const contactosFiltrados = computed(() => {
   const texto = normalizarTexto(buscarContacto.value)
@@ -867,6 +911,39 @@ onMounted(load)
   flex-wrap: wrap;
 }
 
+/* BUSCADOR CLIENTES */
+
+.buscador-card {
+  border-radius: 22px;
+  padding: 14px;
+  background: #ffffff;
+  box-shadow: 0 10px 28px rgba(156, 39, 176, 0.10);
+  border: 1px solid #f3d6e5;
+}
+
+.buscador-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.buscador-input {
+  flex: 1;
+}
+
+.buscador-input :deep(.q-field__control) {
+  min-height: 48px;
+  border-radius: 24px;
+}
+
+.buscador-badge {
+  background: linear-gradient(135deg, #e91e63, #9c27b0);
+  color: white;
+  font-weight: 900;
+  padding: 10px 14px;
+  white-space: nowrap;
+}
+
 .btn-glamur {
   background: linear-gradient(135deg, #e91e63, #9c27b0);
   color: white;
@@ -1044,6 +1121,17 @@ onMounted(load)
 
   .header-actions .q-btn {
     width: 100%;
+  }
+
+  .buscador-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .buscador-badge {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
   }
 
   .dialog-card {
