@@ -173,10 +173,17 @@
     </q-dialog>
 
     <!-- DIALOG IMPORTAR CONTACTOS -->
-    <q-dialog v-model="dialogContactos" persistent>
+    <q-dialog
+      v-model="dialogContactos"
+      persistent
+      :maximized="$q.screen.lt.sm"
+      transition-show="slide-up"
+      transition-hide="slide-down"
+    >
       <q-card class="dialog-contactos">
 
-        <q-card-section class="dialog-header row items-center">
+        <!-- CABECERA FIJA -->
+        <q-card-section class="dialog-header contactos-header row items-center">
           <div>
             <div class="text-h6 text-weight-bold">
               📱 Importar contactos
@@ -199,6 +206,7 @@
           />
         </q-card-section>
 
+        <!-- BUSCADOR Y BOTONES SUPERIORES -->
         <q-card-section class="contactos-toolbar">
           <q-input
             v-model.trim="buscarContacto"
@@ -261,6 +269,7 @@
           </div>
         </q-card-section>
 
+        <!-- CUERPO CON SCROLL REAL -->
         <q-card-section class="contactos-body">
           <q-table
             class="tabla-contactos"
@@ -283,11 +292,12 @@
                 :disable="clienteYaExiste(props.row.telefono)"
               />
             </template>
+
             <template #body-cell-nombre="props">
               <q-td :props="props">
                 <div class="contacto-nombre">
-                  <q-avatar size="34px" class="contacto-avatar">
-                    <q-icon name="person" color="white" size="20px" />
+                  <q-avatar size="36px" class="contacto-avatar">
+                    <q-icon name="person" color="white" size="21px" />
                   </q-avatar>
 
                   <div>
@@ -334,7 +344,8 @@
           </q-table>
         </q-card-section>
 
-        <q-card-actions align="right" class="dialog-actions">
+        <!-- BOTONES FIJOS ABAJO -->
+        <q-card-actions align="right" class="dialog-actions contactos-footer">
           <q-btn
             flat
             label="Cancelar"
@@ -477,7 +488,7 @@ function getErrorMessage(error) {
     return Object.values(data.errors).flat().join(' ')
   }
 
-  return data?.message || data?.error || 'Ocurrió un error'
+  return data?.message || data?.error || error?.message || 'Ocurrió un error'
 }
 
 function normalizarTexto(valor) {
@@ -788,15 +799,6 @@ async function guardarContactosSeleccionados() {
 
   const contactosNuevos = [...contactosSeleccionadosNuevos.value]
 
-  if (contactosNuevos.length === 0) {
-    $q.notify({
-      type: 'warning',
-      message: 'Los contactos seleccionados ya existen como clientes'
-    })
-
-    return
-  }
-
   savingContactos.value = true
 
   let guardados = 0
@@ -913,6 +915,7 @@ onMounted(load)
   gap: 8px;
   font-weight: 700;
   color: #2e7d32;
+  white-space: nowrap;
 }
 
 .acciones {
@@ -932,14 +935,23 @@ onMounted(load)
 .dialog-contactos {
   width: 900px;
   max-width: 96vw;
-  max-height: 92vh;
+  height: min(92dvh, 760px);
+  max-height: 92dvh;
   border-radius: 24px;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: white;
 }
 
 .dialog-header {
   background: linear-gradient(135deg, #e91e63, #9c27b0);
   color: white;
+}
+
+.contactos-header {
+  flex: 0 0 auto;
+  min-height: 96px;
 }
 
 .dialog-body {
@@ -955,6 +967,7 @@ onMounted(load)
 }
 
 .contactos-toolbar {
+  flex: 0 0 auto;
   background: #fff7fb;
   padding: 18px;
   border-bottom: 1px solid #f1d7e5;
@@ -972,9 +985,12 @@ onMounted(load)
 }
 
 .contactos-body {
+  flex: 1 1 auto;
+  min-height: 0;
   padding: 16px;
-  max-height: 58vh;
   overflow-y: auto;
+  overflow-x: hidden;
+  background: white;
 }
 
 .tabla-contactos {
@@ -983,16 +999,35 @@ onMounted(load)
   background: white;
 }
 
+.tabla-contactos :deep(.q-table__container) {
+  max-width: 100%;
+}
+
+.tabla-contactos :deep(.q-table__middle) {
+  overflow-x: auto;
+}
+
 .contacto-nombre {
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 210px;
 }
 
 .contacto-avatar {
   background: linear-gradient(135deg, #e91e63, #9c27b0);
+  flex: 0 0 auto;
 }
 
+.contactos-footer {
+  flex: 0 0 auto;
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  box-shadow: 0 -8px 22px rgba(0, 0, 0, 0.08);
+}
+
+/* MÓVIL */
 @media (max-width: 600px) {
   .clientes-page {
     padding: 12px;
@@ -1011,24 +1046,89 @@ onMounted(load)
     width: 100%;
   }
 
-  .dialog-card,
-  .dialog-contactos {
+  .dialog-card {
     width: 100%;
     max-width: 100%;
     border-radius: 20px;
   }
 
-  .dialog-actions {
-    flex-wrap: wrap;
+  .dialog-contactos {
+    width: 100vw;
+    max-width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
   }
 
-  .dialog-actions .q-btn {
-    width: 100%;
+  .contactos-header {
+    min-height: 110px;
+    padding: 18px 18px;
+  }
+
+  .contactos-header .text-h6 {
+    font-size: 24px;
+    line-height: 1.2;
+  }
+
+  .contactos-header .text-caption {
+    font-size: 15px;
+    line-height: 1.45;
+    margin-top: 6px;
+  }
+
+  .contactos-toolbar {
+    padding: 14px 14px 12px;
+    max-height: 38dvh;
+    overflow-y: auto;
+  }
+
+  .contactos-info {
+    gap: 7px;
+  }
+
+  .contactos-info .q-chip {
+    max-width: 100%;
+    font-size: 13px;
+  }
+
+  .contactos-actions .q-btn {
+    min-height: 42px;
   }
 
   .contactos-body {
     padding: 10px;
-    max-height: 55vh;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .tabla-contactos {
+    border-radius: 14px;
+  }
+
+  .tabla-contactos :deep(.q-table th),
+  .tabla-contactos :deep(.q-table td) {
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+
+  .contacto-nombre {
+    min-width: 190px;
+  }
+
+  .dialog-actions {
+    flex-wrap: wrap;
+    padding: 10px 12px calc(12px + env(safe-area-inset-bottom));
+  }
+
+  .dialog-actions .q-btn {
+    width: 100%;
+    min-height: 46px;
+  }
+
+  .contactos-footer {
+    background: white;
   }
 }
 </style>
