@@ -253,67 +253,84 @@
               </template>
             </q-select>
 
+            <!-- CATEGORÍAS DE SERVICIOS -->
+            <div class="service-category-box">
+              <div class="category-title">Selecciona una categoría</div>
+
+              <div class="service-category-grid">
+                <button
+                  v-for="cat in categoriasServicios"
+                  :key="cat.key"
+                  type="button"
+                  class="service-category-card"
+                  :class="{ active: categoriaSeleccionada === cat.key }"
+                  @click="seleccionarCategoria(cat.key)"
+                >
+                  <q-icon :name="cat.icon" class="category-icon" />
+                  <span>{{ cat.label }}</span>
+                  <small>{{ contarServiciosCategoria(cat.key) }} opción(es)</small>
+                </button>
+              </div>
+            </div>
+
             <!-- SERVICIO / COMBO -->
             <q-select
               v-model="form.servicioOption"
               :options="serviciosFiltrados"
               option-label="combo"
-              use-input
-              input-debounce="0"
-              clearable
+              option-value="id"
               label="Servicio o combo *"
               outlined
               rounded
-              bg-color="white"
-              class="form-field"
+              clearable
+              use-input
+              input-debounce="0"
+              class="form-field service-select"
+              popup-content-class="combo-menu-glamur"
+              :disable="serviciosDeCategoriaActual.length === 0"
               @filter="filtrarServicios"
               @update:model-value="seleccionarServicio"
               @clear="limpiarServicio"
             >
               <template #prepend>
-                <q-icon name="spa" color="pink" />
+                <q-icon :name="categoriaActual.icon" color="pink" class="field-icon" />
               </template>
 
-              <template #selected-item="scope">
-                <div class="text-weight-bold">
-                  {{ scope.opt.combo }}
-                </div>
+              <template #no-option>
+                <q-item>
+                  <q-item-section class="text-grey-7">
+                    No hay servicios en esta categoría.
+                  </q-item-section>
+                </q-item>
               </template>
 
               <template #option="scope">
-                <q-item v-bind="scope.itemProps">
+                <q-item v-bind="scope.itemProps" class="combo-option">
                   <q-item-section avatar>
-                    <q-avatar color="pink" text-color="white" icon="spa" />
+                    <q-avatar color="pink-1" text-color="pink" :icon="iconoServicio(scope.opt.servicio)" />
                   </q-item-section>
 
                   <q-item-section>
                     <q-item-label class="text-weight-bold">
                       {{ scope.opt.combo }}
                     </q-item-label>
-
                     <q-item-label caption>
                       {{ scope.opt.servicio }}
                     </q-item-label>
-
                     <q-item-label caption>
                       {{ scope.opt.detalle }}
                     </q-item-label>
-                  </q-item-section>
-
-                  <q-item-section side>
-                    <q-badge color="green" rounded>
+                    <q-item-label caption class="text-pink text-weight-bold">
                       Bs {{ money(scope.opt.precio) }}
-                    </q-badge>
+                    </q-item-label>
                   </q-item-section>
                 </q-item>
               </template>
 
-              <template #no-option>
-                <q-item>
-                  <q-item-section class="text-grey">
-                    No hay servicios registrados
-                  </q-item-section>
-                </q-item>
+              <template #selected-item="scope">
+                <div class="selected-service-text">
+                  {{ scope.opt.combo }}
+                </div>
               </template>
             </q-select>
 
@@ -597,7 +614,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from 'boot/axios'
@@ -615,6 +632,34 @@ const clientes = ref([])
 const clientesFiltrados = ref([])
 const servicios = ref([])
 const serviciosFiltrados = ref([])
+const categoriaSeleccionada = ref('cejas')
+
+const categoriasServicios = [
+  {
+    key: 'cejas',
+    label: 'Cejas y pestañas',
+    icon: 'spa',
+    match: ['cejas', 'pestañas', 'pestanas', 'brows', 'lash']
+  },
+  {
+    key: 'maquillaje',
+    label: 'Maquillaje y cabello',
+    icon: 'face_retouching_natural',
+    match: ['maquillaje', 'cabello', 'peinado', 'hair', 'makeup']
+  },
+  {
+    key: 'unas',
+    label: 'Uñas',
+    icon: 'back_hand',
+    match: ['uñas', 'unas', 'manicure', 'pedicure', 'nail']
+  },
+  {
+    key: 'otros',
+    label: 'Otros',
+    icon: 'more_horiz',
+    match: []
+  }
+]
 const historial = ref([])
 
 const dialog = ref(false)
@@ -741,8 +786,18 @@ function money(value) {
   return Number(value || 0).toFixed(2)
 }
 
+function fechaLocal(date = new Date()) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+
+  return `${year}-${month}-${day}`
+}
+
 function hoy() {
-  return new Date().toISOString().slice(0, 10)
+  // Importante: no usamos toISOString porque en Bolivia después de cierta hora
+  // puede adelantar la fecha por el cambio a UTC. Esto mantiene el día local.
+  return fechaLocal(new Date())
 }
 
 function normalizar(valor) {
@@ -781,6 +836,44 @@ function mapServicio(item) {
     precio: Number(item.precio || 0),
     activo: item.activo !== false && item.activo !== 0 && item.activo !== '0'
   }
+}
+
+function categoriaDeServicio(nombreServicio = '') {
+  const texto = normalizar(nombreServicio)
+
+  const categoria = categoriasServicios.find(cat => {
+    if (cat.key === 'otros') return false
+    return cat.match.some(palabra => texto.includes(normalizar(palabra)))
+  })
+
+  return categoria?.key || 'otros'
+}
+
+const categoriaActual = computed(() => {
+  return categoriasServicios.find(cat => cat.key === categoriaSeleccionada.value) || categoriasServicios[0]
+})
+
+const serviciosDeCategoriaActual = computed(() => {
+  return servicios.value.filter(servicio => categoriaDeServicio(servicio.servicio) === categoriaSeleccionada.value)
+})
+
+function contarServiciosCategoria(key) {
+  return servicios.value.filter(servicio => categoriaDeServicio(servicio.servicio) === key).length
+}
+
+function iconoServicio(nombreServicio) {
+  const key = categoriaDeServicio(nombreServicio)
+  return categoriasServicios.find(cat => cat.key === key)?.icon || 'spa'
+}
+
+function actualizarServiciosFiltrados() {
+  serviciosFiltrados.value = serviciosDeCategoriaActual.value
+}
+
+function seleccionarCategoria(key) {
+  categoriaSeleccionada.value = key
+  limpiarServicio()
+  actualizarServiciosFiltrados()
 }
 
 function colorEstado(estado) {
@@ -844,7 +937,7 @@ async function loadServicios() {
       .map(mapServicio)
       .filter(item => item.activo)
 
-    serviciosFiltrados.value = servicios.value
+    actualizarServiciosFiltrados()
   } catch (error) {
     servicios.value = []
     serviciosFiltrados.value = []
@@ -875,13 +968,14 @@ function filtrarClientes(valor, update) {
 function filtrarServicios(valor, update) {
   update(() => {
     const texto = normalizar(valor)
+    const base = serviciosDeCategoriaActual.value
 
     if (!texto) {
-      serviciosFiltrados.value = servicios.value
+      serviciosFiltrados.value = base
       return
     }
 
-    serviciosFiltrados.value = servicios.value.filter(servicio => {
+    serviciosFiltrados.value = base.filter(servicio => {
       return normalizar(servicio.servicio).includes(texto) ||
         normalizar(servicio.combo).includes(texto) ||
         normalizar(servicio.detalle).includes(texto)
@@ -894,6 +988,9 @@ function seleccionarServicio(servicio) {
     limpiarServicio()
     return
   }
+
+  categoriaSeleccionada.value = categoriaDeServicio(servicio.servicio)
+  actualizarServiciosFiltrados()
 
   form.value.servicioOption = servicio
   form.value.combo = servicio.combo || ''
@@ -909,6 +1006,9 @@ function limpiarServicio() {
 }
 
 function openDialog(fechaSeleccionada = null) {
+  categoriaSeleccionada.value = 'cejas'
+  actualizarServiciosFiltrados()
+
   form.value = {
     id: null,
     cliente_id: null,
@@ -937,6 +1037,9 @@ function edit(row) {
     precio: Number(row.precio || 0),
     activo: true
   }
+
+  categoriaSeleccionada.value = categoriaDeServicio(servicioTemporal.servicio)
+  actualizarServiciosFiltrados()
 
   form.value = {
     id: row.id,
@@ -1636,6 +1739,71 @@ onMounted(async () => {
   }
 }
 
+/* CATEGORÍAS DENTRO DE NUEVA CITA */
+
+.service-category-box {
+  background: #fff7fb;
+  border: 1px solid #f7c9dc;
+  border-radius: 22px;
+  padding: 14px;
+  margin-bottom: 14px;
+}
+
+.category-title {
+  color: #8a1248;
+  font-weight: 900;
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+.service-category-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.service-category-card {
+  border: 1px solid #efc4d8;
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 12px 8px;
+  cursor: pointer;
+  color: #8a1248;
+  font-weight: 900;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 86px;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.service-category-card:hover,
+.service-category-card.active {
+  color: white;
+  background: linear-gradient(135deg, #e91e63, #9c27b0);
+  border-color: transparent;
+  box-shadow: 0 12px 28px rgba(233, 30, 99, 0.22);
+  transform: translateY(-1px);
+}
+
+.service-category-card .category-icon {
+  font-size: 28px;
+}
+
+.service-category-card span {
+  font-size: 12px;
+  line-height: 1.15;
+}
+
+.service-category-card small {
+  font-size: 10px;
+  opacity: 0.78;
+  font-weight: 700;
+}
+
 /* ARREGLO GLOBAL PARA Q-DIALOG MAXIMIZADO EN CELULAR / TABLET */
 
 :global(.q-dialog__inner--maximized) {
@@ -1652,4 +1820,30 @@ onMounted(async () => {
   flex-direction: column !important;
   overflow: hidden !important;
 }
+
+@media (max-width: 700px) {
+  .service-category-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .service-category-card {
+    min-height: 76px;
+    padding: 10px 6px;
+  }
+
+  .service-category-card .category-icon {
+    font-size: 25px;
+  }
+
+  .service-category-card span {
+    font-size: 11px;
+  }
+
+  .service-category-box {
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+}
+
 </style>
+
