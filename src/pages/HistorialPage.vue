@@ -56,7 +56,6 @@
           bordered
           :rows-per-page-options="[5, 10, 20, 50]"
         >
-          <!-- CLIENTE -->
           <template #body-cell-nombre="props">
             <q-td :props="props">
               <div class="text-weight-bold text-pink-7">
@@ -69,7 +68,6 @@
             </q-td>
           </template>
 
-          <!-- TELÉFONO -->
           <template #body-cell-telefono="props">
             <q-td :props="props">
               <div class="telefono-box">
@@ -79,14 +77,12 @@
             </q-td>
           </template>
 
-          <!-- ELIMINADO -->
           <template #body-cell-deleted_at="props">
             <q-td :props="props">
               {{ formatDate(props.row.deleted_at) }}
             </q-td>
           </template>
 
-          <!-- ACCIONES -->
           <template #body-cell-actions="props">
             <q-td :props="props" class="text-center">
               <div class="acciones">
@@ -150,7 +146,6 @@
           bordered
           :rows-per-page-options="[5, 10, 20, 50]"
         >
-          <!-- SERVICIO -->
           <template #body-cell-servicio="props">
             <q-td :props="props">
               <div class="text-weight-bold text-purple-7">
@@ -163,14 +158,12 @@
             </q-td>
           </template>
 
-          <!-- FECHA -->
           <template #body-cell-fecha="props">
             <q-td :props="props">
               {{ props.row.fecha || 'Sin fecha' }}
             </q-td>
           </template>
 
-          <!-- PRECIO -->
           <template #body-cell-precio="props">
             <q-td :props="props">
               <div class="text-weight-bold text-green-8">
@@ -179,14 +172,12 @@
             </q-td>
           </template>
 
-          <!-- ELIMINADO -->
           <template #body-cell-deleted_at="props">
             <q-td :props="props">
               {{ formatDate(props.row.deleted_at) }}
             </q-td>
           </template>
 
-          <!-- ACCIONES -->
           <template #body-cell-actions="props">
             <q-td :props="props" class="text-center">
               <div class="acciones">
@@ -306,23 +297,19 @@ const columnsCitas = [
   }
 ]
 
-/*
-  IMPORTANTE:
-  Si tus rutas del backend tienen otro nombre, solo cambia estas rutas.
-*/
-  const rutas = {
-    historialEliminados: '/historial/eliminados',
+const rutas = {
+  historialEliminados: '/historial/eliminados',
 
-    recuperarCliente: id => `/historial/clientes/${id}/restaurar`,
-    recuperarCita: id => `/historial/citas/${id}/restaurar`,
-    recuperarPago: id => `/historial/pagos/${id}/restaurar`,
+  recuperarCliente: id => `/historial/clientes/${id}/restaurar`,
+  recuperarCita: id => `/historial/citas/${id}/restaurar`,
+  recuperarPago: id => `/historial/pagos/${id}/restaurar`,
 
-    eliminarClienteDefinitivo: id => `/historial/clientes/${id}/eliminar`,
-    eliminarCitaDefinitiva: id => `/historial/citas/${id}/eliminar`,
-    eliminarPagoDefinitivo: id => `/historial/pagos/${id}/eliminar`,
+  eliminarClienteDefinitivo: id => `/historial/clientes/${id}/eliminar`,
+  eliminarCitaDefinitiva: id => `/historial/citas/${id}/eliminar`,
+  eliminarPagoDefinitivo: id => `/historial/pagos/${id}/eliminar`,
 
-    limpiarHistorial: '/historial/limpiar'
-  }
+  limpiarHistorial: '/historial/limpiar'
+}
 
 function responseToArray(data) {
   if (Array.isArray(data)) return data
@@ -332,6 +319,7 @@ function responseToArray(data) {
   if (Array.isArray(data?.pagos_eliminados)) return data.pagos_eliminados
   return []
 }
+
 function getErrorMessage(error) {
   const data = error?.response?.data
 
@@ -364,31 +352,17 @@ function formatDate(value) {
   })
 }
 
-async function loadClientesEliminados() {
+async function loadAll() {
   loadingClientes.value = true
-
-  try {
-    const { data } = await api.get(rutas.clientesEliminados)
-    clientesEliminados.value = responseToArray(data)
-  } catch (error) {
-    clientesEliminados.value = []
-
-    $q.notify({
-      type: 'negative',
-      message: getErrorMessage(error)
-    })
-  } finally {
-    loadingClientes.value = false
-  }
-}
-
-async function loadCitasEliminadas() {
   loadingCitas.value = true
 
   try {
-    const { data } = await api.get(rutas.citasEliminadas)
-    citasEliminadas.value = responseToArray(data)
+    const { data } = await api.get(rutas.historialEliminados)
+
+    clientesEliminados.value = responseToArray(data?.clientes_eliminados)
+    citasEliminadas.value = responseToArray(data?.citas_eliminadas)
   } catch (error) {
+    clientesEliminados.value = []
     citasEliminadas.value = []
 
     $q.notify({
@@ -396,15 +370,9 @@ async function loadCitasEliminadas() {
       message: getErrorMessage(error)
     })
   } finally {
+    loadingClientes.value = false
     loadingCitas.value = false
   }
-}
-
-async function loadAll() {
-  await Promise.all([
-    loadClientesEliminados(),
-    loadCitasEliminadas()
-  ])
 }
 
 function recuperarCliente(row) {
