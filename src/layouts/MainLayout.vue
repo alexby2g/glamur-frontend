@@ -88,9 +88,11 @@
                 class="empty-notifications"
               >
                 <q-icon name="notifications_none" size="42px" />
+
                 <div class="text-weight-bold q-mt-sm">
                   Sin notificaciones
                 </div>
+
                 <div class="text-caption">
                   Cuando se registre un pago aparecerá aquí.
                 </div>
@@ -118,11 +120,11 @@
 
                   <q-item-section>
                     <q-item-label class="text-weight-bold">
-                      {{ n.titulo }}
+                      {{ n.titulo || 'Notificación' }}
                     </q-item-label>
 
                     <q-item-label caption lines="2">
-                      {{ n.mensaje }}
+                      {{ n.mensaje || 'Nueva actividad registrada en Glamur.' }}
                     </q-item-label>
 
                     <q-item-label caption class="notification-date">
@@ -294,6 +296,8 @@
 
 <script>
 import { api } from 'boot/axios'
+import { Capacitor } from '@capacitor/core'
+import { LocalNotifications } from '@capacitor/local-notifications'
 
 export default {
   name: 'MainLayout',
@@ -308,6 +312,7 @@ export default {
       noLeidas: 0,
       intervaloNotificaciones: null,
       notificacionesInicializadas: false,
+      ultimaNotificacionMostradaId: Number(localStorage.getItem('glamur_last_notification_id') || 0),
 
       menu: [
         {
@@ -363,6 +368,7 @@ export default {
 
   mounted () {
     this.cargarUsuario()
+    this.prepararNotificacionesCelular()
     this.cargarNotificaciones()
 
     this.intervaloNotificaciones = setInterval(() => {
@@ -377,6 +383,82 @@ export default {
   },
 
   methods: {
+    async prepararNotificacionesCelular () {
+      if (!Capacitor.isNativePlatform()) {
+        return
+      }
+
+      try {
+        const permisoActual = await LocalNotifications.checkPermissions()
+
+        let permisoFinal = permisoActual
+
+        if (permisoActual.display !== 'granted') {
+          permisoFinal = await LocalNotifications.requestPermissions()
+        }
+
+        if (permisoFinal.display !== 'granted') {
+          return
+        }
+
+        if (Capacitor.getPlatform() === 'android') {
+          await LocalNotifications.createChannel({
+            id: 'glamur_pagos',
+            name: 'Pagos Glamur',
+            description: 'Notificaciones de pagos registrados en Glamur',
+            importance: 5,
+            visibility: 1,
+            sound: 'default'
+          })
+        }
+      } catch {
+        // La app sigue funcionando aunque el celular bloquee las notificaciones.
+      }
+    },
+
+    async notificarEnCelular (notificacion) {
+      if (!Capacitor.isNativePlatform()) {
+        return
+      }
+
+      try {
+        const permiso = await LocalNotifications.checkPermissions()
+
+        if (permiso.display !== 'granted') {
+          return
+        }
+
+        const idSeguro = Number(notificacion?.id || Date.now()) % 2147483647
+
+        await LocalNotifications.schedule({
+          notifications: [
+            {
+              id: idSeguro,
+              title: notificacion?.titulo || 'Glamur',
+              body: notificacion?.mensaje || 'Nueva notificación registrada',
+              schedule: {
+                at: new Date(Date.now() + 1000)
+              },
+              channelId: 'glamur_pagos'
+            }
+          ]
+        })
+      } catch {
+        // Evitamos romper la app si Android no permite mostrar la notificación.
+      }
+    },
+
+    guardarUltimaNotificacionMostrada (id) {
+      const idNumerico = Number(id || 0)
+
+      if (!idNumerico) {
+        return
+      }
+
+      this.ultimaNotificacionMostradaId = idNumerico
+      localStorage.setItem('glamur_last_notification_id', String(idNumerico))
+    },
+
     cargarUsuario () {
       const usuarioGuardado = localStorage.getItem('glamur_user')
 
@@ -399,8 +481,6 @@ export default {
 
     async cargarNotificaciones () {
       try {
-        const noLeidasAntes = this.noLeidas
-
         const { data } = await api.get('/notificaciones')
 
         this.notificaciones = Array.isArray(data?.notificaciones)
@@ -409,18 +489,33 @@ export default {
 
         this.noLeidas = Number(data?.no_leidas || 0)
 
-        if (
-          this.notificacionesInicializadas &&
-          this.noLeidas > noLeidasAntes
-        ) {
-          const nueva = this.notificaciones[0]
+        const primeraNotificacion = this.notificaciones[0]
+        const primeraId = Number(primeraNotificacion?.id || 0)
 
+        if (!this.notificacionesInicializadas) {
+          if (primeraId) {
+            this.guardarUltimaNotificacionMostrada(primeraId)
+          }
+
+          this.notificacionesInicializadas = true
+          return
+        }
+
+        if (
+          primeraNotificacion &&
+          primeraId &&
+          primeraId !== this.ultimaNotificacionMostradaId &&
+          !primeraNotificacion.leido
+        ) {
           this.$q.notify({
             type: 'positive',
-            icon: 'notifications_active',
+            icon: primeraNotificacion.tipo === 'pago' ? 'payments' : 'notifications_active',
             position: 'top-right',
-            message: nueva?.mensaje || 'Nueva notificación registrada'
+            message: primeraNotificacion?.mensaje || 'Nueva notificación registrada'
           })
+
+          await this.notificarEnCelular(primeraNotificacion)
+          this.guardarUltimaNotificacionMostrada(primeraId)
         }
 
         this.notificacionesInicializadas = true
@@ -496,6 +591,7 @@ export default {
         } finally {
           localStorage.removeItem('glamur_token')
           localStorage.removeItem('glamur_user')
+          localStorage.removeItem('glamur_last_notification_id')
 
           this.$q.notify({
             type: 'positive',
