@@ -25,10 +25,86 @@
           class="btn-glamur-white"
           icon="add"
           label="Nuevo servicio"
-          @click="openDialog"
+          @click="openDialog()"
         />
       </div>
     </div>
+
+    <!-- BOTONES DE CATEGORÍAS -->
+    <div class="categorias-grid q-mb-lg">
+      <div
+        v-for="cat in categoriasUI"
+        :key="cat.value"
+        class="categoria-card"
+        :class="{ active: selectedCategoria === cat.value }"
+        @click="selectedCategoria = cat.value"
+      >
+        <div class="categoria-icon">
+          <q-icon :name="cat.icon" />
+        </div>
+
+        <div class="categoria-info">
+          <div class="categoria-title">
+            {{ cat.label }}
+          </div>
+
+          <div class="categoria-subtitle">
+            {{ cat.descripcion }}
+          </div>
+
+          <div class="categoria-extra">
+            <q-badge rounded :color="selectedCategoria === cat.value ? 'white' : 'pink'">
+              <span :class="selectedCategoria === cat.value ? 'text-pink-7' : 'text-white'">
+                {{ resumenCategoria(cat.value).count }} combo(s)
+              </span>
+            </q-badge>
+
+            <q-badge
+              v-if="resumenCategoria(cat.value).count > 0"
+              rounded
+              :color="selectedCategoria === cat.value ? 'white' : 'green'"
+            >
+              <span :class="selectedCategoria === cat.value ? 'text-green-8' : 'text-white'">
+                Desde Bs {{ money(resumenCategoria(cat.value).minPrecio) }}
+              </span>
+            </q-badge>
+          </div>
+        </div>
+
+        <q-icon
+          class="categoria-arrow"
+          :name="selectedCategoria === cat.value ? 'check_circle' : 'chevron_right'"
+        />
+      </div>
+    </div>
+
+    <!-- ENCABEZADO DE CATEGORÍA SELECCIONADA -->
+    <q-card class="categoria-panel q-mb-md">
+      <div class="categoria-panel-content">
+        <div class="row items-center no-wrap">
+          <q-avatar class="categoria-panel-icon" size="52px">
+            <q-icon :name="categoriaActual.icon" />
+          </q-avatar>
+
+          <div class="q-ml-md">
+            <div class="text-h6 text-weight-bold text-pink-8">
+              {{ categoriaActual.label }}
+            </div>
+
+            <div class="text-caption text-grey-7">
+              {{ categoriaActual.descripcion }}
+            </div>
+          </div>
+        </div>
+
+        <q-btn
+          class="btn-glamur"
+          icon="add"
+          :label="`Agregar combo`"
+          @click="openDialog(selectedCategoria)"
+        />
+      </div>
+    </q-card>
 
     <!-- BUSCADOR -->
     <q-card class="search-card q-mb-md">
@@ -56,7 +132,7 @@
         bordered
         :loading="loading"
         :rows-per-page-options="[5, 10, 20, 50]"
-        no-data-label="No hay servicios registrados"
+        no-data-label="No hay combos registrados en esta categoría"
       >
         <!-- SERVICIO -->
         <template #body-cell-servicio="props">
@@ -78,7 +154,7 @@
               {{ props.row.combo }}
             </div>
 
-            <div class="text-caption text-grey-7">
+            <div class="text-caption text-grey-7 combo-detalle">
               {{ props.row.detalle || 'Sin detalle registrado' }}
             </div>
           </q-td>
@@ -165,7 +241,7 @@
           <div class="q-gutter-md">
             <q-select
               v-model="form.servicio"
-              :options="categorias"
+              :options="categoriasFormulario"
               label="Servicio *"
               outlined
               dense
@@ -270,10 +346,62 @@ const loading = ref(false)
 const saving = ref(false)
 const loadingBase = ref(false)
 
-const categorias = [
+const selectedCategoria = ref('CEJAS Y PESTAÑAS')
+
+const categoriasUI = [
+  {
+    label: 'Cejas y Pestañas',
+    value: 'CEJAS Y PESTAÑAS',
+    icon: 'visibility',
+    descripcion: 'Laminado, henna, depilación, lifting y retoques'
+  },
+  {
+    label: 'Maquillaje y Cabello',
+    value: 'MAQUILLAJE Y CABELLO',
+    icon: 'face_retouching_natural',
+    descripcion: 'Maquillaje, peinado, planchado y servicios VIP'
+  },
+  {
+    label: 'Uñas',
+    value: 'UÑAS',
+    icon: 'brush',
+    descripcion: 'Manicure, uñas, esmaltado y diseños'
+  },
+  {
+    label: 'Otros',
+    value: 'OTROS SERVICIOS',
+    icon: 'more_horiz',
+    descripcion: 'Servicios adicionales agregados manualmente'
+  }
+]
+
+const aliasCategorias = {
+  'CEJAS Y PESTAÑAS': [
+    'CEJAS Y PESTAÑAS',
+    'CEJAS',
+    'PESTAÑAS',
+    'CEJAS PERFECTAS'
+  ],
+  'MAQUILLAJE Y CABELLO': [
+    'MAQUILLAJE Y CABELLO',
+    'MAQUILLAJE',
+    'CABELLO',
+    'MAQUILLAJE Y PEINADO',
+    'PEINADO'
+  ],
+  UÑAS: [
+    'UÑAS',
+    'UNAS',
+    'MANICURE',
+    'PEDICURE',
+    'ESMALTADO'
+  ]
+}
+
+const categoriasPrincipales = [
   'CEJAS Y PESTAÑAS',
   'MAQUILLAJE Y CABELLO',
-  'OTROS SERVICIOS'
+  'UÑAS'
 ]
 
 const combosBase = [
@@ -387,12 +515,35 @@ const columns = [
   }
 ]
 
+const categoriaActual = computed(() => {
+  return categoriasUI.find(cat => cat.value === selectedCategoria.value) || categoriasUI[0]
+})
+
+const categoriasFormulario = computed(() => {
+  const base = [
+    'CEJAS Y PESTAÑAS',
+    'MAQUILLAJE Y CABELLO',
+    'UÑAS',
+    'OTROS SERVICIOS'
+  ]
+
+  const existentes = servicios.value
+    .map(item => item.servicio)
+    .filter(Boolean)
+
+  return [...new Set([...base, ...existentes])]
+})
+
+const serviciosCategoria = computed(() => {
+  return servicios.value.filter(item => perteneceCategoria(item, selectedCategoria.value))
+})
+
 const filteredServicios = computed(() => {
   const texto = normalizar(search.value)
 
-  if (!texto) return servicios.value
+  if (!texto) return serviciosCategoria.value
 
-  return servicios.value.filter(item => {
+  return serviciosCategoria.value.filter(item => {
     return normalizar(item.servicio).includes(texto) ||
       normalizar(item.combo).includes(texto) ||
       normalizar(item.detalle).includes(texto) ||
@@ -412,6 +563,7 @@ function normalizar(valor) {
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
+    .trim()
 }
 
 function responseToArray(data) {
@@ -426,38 +578,73 @@ function booleanValue(value) {
 }
 
 function normalizarServicioRow(row) {
-  const servicio = row.servicio || row.grupo || row.categoria || 'CEJAS Y PESTAÑAS'
+  const servicio = row.servicio || row.grupo || row.categoria || 'OTROS SERVICIOS'
   const combo = row.combo || row.nombre || ''
   const detalle = row.detalle || row.descripcion || ''
+  const activo = row.activo === undefined || row.activo === null
+    ? true
+    : booleanValue(row.activo)
 
   return {
     ...row,
 
-    // Campos usados por el frontend
     servicio,
     combo,
     detalle,
 
-    // Campos compatibles con backend
     grupo: row.grupo || servicio,
     categoria: row.categoria || servicio,
     nombre: row.nombre || combo,
     descripcion: row.descripcion || detalle,
 
     precio: Number(row.precio || 0),
-    activo: booleanValue(row.activo)
+    activo
+  }
+}
+
+function perteneceCategoria(item, categoria) {
+  const servicio = normalizar(item.servicio || item.grupo || item.categoria)
+
+  if (categoria === 'OTROS SERVICIOS') {
+    if (servicio === normalizar('OTROS SERVICIOS')) return true
+
+    const pertenecePrincipal = categoriasPrincipales.some(cat => {
+      return coincideConCategoria(servicio, cat)
+    })
+
+    return !pertenecePrincipal
+  }
+
+  return coincideConCategoria(servicio, categoria)
+}
+
+function coincideConCategoria(servicioNormalizado, categoria) {
+  const aliases = aliasCategorias[categoria] || [categoria]
+
+  return aliases.some(alias => {
+    return servicioNormalizado === normalizar(alias)
+  })
+}
+
+function resumenCategoria(categoria) {
+  const items = servicios.value.filter(item => perteneceCategoria(item, categoria))
+  const precios = items
+    .map(item => Number(item.precio || 0))
+    .filter(precio => precio > 0)
+
+  return {
+    count: items.length,
+    minPrecio: precios.length ? Math.min(...precios) : 0
   }
 }
 
 function crearPayloadDesdeForm() {
   return {
-    // Backend
     grupo: form.value.servicio,
     categoria: form.value.servicio,
     nombre: form.value.combo,
     descripcion: form.value.detalle,
 
-    // Compatibilidad con frontend anterior
     servicio: form.value.servicio,
     combo: form.value.combo,
     detalle: form.value.detalle,
@@ -469,13 +656,11 @@ function crearPayloadDesdeForm() {
 
 function crearPayloadDesdeCombo(combo) {
   return {
-    // Backend
     grupo: combo.servicio,
     categoria: combo.servicio,
     nombre: combo.combo,
     descripcion: combo.detalle,
 
-    // Compatibilidad con frontend anterior
     servicio: combo.servicio,
     combo: combo.combo,
     detalle: combo.detalle,
@@ -511,10 +696,12 @@ async function load() {
   }
 }
 
-function openDialog() {
+function openDialog(categoria = selectedCategoria.value) {
+  const categoriaInicial = categoria || 'CEJAS Y PESTAÑAS'
+
   form.value = {
     id: null,
-    servicio: 'CEJAS Y PESTAÑAS',
+    servicio: categoriaInicial,
     combo: '',
     detalle: '',
     precio: 0,
@@ -529,7 +716,7 @@ function edit(row) {
 
   form.value = {
     id: item.id,
-    servicio: item.servicio || 'CEJAS Y PESTAÑAS',
+    servicio: item.servicio || 'OTROS SERVICIOS',
     combo: item.combo || '',
     detalle: item.detalle || '',
     precio: Number(item.precio || 0),
@@ -597,6 +784,7 @@ async function save() {
       })
     }
 
+    selectedCategoria.value = form.value.servicio
     dialog.value = false
     await load()
   } catch (error) {
@@ -688,6 +876,8 @@ async function cargarCombosBase() {
       }
     }
 
+    selectedCategoria.value = 'CEJAS Y PESTAÑAS'
+
     $q.notify({
       type: 'positive',
       message: 'Combos base cargados correctamente'
@@ -756,6 +946,113 @@ onMounted(load)
   padding: 10px 18px;
 }
 
+.categorias-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.categoria-card {
+  background: white;
+  border-radius: 24px;
+  padding: 18px;
+  min-height: 150px;
+  cursor: pointer;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(233, 30, 99, 0.12);
+  box-shadow: 0 12px 30px rgba(156, 39, 176, 0.1);
+  transition: all 0.2s ease;
+}
+
+.categoria-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 18px 38px rgba(156, 39, 176, 0.18);
+}
+
+.categoria-card.active {
+  background: linear-gradient(135deg, #e91e63, #9c27b0);
+  color: white;
+  border-color: transparent;
+}
+
+.categoria-icon {
+  width: 52px;
+  height: 52px;
+  min-width: 52px;
+  border-radius: 18px;
+  background: #fce4ec;
+  color: #e91e63;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+}
+
+.categoria-card.active .categoria-icon {
+  background: rgba(255, 255, 255, 0.22);
+  color: white;
+}
+
+.categoria-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.categoria-title {
+  font-weight: 900;
+  font-size: 17px;
+  line-height: 1.15;
+}
+
+.categoria-subtitle {
+  margin-top: 5px;
+  font-size: 12px;
+  color: #6b6070;
+  line-height: 1.3;
+}
+
+.categoria-card.active .categoria-subtitle {
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.categoria-extra {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.categoria-arrow {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  font-size: 24px;
+  opacity: 0.8;
+}
+
+.categoria-panel {
+  border-radius: 24px;
+  padding: 18px;
+  background: white;
+  box-shadow: 0 14px 35px rgba(156, 39, 176, 0.1);
+}
+
+.categoria-panel-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.categoria-panel-icon {
+  background: linear-gradient(135deg, #e91e63, #9c27b0);
+  color: white;
+}
+
 .search-card,
 .table-card {
   border-radius: 24px;
@@ -790,6 +1087,12 @@ onMounted(load)
 .estado-badge {
   padding: 6px 10px;
   font-weight: 800;
+}
+
+.combo-detalle {
+  max-width: 520px;
+  white-space: normal;
+  line-height: 1.35;
 }
 
 .acciones {
@@ -836,6 +1139,13 @@ onMounted(load)
   z-index: 3;
 }
 
+/* TABLET */
+@media (max-width: 1024px) {
+  .categorias-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 /* TABLET Y CELULAR */
 @media (max-width: 768px) {
   .servicios-page {
@@ -860,6 +1170,25 @@ onMounted(load)
   }
 
   .hero-actions .q-btn {
+    width: 100%;
+  }
+
+  .categorias-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .categoria-card {
+    min-height: 118px;
+    padding: 16px;
+  }
+
+  .categoria-panel-content {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .categoria-panel-content .q-btn {
     width: 100%;
   }
 
@@ -896,6 +1225,14 @@ onMounted(load)
 
   .page-hero .text-subtitle2 {
     font-size: 13px;
+  }
+
+  .categoria-title {
+    font-size: 16px;
+  }
+
+  .categoria-subtitle {
+    font-size: 12px;
   }
 
   .btn-glamur-white,

@@ -1,5 +1,9 @@
 {
   "appId": "com.glamur.app",
   "appName": "Glamur",
-  "webDir": "dist/spa"
+  "webDir": "dist/spa",
+  "server": {
+    "url": "https://glamur-frontend.vercel.app",
+    "cleartext": false
+  }
 }
