@@ -13,7 +13,7 @@
         </div>
 
         <div class="text-subtitle2 text-white hero-subtitle">
-          Resumen general de citas, ingresos y actividad del sistema
+          Resumen general de citas, ingresos, clientes y servicios
         </div>
       </div>
 
@@ -36,7 +36,7 @@
     <!-- TARJETAS PRINCIPALES -->
     <div class="row q-col-gutter-md q-mt-md">
       <div
-        class="col-12 col-sm-6 col-md-4"
+        class="col-12 col-sm-6 col-md-4 col-lg-3"
         v-for="card in cards"
         :key="card.titulo"
       >
@@ -77,9 +77,10 @@
       </div>
     </div>
 
-    <!-- PANELES -->
+    <!-- PANELES DE RESUMEN -->
     <div class="row q-col-gutter-md q-mt-md">
 
+      <!-- ESTADO DE CITAS -->
       <div class="col-12 col-md-7">
         <q-card class="panel-card">
           <q-card-section>
@@ -90,7 +91,7 @@
                 </div>
 
                 <div class="panel-subtitle">
-                  Control visual de citas pendientes y concluidas
+                  Control visual de citas pendientes, concluidas y canceladas
                 </div>
               </div>
 
@@ -136,34 +137,58 @@
                 :value="porcentajeConcluidas"
               />
             </div>
+
+            <div class="progress-box">
+              <div class="row justify-between q-mb-xs">
+                <div class="progress-label">Canceladas</div>
+                <div class="progress-number">{{ data.canceladas || 0 }}</div>
+              </div>
+
+              <q-linear-progress
+                rounded
+                size="16px"
+                color="red"
+                :value="porcentajeCanceladas"
+              />
+            </div>
           </q-card-section>
         </q-card>
       </div>
 
+      <!-- INGRESOS -->
       <div class="col-12 col-md-5">
         <q-card class="panel-card income-card">
           <q-card-section>
             <div class="panel-title">
-              Ingresos del mes
+              Resumen de ingresos
             </div>
 
             <div class="panel-subtitle">
-              Total registrado en pagos
+              Pagos registrados como pagados
             </div>
           </q-card-section>
 
           <q-separator />
 
           <q-card-section>
-            <div class="ingreso-total">
-              Bs {{ money(data.ingreso_mes) }}
+            <div class="income-grid">
+              <div class="income-box">
+                <div class="income-label">Hoy</div>
+                <div class="income-value">Bs {{ money(data.ingreso_dia) }}</div>
+              </div>
+
+              <div class="income-box">
+                <div class="income-label">Mes</div>
+                <div class="income-value">Bs {{ money(data.ingreso_mes) }}</div>
+              </div>
+
+              <div class="income-box">
+                <div class="income-label">Año</div>
+                <div class="income-value">Bs {{ money(data.ingreso_anio) }}</div>
+              </div>
             </div>
 
-            <div class="text-caption text-grey-7 q-mb-md">
-              Ingreso acumulado del mes actual
-            </div>
-
-            <div class="quick-actions">
+            <div class="quick-actions q-mt-md">
               <q-btn
                 class="quick-btn"
                 icon="people"
@@ -193,6 +218,282 @@
       </div>
 
     </div>
+
+    <!-- GRÁFICOS -->
+    <div class="row q-col-gutter-md q-mt-md">
+
+      <!-- INGRESOS POR DÍA -->
+      <div class="col-12 col-lg-7">
+        <q-card class="panel-card chart-card">
+          <q-card-section>
+            <div class="panel-title">
+              Ingresos por día del mes
+            </div>
+
+            <div class="panel-subtitle">
+              Muestra los ingresos diarios del mes actual
+            </div>
+          </q-card-section>
+
+          <q-separator />
+
+          <q-card-section>
+            <div v-if="data.estadisticas_dias.length === 0" class="empty-chart">
+              No hay datos para mostrar.
+            </div>
+
+            <div v-else class="bar-chart">
+              <div
+                v-for="item in data.estadisticas_dias"
+                :key="item.fecha"
+                class="bar-row"
+              >
+                <div class="bar-label">
+                  {{ item.label }}
+                </div>
+
+                <div class="bar-track">
+                  <div
+                    class="bar-fill"
+                    :style="{ width: barWidth(item.ingresos, maxIngresosDias) + '%' }"
+                  />
+                </div>
+
+                <div class="bar-value">
+                  Bs {{ money(item.ingresos) }}
+                </div>
+              </div>
+            </div>
+          </q-card-section>
+        </q-card>
+      </div>
+
+      <!-- SERVICIOS MÁS VENDIDOS -->
+      <div class="col-12 col-lg-5">
+        <q-card class="panel-card chart-card">
+          <q-card-section>
+            <div class="panel-title">
+              Servicios más vendidos
+            </div>
+
+            <div class="panel-subtitle">
+              Ranking por cantidad de citas
+            </div>
+          </q-card-section>
+
+          <q-separator />
+
+          <q-card-section>
+            <div v-if="data.servicios_top.length === 0" class="empty-chart">
+              No hay servicios registrados.
+            </div>
+
+            <div v-else class="service-list">
+              <div
+                v-for="servicio in data.servicios_top"
+                :key="servicio.servicio"
+                class="service-item"
+              >
+                <div class="service-top">
+                  <div class="service-name">
+                    {{ servicio.servicio }}
+                  </div>
+
+                  <div class="service-count">
+                    {{ servicio.cantidad }} cita(s)
+                  </div>
+                </div>
+
+                <div class="bar-track small">
+                  <div
+                    class="bar-fill purple"
+                    :style="{ width: barWidth(servicio.cantidad, maxServicios) + '%' }"
+                  />
+                </div>
+
+                <div class="service-income">
+                  Bs {{ money(servicio.ingresos) }}
+                </div>
+              </div>
+            </div>
+          </q-card-section>
+        </q-card>
+      </div>
+
+    </div>
+
+    <div class="row q-col-gutter-md q-mt-md">
+
+      <!-- INGRESOS POR MES -->
+      <div class="col-12 col-lg-7">
+        <q-card class="panel-card chart-card">
+          <q-card-section>
+            <div class="panel-title">
+              Ingresos por mes del año
+            </div>
+
+            <div class="panel-subtitle">
+              Comparación mensual del año actual
+            </div>
+          </q-card-section>
+
+          <q-separator />
+
+          <q-card-section>
+            <div class="line-chart-wrapper">
+              <svg viewBox="0 0 600 190" class="line-chart">
+                <polyline
+                  :points="chartMesesPoints"
+                  fill="none"
+                  stroke="#e91e63"
+                  stroke-width="5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+
+                <circle
+                  v-for="punto in chartMesesCirculos"
+                  :key="punto.label"
+                  :cx="punto.x"
+                  :cy="punto.y"
+                  r="6"
+                  fill="#9c27b0"
+                />
+              </svg>
+
+              <div class="month-labels">
+                <div
+                  v-for="item in data.estadisticas_meses"
+                  :key="item.label"
+                >
+                  {{ item.label }}
+                </div>
+              </div>
+            </div>
+
+            <div class="month-summary">
+              <div
+                v-for="item in data.estadisticas_meses"
+                :key="item.label + '-data'"
+                class="month-chip"
+              >
+                <b>{{ item.label }}</b>
+                <span>Bs {{ money(item.ingresos) }}</span>
+              </div>
+            </div>
+          </q-card-section>
+        </q-card>
+      </div>
+
+      <!-- RESUMEN POR AÑOS -->
+      <div class="col-12 col-lg-5">
+        <q-card class="panel-card chart-card">
+          <q-card-section>
+            <div class="panel-title">
+              Resumen últimos años
+            </div>
+
+            <div class="panel-subtitle">
+              Citas e ingresos por año
+            </div>
+          </q-card-section>
+
+          <q-separator />
+
+          <q-card-section>
+            <div class="year-list">
+              <div
+                v-for="anio in data.estadisticas_anios"
+                :key="anio.label"
+                class="year-item"
+              >
+                <div>
+                  <div class="year-label">{{ anio.label }}</div>
+                  <div class="year-subtitle">{{ anio.citas }} cita(s)</div>
+                </div>
+
+                <div class="year-income">
+                  Bs {{ money(anio.ingresos) }}
+                </div>
+              </div>
+            </div>
+          </q-card-section>
+        </q-card>
+      </div>
+
+    </div>
+
+    <!-- ÚLTIMAS CITAS -->
+    <q-card class="panel-card q-mt-md">
+      <q-card-section>
+        <div class="row items-center justify-between">
+          <div>
+            <div class="panel-title">
+              Últimas citas registradas
+            </div>
+
+            <div class="panel-subtitle">
+              Actividad reciente del sistema
+            </div>
+          </div>
+
+          <q-btn
+            class="panel-history-btn"
+            icon="event"
+            label="Ver citas"
+            to="/citas"
+            unelevated
+            no-caps
+          />
+        </div>
+      </q-card-section>
+
+      <q-separator />
+
+      <q-card-section>
+        <div v-if="data.ultimas_citas.length === 0" class="empty-chart">
+          No hay citas recientes.
+        </div>
+
+        <q-list v-else separator>
+          <q-item
+            v-for="cita in data.ultimas_citas"
+            :key="cita.id"
+            class="latest-item"
+          >
+            <q-item-section avatar>
+              <q-avatar :color="estadoColor(cita)" text-color="white">
+                <q-icon :name="estadoIcon(cita)" />
+              </q-avatar>
+            </q-item-section>
+
+            <q-item-section>
+              <q-item-label class="text-weight-bold">
+                {{ clienteTexto(cita) }}
+              </q-item-label>
+
+              <q-item-label caption>
+                {{ servicioTexto(cita) }} · {{ fechaBonita(cita.fecha) }} {{ horaBonita(cita.hora) }}
+              </q-item-label>
+            </q-item-section>
+
+            <q-item-section side>
+              <div class="latest-price">
+                Bs {{ money(precioTexto(cita)) }}
+              </div>
+
+              <q-badge
+                rounded
+                :color="estadoColor(cita)"
+                text-color="white"
+              >
+                {{ estadoTexto(cita) }}
+              </q-badge>
+            </q-item-section>
+          </q-item>
+        </q-list>
+      </q-card-section>
+    </q-card>
 
     <!-- MODAL HISTORIAL DE CITAS -->
     <q-dialog
@@ -231,6 +532,7 @@
             :key="item.label"
           >
             <q-icon :name="item.icon" :color="item.color" size="24px" />
+
             <div>
               <div class="summary-number">{{ item.value }}</div>
               <div class="summary-label">{{ item.label }}</div>
@@ -270,12 +572,13 @@
         <q-separator />
 
         <q-card-section class="history-body">
-
           <div v-if="historialFiltrado.length === 0" class="empty-history">
             <q-icon name="event_busy" size="58px" color="grey-5" />
+
             <div class="empty-title">
               No hay citas para mostrar
             </div>
+
             <div class="empty-subtitle">
               Cuando registres citas, aparecerán en este historial.
             </div>
@@ -342,7 +645,6 @@
               </q-item-section>
             </q-item>
           </q-list>
-
         </q-card-section>
 
         <q-separator />
@@ -376,7 +678,9 @@ import { ref, computed, onMounted } from 'vue'
 import { api } from 'boot/axios'
 import { useQuasar } from 'quasar'
 
-defineOptions({ name: 'DashboardPage' })
+defineOptions({
+  name: 'DashboardPage'
+})
 
 const $q = useQuasar()
 
@@ -387,11 +691,21 @@ const citas = ref([])
 
 const data = ref({
   total: 0,
+  citas_hoy: 0,
+  citas_mes: 0,
+  citas_anio: 0,
   pendientes: 0,
   concluidas: 0,
+  canceladas: 0,
+  clientes_total: 0,
   ingreso_dia: 0,
   ingreso_mes: 0,
-  ingreso_anio: 0
+  ingreso_anio: 0,
+  estadisticas_dias: [],
+  estadisticas_meses: [],
+  estadisticas_anios: [],
+  servicios_top: [],
+  ultimas_citas: []
 })
 
 function money(value) {
@@ -415,6 +729,7 @@ function getEstado(cita) {
 
 function esConcluida(cita) {
   const estado = getEstado(cita)
+
   return (
     estado.includes('conclu') ||
     estado.includes('final') ||
@@ -425,6 +740,7 @@ function esConcluida(cita) {
 
 function esCancelada(cita) {
   const estado = getEstado(cita)
+
   return (
     estado.includes('cancel') ||
     estado.includes('anulad')
@@ -494,6 +810,7 @@ const historialFiltrado = computed(() => {
   return lista.sort((a, b) => {
     const fechaA = `${a.fecha || ''} ${a.hora || ''}`
     const fechaB = `${b.fecha || ''} ${b.hora || ''}`
+
     return fechaB.localeCompare(fechaA)
   })
 })
@@ -501,22 +818,40 @@ const historialFiltrado = computed(() => {
 const porcentajePendientes = computed(() => {
   const total = Number(data.value.total || 0)
   if (total === 0) return 0
+
   return Number(data.value.pendientes || 0) / total
 })
 
 const porcentajeConcluidas = computed(() => {
   const total = Number(data.value.total || 0)
   if (total === 0) return 0
+
   return Number(data.value.concluidas || 0) / total
 })
 
+const porcentajeCanceladas = computed(() => {
+  const total = Number(data.value.total || 0)
+  if (total === 0) return 0
+
+  return Number(data.value.canceladas || 0) / total
+})
+
 const cards = computed(() => [
+  {
+    titulo: 'Citas Hoy',
+    valor: data.value.citas_hoy || 0,
+    detalle: 'Citas programadas para hoy',
+    icono: 'today',
+    clase: 'bg-pink-7',
+    filtro: 'todas',
+    boton: 'Ver historial'
+  },
   {
     titulo: 'Total Citas',
     valor: data.value.total || 0,
     detalle: 'Citas registradas',
     icono: 'event',
-    clase: 'bg-pink-7',
+    clase: 'bg-purple-7',
     filtro: 'todas',
     boton: 'Historial'
   },
@@ -539,6 +874,22 @@ const cards = computed(() => [
     boton: 'Ver concluidas'
   },
   {
+    titulo: 'Canceladas',
+    valor: data.value.canceladas || 0,
+    detalle: 'Citas canceladas',
+    icono: 'cancel',
+    clase: 'bg-red-7',
+    filtro: 'canceladas',
+    boton: 'Ver canceladas'
+  },
+  {
+    titulo: 'Clientes',
+    valor: data.value.clientes_total || 0,
+    detalle: 'Clientes activos registrados',
+    icono: 'people',
+    clase: 'bg-blue-7'
+  },
+  {
     titulo: 'Ingresos Hoy',
     valor: `Bs ${money(data.value.ingreso_dia)}`,
     detalle: 'Pagos del día',
@@ -548,18 +899,75 @@ const cards = computed(() => [
   {
     titulo: 'Ingresos Mes',
     valor: `Bs ${money(data.value.ingreso_mes)}`,
-    detalle: 'Pagos del mes',
+    detalle: 'Pagos del mes actual',
     icono: 'calendar_month',
-    clase: 'bg-blue-7'
+    clase: 'bg-indigo-7'
   },
   {
     titulo: 'Ingresos Año',
     valor: `Bs ${money(data.value.ingreso_anio)}`,
-    detalle: 'Pagos del año',
+    detalle: 'Pagos del año actual',
     icono: 'trending_up',
-    clase: 'bg-purple-7'
+    clase: 'bg-deep-purple-7'
   }
 ])
+
+const maxIngresosDias = computed(() => {
+  return maxValor(data.value.estadisticas_dias, 'ingresos')
+})
+
+const maxServicios = computed(() => {
+  return maxValor(data.value.servicios_top, 'cantidad')
+})
+
+const maxIngresosMeses = computed(() => {
+  return maxValor(data.value.estadisticas_meses, 'ingresos')
+})
+
+const chartMesesCirculos = computed(() => {
+  const lista = data.value.estadisticas_meses || []
+  const max = maxIngresosMeses.value || 1
+
+  if (lista.length === 0) {
+    return []
+  }
+
+  return lista.map((item, index) => {
+    const x = 30 + (index * (540 / Math.max(lista.length - 1, 1)))
+    const y = 160 - ((Number(item.ingresos || 0) / max) * 120)
+
+    return {
+      x,
+      y,
+      label: item.label,
+      ingresos: item.ingresos
+    }
+  })
+})
+
+const chartMesesPoints = computed(() => {
+  return chartMesesCirculos.value
+    .map(punto => `${punto.x},${punto.y}`)
+    .join(' ')
+})
+
+function maxValor(lista, campo) {
+  const valores = (lista || []).map(item => Number(item?.[campo] || 0))
+  const max = Math.max(...valores, 0)
+
+  return max <= 0 ? 1 : max
+}
+
+function barWidth(valor, max) {
+  const numero = Number(valor || 0)
+  const maximo = Number(max || 1)
+
+  if (numero <= 0) {
+    return 4
+  }
+
+  return Math.max((numero / maximo) * 100, 8)
+}
 
 function abrirHistorial(filtro) {
   filtroHistorial.value = filtro || 'todas'
@@ -637,18 +1045,21 @@ function horaBonita(hora) {
 function estadoTexto(cita) {
   if (esCancelada(cita)) return 'Cancelada'
   if (esConcluida(cita)) return 'Concluida'
+
   return 'Pendiente'
 }
 
 function estadoColor(cita) {
   if (esCancelada(cita)) return 'red-7'
   if (esConcluida(cita)) return 'green-7'
+
   return 'orange-7'
 }
 
 function estadoIcon(cita) {
   if (esCancelada(cita)) return 'cancel'
   if (esConcluida(cita)) return 'check_circle'
+
   return 'schedule'
 }
 
@@ -677,6 +1088,16 @@ function pagoColor(cita) {
   return 'grey-7'
 }
 
+function getErrorMessage(error) {
+  const info = error?.response?.data
+
+  if (info?.errors) {
+    return Object.values(info.errors).flat().join(' ')
+  }
+
+  return info?.message || error?.message || 'No se pudo cargar el dashboard'
+}
+
 async function load() {
   loading.value = true
 
@@ -688,14 +1109,25 @@ async function load() {
 
     if (dashboardResult.status === 'fulfilled') {
       const res = dashboardResult.value
+      const dashboard = res.data || {}
 
       data.value = {
-        total: Number(res.data?.total || 0),
-        pendientes: Number(res.data?.pendientes || 0),
-        concluidas: Number(res.data?.concluidas || 0),
-        ingreso_dia: Number(res.data?.ingreso_dia || 0),
-        ingreso_mes: Number(res.data?.ingreso_mes || 0),
-        ingreso_anio: Number(res.data?.ingreso_anio || 0)
+        total: Number(dashboard.total || 0),
+        citas_hoy: Number(dashboard.citas_hoy || 0),
+        citas_mes: Number(dashboard.citas_mes || 0),
+        citas_anio: Number(dashboard.citas_anio || 0),
+        pendientes: Number(dashboard.pendientes || 0),
+        concluidas: Number(dashboard.concluidas || 0),
+        canceladas: Number(dashboard.canceladas || 0),
+        clientes_total: Number(dashboard.clientes_total || 0),
+        ingreso_dia: Number(dashboard.ingreso_dia || 0),
+        ingreso_mes: Number(dashboard.ingreso_mes || 0),
+        ingreso_anio: Number(dashboard.ingreso_anio || 0),
+        estadisticas_dias: normalizarLista(dashboard.estadisticas_dias),
+        estadisticas_meses: normalizarLista(dashboard.estadisticas_meses),
+        estadisticas_anios: normalizarLista(dashboard.estadisticas_anios),
+        servicios_top: normalizarLista(dashboard.servicios_top),
+        ultimas_citas: normalizarLista(dashboard.ultimas_citas)
       }
     } else {
       throw dashboardResult.reason
@@ -714,7 +1146,7 @@ async function load() {
   } catch (error) {
     $q.notify({
       type: 'negative',
-      message: error.response?.data?.message || 'No se pudo cargar el dashboard'
+      message: getErrorMessage(error)
     })
   } finally {
     loading.value = false
@@ -732,6 +1164,8 @@ onMounted(load)
     radial-gradient(circle at top left, rgba(233, 30, 99, 0.12), transparent 34%),
     linear-gradient(180deg, #fff7fb 0%, #f7f7fb 100%);
 }
+
+/* HERO */
 
 .dashboard-hero {
   background: linear-gradient(135deg, #e91e63, #9c27b0);
@@ -779,6 +1213,8 @@ onMounted(load)
   z-index: 1;
 }
 
+/* TARJETAS */
+
 .stat-card {
   border-radius: 26px;
   box-shadow: 0 14px 35px rgba(156, 39, 176, 0.12);
@@ -803,10 +1239,11 @@ onMounted(load)
 }
 
 .stat-value {
-  font-size: 28px;
+  font-size: 25px;
   font-weight: 900;
   color: #222;
   margin-top: 4px;
+  word-break: break-word;
 }
 
 .stat-detail {
@@ -823,11 +1260,14 @@ onMounted(load)
   padding: 4px 12px;
 }
 
+/* PANELES */
+
 .panel-card {
   border-radius: 26px;
   box-shadow: 0 14px 35px rgba(156, 39, 176, 0.12);
   overflow: hidden;
   border: 1px solid rgba(233, 30, 99, 0.08);
+  background: white;
 }
 
 .panel-title {
@@ -863,10 +1303,31 @@ onMounted(load)
   color: #c2185b;
 }
 
-.ingreso-total {
-  font-size: 38px;
-  font-weight: 900;
+/* INGRESOS */
+
+.income-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.income-box {
+  border-radius: 20px;
+  background: #fff7fb;
+  border: 1px solid rgba(233, 30, 99, 0.12);
+  padding: 14px;
+}
+
+.income-label {
+  color: #777;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.income-value {
   color: #2e7d32;
+  font-size: 25px;
+  font-weight: 900;
 }
 
 .quick-actions {
@@ -883,6 +1344,212 @@ onMounted(load)
   background: linear-gradient(135deg, #e91e63, #9c27b0);
   font-weight: 800;
 }
+
+/* GRÁFICOS */
+
+.chart-card {
+  min-height: 100%;
+}
+
+.empty-chart {
+  text-align: center;
+  color: #777;
+  padding: 32px 10px;
+  font-weight: 700;
+}
+
+.bar-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 420px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.bar-row {
+  display: grid;
+  grid-template-columns: 50px 1fr 92px;
+  gap: 10px;
+  align-items: center;
+}
+
+.bar-label {
+  font-size: 12px;
+  color: #777;
+  font-weight: 900;
+}
+
+.bar-track {
+  height: 18px;
+  border-radius: 999px;
+  background: #f3e5f5;
+  overflow: hidden;
+}
+
+.bar-track.small {
+  height: 12px;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #e91e63, #ff80ab);
+  transition: width 0.3s ease;
+}
+
+.bar-fill.purple {
+  background: linear-gradient(135deg, #9c27b0, #e91e63);
+}
+
+.bar-value {
+  font-size: 12px;
+  color: #2e7d32;
+  font-weight: 900;
+  text-align: right;
+}
+
+.service-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.service-item {
+  border-radius: 18px;
+  background: #fff7fb;
+  border: 1px solid rgba(233, 30, 99, 0.10);
+  padding: 13px;
+}
+
+.service-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 7px;
+}
+
+.service-name {
+  color: #c2185b;
+  font-weight: 900;
+  font-size: 13px;
+}
+
+.service-count {
+  color: #444;
+  font-weight: 900;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.service-income {
+  color: #2e7d32;
+  font-weight: 900;
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+.line-chart-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.line-chart {
+  width: 100%;
+  min-width: 560px;
+  height: 210px;
+  background:
+    linear-gradient(#f8edf6 1px, transparent 1px),
+    linear-gradient(90deg, #f8edf6 1px, transparent 1px);
+  background-size: 60px 45px;
+  border-radius: 20px;
+  padding: 10px;
+}
+
+.month-labels {
+  min-width: 560px;
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  color: #777;
+  font-weight: 900;
+  font-size: 12px;
+  text-align: center;
+  margin-top: 8px;
+}
+
+.month-summary {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.month-chip {
+  background: #fff7fb;
+  border: 1px solid rgba(233, 30, 99, 0.10);
+  border-radius: 14px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: #555;
+  font-size: 12px;
+}
+
+.month-chip b {
+  color: #c2185b;
+}
+
+.year-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.year-item {
+  background: #fff7fb;
+  border: 1px solid rgba(233, 30, 99, 0.10);
+  border-radius: 18px;
+  padding: 14px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.year-label {
+  color: #c2185b;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.year-subtitle {
+  color: #777;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.year-income {
+  color: #2e7d32;
+  font-weight: 900;
+  text-align: right;
+}
+
+/* ÚLTIMAS CITAS */
+
+.latest-item {
+  border-radius: 18px;
+  margin-bottom: 8px;
+  background: #fff7fb;
+}
+
+.latest-price {
+  color: #2e7d32;
+  font-weight: 900;
+  margin-bottom: 4px;
+}
+
+/* HISTORIAL MODAL */
 
 .history-card {
   width: 900px;
@@ -1028,6 +1695,14 @@ onMounted(load)
   background: white;
 }
 
+/* RESPONSIVE */
+
+@media (max-width: 900px) {
+  .month-summary {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
 @media (max-width: 700px) {
   .dashboard-page {
     padding: 12px;
@@ -1050,7 +1725,7 @@ onMounted(load)
   }
 
   .stat-value {
-    font-size: 24px;
+    font-size: 22px;
   }
 
   .card-history-btn {
@@ -1067,8 +1742,34 @@ onMounted(load)
     flex-direction: column;
   }
 
-  .ingreso-total {
-    font-size: 30px;
+  .bar-row {
+    grid-template-columns: 44px 1fr 78px;
+    gap: 7px;
+  }
+
+  .bar-value {
+    font-size: 11px;
+  }
+
+  .service-top {
+    flex-direction: column;
+  }
+
+  .month-summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .year-item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .year-income {
+    text-align: left;
+  }
+
+  .latest-item {
+    align-items: flex-start;
   }
 
   .history-card {
@@ -1106,6 +1807,16 @@ onMounted(load)
     position: sticky;
     bottom: 0;
     z-index: 2;
+  }
+}
+
+@media (max-width: 420px) {
+  .month-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .income-value {
+    font-size: 22px;
   }
 }
 </style>
