@@ -30,14 +30,39 @@
       </div>
     </div>
 
+    <!-- BUSCADOR -->
+    <q-card class="buscador-card q-mb-md" flat bordered>
+      <div class="buscador-row">
+        <q-input
+          v-model="busqueda"
+          class="buscador-input"
+          outlined
+          rounded
+          dense
+          clearable
+          bg-color="white"
+          debounce="200"
+          placeholder="Buscar por cliente, teléfono, servicio, fecha, estado o pago..."
+        >
+          <template #prepend>
+            <q-icon name="search" color="pink" />
+          </template>
+        </q-input>
+
+        <q-badge class="buscador-badge" rounded>
+          {{ citasFiltradas.length }} de {{ citas.length }}
+        </q-badge>
+      </div>
+    </q-card>
+
     <!-- TABLA -->
     <q-table
       class="tabla-glamur"
-      :rows="citas"
+      :rows="citasFiltradas"
       :columns="columns"
       row-key="id"
       :loading="loading"
-      no-data-label="No hay citas registradas"
+      :no-data-label="busqueda ? 'No se encontraron citas con esa búsqueda' : 'No hay citas registradas'"
       flat
       bordered
       :rows-per-page-options="[5, 10, 20, 50]"
@@ -628,6 +653,7 @@ const route = useRoute()
 const router = useRouter()
 
 const citas = ref([])
+const busqueda = ref('')
 const clientes = ref([])
 const clientesFiltrados = ref([])
 const servicios = ref([])
@@ -660,6 +686,7 @@ const categoriasServicios = [
     match: []
   }
 ]
+
 const historial = ref([])
 
 const dialog = ref(false)
@@ -806,6 +833,32 @@ function normalizar(valor) {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
 }
+
+const citasFiltradas = computed(() => {
+  const texto = normalizar(busqueda.value)
+
+  if (!texto) {
+    return citas.value
+  }
+
+  return citas.value.filter(cita => {
+    const datos = [
+      cita.id,
+      cita.cliente?.nombre,
+      cita.cliente?.telefono,
+      cita.servicio,
+      cita.precio,
+      cita.fecha,
+      cita.hora,
+      cita.estado,
+      mostrarEstado(cita.estado),
+      cita.estado_pago,
+      mostrarPago(cita.estado_pago)
+    ]
+
+    return datos.some(dato => normalizar(dato).includes(texto))
+  })
+})
 
 function responseToArray(data) {
   if (Array.isArray(data)) return data
@@ -1313,6 +1366,39 @@ onMounted(async () => {
   justify-content: flex-end;
 }
 
+/* BUSCADOR */
+
+.buscador-card {
+  border-radius: 22px;
+  padding: 14px;
+  background: #ffffff;
+  box-shadow: 0 10px 28px rgba(156, 39, 176, 0.10);
+  border: 1px solid #f3d6e5;
+}
+
+.buscador-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.buscador-input {
+  flex: 1;
+}
+
+.buscador-input :deep(.q-field__control) {
+  min-height: 48px;
+  border-radius: 24px;
+}
+
+.buscador-badge {
+  background: linear-gradient(135deg, #e91e63, #9c27b0);
+  color: white;
+  font-weight: 900;
+  padding: 10px 14px;
+  white-space: nowrap;
+}
+
 /* BOTONES */
 
 .btn-glamur-white {
@@ -1665,6 +1751,41 @@ onMounted(async () => {
   }
 }
 
+@media (max-width: 700px) {
+  .buscador-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .buscador-badge {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .service-category-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .service-category-card {
+    min-height: 76px;
+    padding: 10px 6px;
+  }
+
+  .service-category-card .category-icon {
+    font-size: 25px;
+  }
+
+  .service-category-card span {
+    font-size: 11px;
+  }
+
+  .service-category-box {
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+}
+
 @media (max-width: 420px) {
   .dialog-body {
     padding: 20px 20px 24px !important;
@@ -1820,30 +1941,4 @@ onMounted(async () => {
   flex-direction: column !important;
   overflow: hidden !important;
 }
-
-@media (max-width: 700px) {
-  .service-category-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .service-category-card {
-    min-height: 76px;
-    padding: 10px 6px;
-  }
-
-  .service-category-card .category-icon {
-    font-size: 25px;
-  }
-
-  .service-category-card span {
-    font-size: 11px;
-  }
-
-  .service-category-box {
-    padding: 12px;
-    margin-bottom: 12px;
-  }
-}
-
 </style>
-
