@@ -13,17 +13,28 @@
         </div>
       </div>
 
-      <q-btn
-        icon="add"
-        label="Nuevo Cliente"
-        class="btn-glamur"
-        unelevated
-        rounded
-        @click="openDialog"
-      />
+      <div class="header-actions">
+        <q-btn
+          icon="contacts"
+          label="Importar contactos"
+          class="btn-importar"
+          unelevated
+          rounded
+          @click="abrirImportarContactos"
+        />
+
+        <q-btn
+          icon="add"
+          label="Nuevo Cliente"
+          class="btn-glamur"
+          unelevated
+          rounded
+          @click="openDialog"
+        />
+      </div>
     </div>
 
-    <!-- TABLA -->
+    <!-- TABLA CLIENTES -->
     <q-card class="card-table">
       <q-table
         :rows="clientes"
@@ -92,7 +103,7 @@
       </q-table>
     </q-card>
 
-    <!-- DIALOG -->
+    <!-- DIALOG CREAR / EDITAR CLIENTE -->
     <q-dialog v-model="dialog" persistent>
       <q-card class="dialog-card">
 
@@ -161,13 +172,164 @@
       </q-card>
     </q-dialog>
 
+    <!-- DIALOG IMPORTAR CONTACTOS -->
+    <q-dialog v-model="dialogContactos" persistent>
+      <q-card class="dialog-contactos">
+
+        <q-card-section class="dialog-header row items-center">
+          <div>
+            <div class="text-h6 text-weight-bold">
+              📱 Importar contactos
+            </div>
+
+            <div class="text-caption text-white">
+              Selecciona contactos del teléfono para guardarlos como clientes
+            </div>
+          </div>
+
+          <q-space />
+
+          <q-btn
+            icon="close"
+            flat
+            round
+            dense
+            color="white"
+            v-close-popup
+          />
+        </q-card-section>
+
+        <q-card-section class="contactos-toolbar">
+          <q-input
+            v-model.trim="buscarContacto"
+            label="Buscar por nombre o teléfono"
+            outlined
+            rounded
+            dense
+            clearable
+            bg-color="white"
+          >
+            <template #prepend>
+              <q-icon name="search" color="pink" />
+            </template>
+          </q-input>
+
+          <div class="contactos-info">
+            <q-chip color="pink" text-color="white" icon="contacts">
+              {{ contactosFiltrados.length }} contacto(s)
+            </q-chip>
+
+            <q-chip color="purple" text-color="white" icon="check_circle">
+              {{ contactosSeleccionados.length }} seleccionado(s)
+            </q-chip>
+          </div>
+        </q-card-section>
+
+        <q-card-section class="contactos-body">
+          <q-table
+            class="tabla-contactos"
+            :rows="contactosFiltrados"
+            :columns="columnsContactos"
+            row-key="uid"
+            :loading="loadingContactos"
+            no-data-label="No se encontraron contactos disponibles"
+            flat
+            bordered
+            selection="multiple"
+            v-model:selected="contactosSeleccionados"
+            :rows-per-page-options="[5, 10, 20, 50]"
+          >
+            <template #body-cell-nombre="props">
+              <q-td :props="props">
+                <div class="contacto-nombre">
+                  <q-avatar size="34px" class="contacto-avatar">
+                    <q-icon name="person" color="white" size="20px" />
+                  </q-avatar>
+
+                  <div>
+                    <div class="text-weight-bold">
+                      {{ props.row.nombre }}
+                    </div>
+
+                    <div class="text-caption text-grey-7">
+                      Contacto del teléfono
+                    </div>
+                  </div>
+                </div>
+              </q-td>
+            </template>
+
+            <template #body-cell-telefono="props">
+              <q-td :props="props">
+                <div class="telefono-box">
+                  <q-icon name="phone_android" color="green" size="18px" />
+                  <span>{{ props.row.telefono }}</span>
+                </div>
+              </q-td>
+            </template>
+
+            <template #body-cell-estado="props">
+              <q-td :props="props" class="text-center">
+                <q-badge
+                  v-if="clienteYaExiste(props.row.telefono)"
+                  color="orange"
+                  rounded
+                >
+                  Ya existe
+                </q-badge>
+
+                <q-badge
+                  v-else
+                  color="green"
+                  rounded
+                >
+                  Nuevo
+                </q-badge>
+              </q-td>
+            </template>
+          </q-table>
+        </q-card-section>
+
+        <q-card-actions align="right" class="dialog-actions">
+          <q-btn
+            flat
+            label="Cancelar"
+            color="grey-7"
+            v-close-popup
+          />
+
+          <q-btn
+            color="primary"
+            icon="refresh"
+            label="Volver a cargar"
+            unelevated
+            rounded
+            :loading="loadingContactos"
+            @click="cargarContactosTelefono"
+          />
+
+          <q-btn
+            class="btn-glamur"
+            icon="save"
+            label="Guardar seleccionados"
+            :disable="contactosSeleccionados.length === 0"
+            :loading="savingContactos"
+            @click="guardarContactosSeleccionados"
+          />
+        </q-card-actions>
+
+      </q-card>
+    </q-dialog>
+
   </q-page>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
 import { api } from 'boot/axios'
+import { Capacitor } from '@capacitor/core'
+import { Contacts } from '@capacitor-community/contacts'
 
 defineOptions({
   name: 'ClientesPage'
@@ -179,6 +341,13 @@ const clientes = ref([])
 const dialog = ref(false)
 const loading = ref(false)
 const saving = ref(false)
+
+const dialogContactos = ref(false)
+const contactosTelefono = ref([])
+const contactosSeleccionados = ref([])
+const buscarContacto = ref('')
+const loadingContactos = ref(false)
+const savingContactos = ref(false)
 
 const form = ref({
   id: null,
@@ -208,6 +377,43 @@ const columns = [
   }
 ]
 
+const columnsContactos = [
+  {
+    name: 'nombre',
+    label: 'Nombre',
+    field: 'nombre',
+    align: 'left',
+    sortable: true
+  },
+  {
+    name: 'telefono',
+    label: 'Teléfono',
+    field: 'telefono',
+    align: 'left'
+  },
+  {
+    name: 'estado',
+    label: 'Estado',
+    field: 'estado',
+    align: 'center'
+  }
+]
+
+const contactosFiltrados = computed(() => {
+  const texto = normalizarTexto(buscarContacto.value)
+
+  if (!texto) {
+    return contactosTelefono.value
+  }
+
+  return contactosTelefono.value.filter((contacto) => {
+    const nombre = normalizarTexto(contacto.nombre)
+    const telefono = normalizarTexto(contacto.telefono)
+
+    return nombre.includes(texto) || telefono.includes(texto)
+  })
+})
+
 function getErrorMessage(error) {
   const data = error?.response?.data
 
@@ -216,6 +422,50 @@ function getErrorMessage(error) {
   }
 
   return data?.message || data?.error || 'Ocurrió un error'
+}
+
+function normalizarTexto(valor) {
+  return String(valor || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+}
+
+function limpiarTelefono(valor) {
+  return String(valor || '')
+    .replace(/[^\d+]/g, '')
+    .trim()
+}
+
+function telefonoComparable(valor) {
+  return String(valor || '')
+    .replace(/\D/g, '')
+    .trim()
+}
+
+function clienteYaExiste(telefono) {
+  const telefonoLimpio = telefonoComparable(telefono)
+
+  if (!telefonoLimpio) {
+    return false
+  }
+
+  return clientes.value.some((cliente) => {
+    return telefonoComparable(cliente.telefono) === telefonoLimpio
+  })
+}
+
+function permisoContactosConcedido(respuesta) {
+  if (!respuesta) {
+    return false
+  }
+
+  if (respuesta.contacts === 'granted') {
+    return true
+  }
+
+  return Object.values(respuesta).includes('granted')
 }
 
 async function load() {
@@ -281,7 +531,7 @@ async function save() {
   try {
     const payload = {
       nombre: form.value.nombre.trim(),
-      telefono: form.value.telefono.trim(),
+      telefono: limpiarTelefono(form.value.telefono),
       email: null
     }
 
@@ -348,6 +598,173 @@ function remove(row) {
   })
 }
 
+async function abrirImportarContactos() {
+  if (!Capacitor.isNativePlatform()) {
+    $q.notify({
+      type: 'warning',
+      message: 'La importación de contactos solo funciona en la APK instalada en el celular.'
+    })
+
+    return
+  }
+
+  dialogContactos.value = true
+
+  if (contactosTelefono.value.length === 0) {
+    await cargarContactosTelefono()
+  }
+}
+
+async function cargarContactosTelefono() {
+  loadingContactos.value = true
+  contactosSeleccionados.value = []
+
+  try {
+    const permisoActual = await Contacts.checkPermissions()
+
+    let permisoFinal = permisoActual
+
+    if (!permisoContactosConcedido(permisoActual)) {
+      permisoFinal = await Contacts.requestPermissions()
+    }
+
+    if (!permisoContactosConcedido(permisoFinal)) {
+      $q.notify({
+        type: 'warning',
+        message: 'Permiso de contactos denegado. Actívalo desde los permisos de la aplicación.'
+      })
+
+      return
+    }
+
+    const resultado = await Contacts.getContacts({
+      projection: {
+        name: true,
+        phones: true
+      }
+    })
+
+    const lista = Array.isArray(resultado?.contacts)
+      ? resultado.contacts
+      : []
+
+    const contactosProcesados = lista
+      .map((contacto, index) => {
+        const nombre =
+          contacto?.name?.display ||
+          [contacto?.name?.given, contacto?.name?.family].filter(Boolean).join(' ') ||
+          contacto?.displayName ||
+          'Sin nombre'
+
+        const telefono =
+          contacto?.phones?.[0]?.number ||
+          contacto?.phoneNumbers?.[0]?.number ||
+          ''
+
+        return {
+          uid: `${index}-${telefonoComparable(telefono)}-${normalizarTexto(nombre)}`,
+          nombre: String(nombre).trim(),
+          telefono: limpiarTelefono(telefono)
+        }
+      })
+      .filter((contacto) => contacto.nombre && contacto.telefono)
+
+    const sinRepetidos = []
+    const usados = new Set()
+
+    contactosProcesados.forEach((contacto) => {
+      const clave = telefonoComparable(contacto.telefono)
+
+      if (!clave || usados.has(clave)) {
+        return
+      }
+
+      usados.add(clave)
+      sinRepetidos.push(contacto)
+    })
+
+    contactosTelefono.value = sinRepetidos
+
+    $q.notify({
+      type: 'positive',
+      message: `Se cargaron ${sinRepetidos.length} contacto(s) del teléfono`
+    })
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: error?.message || 'No se pudieron cargar los contactos del teléfono'
+    })
+  } finally {
+    loadingContactos.value = false
+  }
+}
+
+async function guardarContactosSeleccionados() {
+  if (contactosSeleccionados.value.length === 0) {
+    $q.notify({
+      type: 'warning',
+      message: 'Selecciona al menos un contacto'
+    })
+
+    return
+  }
+
+  const contactosNuevos = contactosSeleccionados.value.filter((contacto) => {
+    return !clienteYaExiste(contacto.telefono)
+  })
+
+  if (contactosNuevos.length === 0) {
+    $q.notify({
+      type: 'warning',
+      message: 'Los contactos seleccionados ya existen como clientes'
+    })
+
+    return
+  }
+
+  savingContactos.value = true
+
+  let guardados = 0
+  let fallidos = 0
+
+  try {
+    for (const contacto of contactosNuevos) {
+      try {
+        await api.post('/clientes', {
+          nombre: contacto.nombre,
+          telefono: contacto.telefono,
+          email: null
+        })
+
+        guardados++
+      } catch {
+        fallidos++
+      }
+    }
+
+    if (guardados > 0) {
+      $q.notify({
+        type: 'positive',
+        message: `${guardados} contacto(s) importado(s) correctamente`
+      })
+    }
+
+    if (fallidos > 0) {
+      $q.notify({
+        type: 'warning',
+        message: `${fallidos} contacto(s) no se pudieron importar`
+      })
+    }
+
+    dialogContactos.value = false
+    contactosSeleccionados.value = []
+
+    await load()
+  } finally {
+    savingContactos.value = false
+  }
+}
+
 onMounted(load)
 </script>
 
@@ -366,6 +783,13 @@ onMounted(load)
   gap: 14px;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .btn-glamur {
   background: linear-gradient(135deg, #e91e63, #9c27b0);
   color: white;
@@ -375,6 +799,15 @@ onMounted(load)
   box-shadow: 0 12px 28px rgba(233, 30, 99, 0.26);
 }
 
+.btn-importar {
+  background: linear-gradient(135deg, #15111f, #b8860b);
+  color: white;
+  font-weight: 900;
+  border-radius: 16px;
+  padding: 10px 18px;
+  box-shadow: 0 12px 28px rgba(20, 10, 30, 0.22);
+}
+
 .card-table {
   border-radius: 24px;
   overflow: hidden;
@@ -382,17 +815,20 @@ onMounted(load)
   box-shadow: 0 14px 35px rgba(156, 39, 176, 0.12);
 }
 
-.card-table :deep(.q-table thead tr) {
+.card-table :deep(.q-table thead tr),
+.tabla-contactos :deep(.q-table thead tr) {
   background: linear-gradient(135deg, #fce4ec, #f3e5f5);
   color: #880e4f;
 }
 
-.card-table :deep(.q-table th) {
+.card-table :deep(.q-table th),
+.tabla-contactos :deep(.q-table th) {
   font-weight: 900;
   font-size: 13px;
 }
 
-.card-table :deep(.q-table tbody tr:hover) {
+.card-table :deep(.q-table tbody tr:hover),
+.tabla-contactos :deep(.q-table tbody tr:hover) {
   background: #fff0f6;
 }
 
@@ -418,6 +854,14 @@ onMounted(load)
   overflow: hidden;
 }
 
+.dialog-contactos {
+  width: 900px;
+  max-width: 96vw;
+  max-height: 92vh;
+  border-radius: 24px;
+  overflow: hidden;
+}
+
 .dialog-header {
   background: linear-gradient(135deg, #e91e63, #9c27b0);
   color: white;
@@ -432,6 +876,42 @@ onMounted(load)
   padding: 16px 22px;
   background: white;
   border-top: 1px solid #eeeeee;
+  gap: 10px;
+}
+
+.contactos-toolbar {
+  background: #fff7fb;
+  padding: 18px;
+  border-bottom: 1px solid #f1d7e5;
+}
+
+.contactos-info {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.contactos-body {
+  padding: 16px;
+  max-height: 58vh;
+  overflow-y: auto;
+}
+
+.tabla-contactos {
+  border-radius: 18px;
+  overflow: hidden;
+  background: white;
+}
+
+.contacto-nombre {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.contacto-avatar {
+  background: linear-gradient(135deg, #e91e63, #9c27b0);
 }
 
 @media (max-width: 600px) {
@@ -444,11 +924,16 @@ onMounted(load)
     align-items: flex-start;
   }
 
-  .page-header .q-btn {
+  .header-actions {
     width: 100%;
   }
 
-  .dialog-card {
+  .header-actions .q-btn {
+    width: 100%;
+  }
+
+  .dialog-card,
+  .dialog-contactos {
     width: 100%;
     max-width: 100%;
     border-radius: 20px;
@@ -456,11 +941,15 @@ onMounted(load)
 
   .dialog-actions {
     flex-wrap: wrap;
-    gap: 10px;
   }
 
   .dialog-actions .q-btn {
     width: 100%;
+  }
+
+  .contactos-body {
+    padding: 10px;
+    max-height: 55vh;
   }
 }
 </style>
