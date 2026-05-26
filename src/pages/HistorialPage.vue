@@ -1,288 +1,223 @@
 <template>
-  <q-page class="q-pa-md historial-page">
-    <!-- HERO -->
-    <div class="historial-hero q-mb-lg">
+  <q-page class="q-pa-lg historial-page">
+
+    <!-- HEADER -->
+    <div class="page-header q-mb-lg">
       <div>
         <div class="text-h4 text-weight-bold text-primary">
-          Historial
+          🕘 Historial
         </div>
+
         <div class="text-grey-7">
-          Clientes, citas/servicios y pagos eliminados del sistema
+          Clientes, citas y servicios enviados al historial
         </div>
       </div>
 
-      <div class="hero-actions">
-        <q-btn
-          icon="restore"
-          label="Recuperar todo"
-          class="btn-recuperar"
-          unelevated
-          :loading="loadingAction"
-          @click="restaurarTodo"
-        />
-
-        <q-btn
-          icon="delete_sweep"
-          label="Limpiar historial"
-          class="btn-limpiar"
-          unelevated
-          :loading="loadingAction"
-          @click="limpiarHistorial"
-        />
-      </div>
+      <q-btn
+        class="btn-glamur"
+        icon="refresh"
+        label="Actualizar"
+        unelevated
+        rounded
+        :loading="loading"
+        @click="loadAll"
+      />
     </div>
 
-    <!-- CONTENIDO -->
-    <div class="row q-col-gutter-lg">
-      <!-- CLIENTES ELIMINADOS -->
-      <div class="col-12 col-lg-6">
-        <q-card class="historial-card">
-          <q-card-section class="card-title-row">
-            <div>
-              <div class="text-h6 text-weight-bold">Clientes eliminados</div>
-              <div class="text-caption text-grey-7">Clientes enviados al historial</div>
-            </div>
+    <!-- CLIENTES ELIMINADOS -->
+    <q-card class="historial-card q-mb-xl">
+      <q-card-section class="section-header">
+        <div>
+          <div class="text-h5 text-weight-bold">
+            👥 Clientes eliminados
+          </div>
 
-            <q-badge color="pink" rounded>
-              {{ clientesEliminados.length }}
-            </q-badge>
-          </q-card-section>
+          <div class="text-grey-7">
+            Clientes enviados al historial
+          </div>
+        </div>
 
-          <q-separator />
+        <q-badge class="count-badge" rounded>
+          {{ clientesEliminados.length }}
+        </q-badge>
+      </q-card-section>
 
-          <q-card-section>
-            <q-table
-              class="tabla-historial"
-              :rows="clientesEliminados"
-              :columns="columnsClientes"
-              row-key="id"
-              flat
-              bordered
-              dense
-              :loading="loading"
-              :rows-per-page-options="[5, 10, 20]"
-              no-data-label="No hay clientes eliminados"
-            >
-              <template #body-cell-nombre="props">
-                <q-td :props="props">
-                  <div class="text-weight-bold text-pink-8">
-                    {{ props.row.nombre || 'Sin nombre' }}
-                  </div>
-                </q-td>
-              </template>
+      <q-separator />
 
-              <template #body-cell-telefono="props">
-                <q-td :props="props">
-                  {{ props.row.telefono || 'Sin teléfono' }}
-                </q-td>
-              </template>
+      <q-card-section class="q-pa-none">
+        <q-table
+          class="tabla-glamur"
+          :rows="clientesEliminados"
+          :columns="columnsClientes"
+          row-key="id"
+          :loading="loadingClientes"
+          no-data-label="No hay clientes eliminados"
+          flat
+          bordered
+          :rows-per-page-options="[5, 10, 20, 50]"
+        >
+          <!-- CLIENTE -->
+          <template #body-cell-nombre="props">
+            <q-td :props="props">
+              <div class="text-weight-bold text-pink-7">
+                {{ props.row.nombre || 'Sin nombre' }}
+              </div>
 
-              <template #body-cell-deleted_at="props">
-                <q-td :props="props">
-                  {{ formatDate(props.row.deleted_at) }}
-                </q-td>
-              </template>
+              <div class="text-caption text-grey-7">
+                Cliente eliminado
+              </div>
+            </q-td>
+          </template>
 
-              <template #body-cell-actions="props">
-                <q-td :props="props" class="text-center">
-                  <q-btn
-                    round
-                    dense
-                    unelevated
-                    color="positive"
-                    icon="restore"
-                    @click="restaurarCliente(props.row.id)"
-                  >
-                    <q-tooltip>Recuperar cliente</q-tooltip>
-                  </q-btn>
-                </q-td>
-              </template>
-            </q-table>
-          </q-card-section>
-        </q-card>
-      </div>
+          <!-- TELÉFONO -->
+          <template #body-cell-telefono="props">
+            <q-td :props="props">
+              <div class="telefono-box">
+                <q-icon name="phone" color="green" size="18px" />
+                <span>{{ props.row.telefono || 'Sin teléfono' }}</span>
+              </div>
+            </q-td>
+          </template>
 
-      <!-- CITAS ELIMINADAS -->
-      <div class="col-12 col-lg-6">
-        <q-card class="historial-card">
-          <q-card-section class="card-title-row">
-            <div>
-              <div class="text-h6 text-weight-bold">Citas / servicios borrados</div>
-              <div class="text-caption text-grey-7">Citas eliminadas que pueden recuperarse</div>
-            </div>
+          <!-- ELIMINADO -->
+          <template #body-cell-deleted_at="props">
+            <q-td :props="props">
+              {{ formatDate(props.row.deleted_at) }}
+            </q-td>
+          </template>
 
-            <q-badge color="purple" rounded>
-              {{ citasEliminadas.length }}
-            </q-badge>
-          </q-card-section>
+          <!-- ACCIONES -->
+          <template #body-cell-actions="props">
+            <q-td :props="props" class="text-center">
+              <div class="acciones">
+                <q-btn
+                  round
+                  unelevated
+                  size="sm"
+                  color="positive"
+                  icon="restore"
+                  @click="recuperarCliente(props.row)"
+                >
+                  <q-tooltip>Recuperar cliente</q-tooltip>
+                </q-btn>
 
-          <q-separator />
+                <q-btn
+                  round
+                  unelevated
+                  size="sm"
+                  color="negative"
+                  icon="delete_forever"
+                  @click="eliminarClienteDefinitivo(props.row)"
+                >
+                  <q-tooltip>Eliminar definitivamente</q-tooltip>
+                </q-btn>
+              </div>
+            </q-td>
+          </template>
+        </q-table>
+      </q-card-section>
+    </q-card>
 
-          <q-card-section>
-            <q-table
-              class="tabla-historial"
-              :rows="citasEliminadas"
-              :columns="columnsCitas"
-              row-key="id"
-              flat
-              bordered
-              dense
-              :loading="loading"
-              :rows-per-page-options="[5, 10, 20]"
-              no-data-label="No hay citas o servicios eliminados"
-            >
-              <template #body-cell-servicio="props">
-                <q-td :props="props">
-                  <div class="text-weight-bold text-purple-8">
-                    {{ props.row.servicio || 'Sin servicio' }}
-                  </div>
-                  <div class="text-caption text-grey-7">
-                    Cliente: {{ props.row.cliente?.nombre || 'Sin cliente' }}
-                  </div>
-                </q-td>
-              </template>
+    <!-- CITAS / SERVICIOS BORRADOS -->
+    <q-card class="historial-card">
+      <q-card-section class="section-header">
+        <div>
+          <div class="text-h5 text-weight-bold">
+            📅 Citas / servicios borrados
+          </div>
 
-              <template #body-cell-precio="props">
-                <q-td :props="props">
-                  <b class="text-green-8">Bs {{ money(props.row.precio) }}</b>
-                </q-td>
-              </template>
+          <div class="text-grey-7">
+            Citas eliminadas que pueden recuperarse o eliminarse definitivamente
+          </div>
+        </div>
 
-              <template #body-cell-deleted_at="props">
-                <q-td :props="props">
-                  {{ formatDate(props.row.deleted_at) }}
-                </q-td>
-              </template>
+        <q-badge class="count-badge purple" rounded>
+          {{ citasEliminadas.length }}
+        </q-badge>
+      </q-card-section>
 
-              <template #body-cell-actions="props">
-                <q-td :props="props" class="text-center">
-                  <q-btn
-                    round
-                    dense
-                    unelevated
-                    color="positive"
-                    icon="restore"
-                    @click="restaurarCita(props.row.id)"
-                  >
-                    <q-tooltip>Recuperar cita</q-tooltip>
-                  </q-btn>
-                </q-td>
-              </template>
-            </q-table>
-          </q-card-section>
-        </q-card>
-      </div>
+      <q-separator />
 
-      <!-- PAGOS ELIMINADOS -->
-      <div class="col-12">
-        <q-card class="historial-card pagos-card">
-          <q-card-section class="card-title-row">
-            <div>
-              <div class="text-h6 text-weight-bold">Pagos eliminados</div>
-              <div class="text-caption text-grey-7">Pagos borrados que pueden recuperarse</div>
-            </div>
+      <q-card-section class="q-pa-none">
+        <q-table
+          class="tabla-glamur"
+          :rows="citasEliminadas"
+          :columns="columnsCitas"
+          row-key="id"
+          :loading="loadingCitas"
+          no-data-label="No hay citas o servicios eliminados"
+          flat
+          bordered
+          :rows-per-page-options="[5, 10, 20, 50]"
+        >
+          <!-- SERVICIO -->
+          <template #body-cell-servicio="props">
+            <q-td :props="props">
+              <div class="text-weight-bold text-purple-7">
+                {{ props.row.servicio || 'Sin servicio' }}
+              </div>
 
-            <q-badge color="green" rounded>
-              {{ pagosEliminados.length }}
-            </q-badge>
-          </q-card-section>
+              <div class="text-caption text-grey-7">
+                Cliente: {{ props.row.cliente?.nombre || props.row.cliente_nombre || 'Sin cliente' }}
+              </div>
+            </q-td>
+          </template>
 
-          <q-separator />
+          <!-- FECHA -->
+          <template #body-cell-fecha="props">
+            <q-td :props="props">
+              {{ props.row.fecha || 'Sin fecha' }}
+            </q-td>
+          </template>
 
-          <q-card-section>
-            <q-table
-              class="tabla-historial"
-              :rows="pagosEliminados"
-              :columns="columnsPagos"
-              row-key="id"
-              flat
-              bordered
-              dense
-              :loading="loading"
-              :rows-per-page-options="[5, 10, 20, 50]"
-              no-data-label="No hay pagos eliminados"
-            >
-              <template #body-cell-cliente="props">
-                <q-td :props="props">
-                  <div class="text-weight-bold text-pink-8">
-                    {{ nombreClientePago(props.row) }}
-                  </div>
-                  <div class="text-caption text-grey-7">
-                    Cita #{{ props.row.cita_id || 'N/D' }}
-                  </div>
-                </q-td>
-              </template>
+          <!-- PRECIO -->
+          <template #body-cell-precio="props">
+            <q-td :props="props">
+              <div class="text-weight-bold text-green-8">
+                Bs {{ money(props.row.precio) }}
+              </div>
+            </q-td>
+          </template>
 
-              <template #body-cell-servicio="props">
-                <q-td :props="props">
-                  {{ props.row.cita?.servicio || props.row.servicio || 'Sin servicio' }}
-                </q-td>
-              </template>
+          <!-- ELIMINADO -->
+          <template #body-cell-deleted_at="props">
+            <q-td :props="props">
+              {{ formatDate(props.row.deleted_at) }}
+            </q-td>
+          </template>
 
-              <template #body-cell-monto="props">
-                <q-td :props="props">
-                  <b class="text-green-8">Bs {{ money(props.row.monto) }}</b>
-                </q-td>
-              </template>
+          <!-- ACCIONES -->
+          <template #body-cell-actions="props">
+            <q-td :props="props" class="text-center">
+              <div class="acciones">
+                <q-btn
+                  round
+                  unelevated
+                  size="sm"
+                  color="positive"
+                  icon="restore"
+                  @click="recuperarCita(props.row)"
+                >
+                  <q-tooltip>Recuperar cita</q-tooltip>
+                </q-btn>
 
-              <template #body-cell-metodo="props">
-                <q-td :props="props">
-                  <q-badge color="blue" rounded class="text-uppercase">
-                    {{ props.row.metodo || 'No definido' }}
-                  </q-badge>
-                </q-td>
-              </template>
+                <q-btn
+                  round
+                  unelevated
+                  size="sm"
+                  color="negative"
+                  icon="delete_forever"
+                  @click="eliminarCitaDefinitiva(props.row)"
+                >
+                  <q-tooltip>Eliminar definitivamente</q-tooltip>
+                </q-btn>
+              </div>
+            </q-td>
+          </template>
+        </q-table>
+      </q-card-section>
+    </q-card>
 
-              <template #body-cell-estado="props">
-                <q-td :props="props">
-                  <q-badge color="green" rounded class="text-capitalize">
-                    {{ props.row.estado || 'pagado' }}
-                  </q-badge>
-                </q-td>
-              </template>
-
-              <template #body-cell-fecha_pago="props">
-                <q-td :props="props">
-                  {{ formatDate(props.row.fecha_pago) }}
-                </q-td>
-              </template>
-
-              <template #body-cell-deleted_at="props">
-                <q-td :props="props">
-                  {{ formatDate(props.row.deleted_at) }}
-                </q-td>
-              </template>
-
-              <template #body-cell-actions="props">
-                <q-td :props="props" class="text-center">
-                  <q-btn
-                    round
-                    dense
-                    unelevated
-                    color="positive"
-                    icon="restore"
-                    @click="restaurarPago(props.row.id)"
-                  >
-                    <q-tooltip>Recuperar pago</q-tooltip>
-                  </q-btn>
-                </q-td>
-              </template>
-            </q-table>
-          </q-card-section>
-        </q-card>
-      </div>
-    </div>
-
-    <!-- MENSAJE VACÍO -->
-    <div v-if="!loading && totalEliminados === 0" class="empty-state q-mt-xl">
-      <q-icon name="history" size="72px" color="pink-4" />
-      <div class="text-h6 text-weight-bold text-pink-7 q-mt-sm">
-        No hay elementos en el historial
-      </div>
-      <div class="text-grey-7">
-        Cuando elimines clientes, citas o pagos, aparecerán aquí para poder recuperarlos.
-      </div>
-    </div>
   </q-page>
 </template>
 
@@ -291,46 +226,119 @@ import { computed, onMounted, ref } from 'vue'
 import { useQuasar } from 'quasar'
 import { api } from 'boot/axios'
 
-defineOptions({ name: 'HistorialPage' })
+defineOptions({
+  name: 'HistorialPage'
+})
 
 const $q = useQuasar()
 
-const loading = ref(false)
-const loadingAction = ref(false)
-
 const clientesEliminados = ref([])
 const citasEliminadas = ref([])
-const pagosEliminados = ref([])
 
-const totalEliminados = computed(() => {
-  return clientesEliminados.value.length + citasEliminadas.value.length + pagosEliminados.value.length
-})
+const loadingClientes = ref(false)
+const loadingCitas = ref(false)
+
+const loading = computed(() => loadingClientes.value || loadingCitas.value)
 
 const columnsClientes = [
-  { name: 'nombre', label: 'Cliente', field: 'nombre', align: 'left', sortable: true },
-  { name: 'telefono', label: 'Teléfono', field: 'telefono', align: 'left' },
-  { name: 'deleted_at', label: 'Eliminado', field: 'deleted_at', align: 'left', sortable: true },
-  { name: 'actions', label: 'Acciones', field: 'actions', align: 'center' }
+  {
+    name: 'nombre',
+    label: 'Cliente',
+    field: 'nombre',
+    align: 'left',
+    sortable: true
+  },
+  {
+    name: 'telefono',
+    label: 'Teléfono',
+    field: 'telefono',
+    align: 'left'
+  },
+  {
+    name: 'deleted_at',
+    label: 'Eliminado',
+    field: 'deleted_at',
+    align: 'left',
+    sortable: true
+  },
+  {
+    name: 'actions',
+    label: 'Acciones',
+    field: 'actions',
+    align: 'center'
+  }
 ]
 
 const columnsCitas = [
-  { name: 'servicio', label: 'Servicio', field: 'servicio', align: 'left', sortable: true },
-  { name: 'fecha', label: 'Fecha', field: 'fecha', align: 'left', sortable: true },
-  { name: 'precio', label: 'Precio', field: 'precio', align: 'left' },
-  { name: 'deleted_at', label: 'Eliminado', field: 'deleted_at', align: 'left', sortable: true },
-  { name: 'actions', label: 'Acciones', field: 'actions', align: 'center' }
+  {
+    name: 'servicio',
+    label: 'Servicio',
+    field: 'servicio',
+    align: 'left',
+    sortable: true
+  },
+  {
+    name: 'fecha',
+    label: 'Fecha',
+    field: 'fecha',
+    align: 'left',
+    sortable: true
+  },
+  {
+    name: 'precio',
+    label: 'Precio',
+    field: 'precio',
+    align: 'left',
+    sortable: true
+  },
+  {
+    name: 'deleted_at',
+    label: 'Eliminado',
+    field: 'deleted_at',
+    align: 'left',
+    sortable: true
+  },
+  {
+    name: 'actions',
+    label: 'Acciones',
+    field: 'actions',
+    align: 'center'
+  }
 ]
 
-const columnsPagos = [
-  { name: 'cliente', label: 'Cliente', field: 'cliente', align: 'left', sortable: true },
-  { name: 'servicio', label: 'Servicio', field: 'servicio', align: 'left' },
-  { name: 'monto', label: 'Monto', field: 'monto', align: 'left', sortable: true },
-  { name: 'metodo', label: 'Método', field: 'metodo', align: 'left' },
-  { name: 'estado', label: 'Estado', field: 'estado', align: 'left' },
-  { name: 'fecha_pago', label: 'Fecha pago', field: 'fecha_pago', align: 'left', sortable: true },
-  { name: 'deleted_at', label: 'Eliminado', field: 'deleted_at', align: 'left', sortable: true },
-  { name: 'actions', label: 'Acciones', field: 'actions', align: 'center' }
-]
+/*
+  IMPORTANTE:
+  Si tus rutas del backend tienen otro nombre, solo cambia estas rutas.
+*/
+const rutas = {
+  clientesEliminados: '/clientes/eliminados',
+  recuperarCliente: id => `/clientes/recuperar/${id}`,
+  eliminarClienteDefinitivo: id => `/clientes/eliminados/${id}`,
+
+  citasEliminadas: '/citas/eliminadas',
+  recuperarCita: id => `/citas/recuperar/${id}`,
+  eliminarCitaDefinitiva: id => `/citas/eliminadas/${id}`
+}
+
+function responseToArray(data) {
+  if (Array.isArray(data)) return data
+  if (Array.isArray(data?.data)) return data.data
+  if (Array.isArray(data?.clientes)) return data.clientes
+  if (Array.isArray(data?.clientes_eliminados)) return data.clientes_eliminados
+  if (Array.isArray(data?.citas)) return data.citas
+  if (Array.isArray(data?.citas_eliminadas)) return data.citas_eliminadas
+  return []
+}
+
+function getErrorMessage(error) {
+  const data = error?.response?.data
+
+  if (data?.errors) {
+    return Object.values(data.errors).flat().join(' ')
+  }
+
+  return data?.message || data?.error || error?.message || 'Ocurrió un error'
+}
 
 function money(value) {
   return Number(value || 0).toFixed(2)
@@ -342,7 +350,7 @@ function formatDate(value) {
   const date = new Date(value)
 
   if (Number.isNaN(date.getTime())) {
-    return String(value)
+    return value
   }
 
   return date.toLocaleString('es-BO', {
@@ -354,215 +362,279 @@ function formatDate(value) {
   })
 }
 
-function nombreClientePago(row) {
-  return row?.cita?.cliente?.nombre || row?.cliente?.nombre || row?.nombre_cliente || 'Sin cliente'
-}
-
-function getErrorMessage(error) {
-  const data = error?.response?.data
-
-  if (data?.errors) {
-    return Object.values(data.errors).flat().join(' ')
-  }
-
-  return data?.message || data?.error || 'Ocurrió un error'
-}
-
-async function load() {
-  loading.value = true
+async function loadClientesEliminados() {
+  loadingClientes.value = true
 
   try {
-    const { data } = await api.get('/historial/eliminados')
-
-    clientesEliminados.value = data?.clientes_eliminados || data?.clientes || []
-    citasEliminadas.value = data?.citas_eliminadas || data?.citas || []
-    pagosEliminados.value = data?.pagos_eliminados || data?.pagos || []
+    const { data } = await api.get(rutas.clientesEliminados)
+    clientesEliminados.value = responseToArray(data)
   } catch (error) {
+    clientesEliminados.value = []
+
     $q.notify({
       type: 'negative',
       message: getErrorMessage(error)
     })
   } finally {
-    loading.value = false
+    loadingClientes.value = false
   }
 }
 
-async function restaurarCliente(id) {
-  loadingAction.value = true
+async function loadCitasEliminadas() {
+  loadingCitas.value = true
 
   try {
-    await api.put(`/historial/clientes/${id}/restaurar`)
-    $q.notify({ type: 'positive', message: 'Cliente recuperado correctamente' })
-    await load()
+    const { data } = await api.get(rutas.citasEliminadas)
+    citasEliminadas.value = responseToArray(data)
   } catch (error) {
-    $q.notify({ type: 'negative', message: getErrorMessage(error) })
+    citasEliminadas.value = []
+
+    $q.notify({
+      type: 'negative',
+      message: getErrorMessage(error)
+    })
   } finally {
-    loadingAction.value = false
+    loadingCitas.value = false
   }
 }
 
-async function restaurarCita(id) {
-  loadingAction.value = true
-
-  try {
-    await api.put(`/historial/citas/${id}/restaurar`)
-    $q.notify({ type: 'positive', message: 'Cita recuperada correctamente' })
-    await load()
-  } catch (error) {
-    $q.notify({ type: 'negative', message: getErrorMessage(error) })
-  } finally {
-    loadingAction.value = false
-  }
+async function loadAll() {
+  await Promise.all([
+    loadClientesEliminados(),
+    loadCitasEliminadas()
+  ])
 }
 
-async function restaurarPago(id) {
-  loadingAction.value = true
-
-  try {
-    await api.put(`/historial/pagos/${id}/restaurar`)
-    $q.notify({ type: 'positive', message: 'Pago recuperado correctamente' })
-    await load()
-  } catch (error) {
-    $q.notify({ type: 'negative', message: getErrorMessage(error) })
-  } finally {
-    loadingAction.value = false
-  }
-}
-
-function restaurarTodo() {
-  if (totalEliminados.value === 0) {
-    $q.notify({ type: 'info', message: 'No hay elementos para recuperar' })
-    return
-  }
-
+function recuperarCliente(row) {
   $q.dialog({
-    title: 'Recuperar todo',
-    message: '¿Deseas recuperar todos los clientes, citas y pagos eliminados?',
+    title: 'Recuperar cliente',
+    message: `¿Deseas recuperar a "${row.nombre || 'este cliente'}"?`,
     persistent: true,
-    ok: { label: 'Recuperar', color: 'positive', unelevated: true },
-    cancel: { label: 'Cancelar', flat: true, color: 'grey-7' }
+    ok: {
+      label: 'Recuperar',
+      color: 'positive',
+      unelevated: true
+    },
+    cancel: {
+      label: 'Cancelar',
+      color: 'grey-7',
+      flat: true
+    }
   }).onOk(async () => {
-    loadingAction.value = true
-
     try {
-      await api.put('/historial/restaurar-todo')
-      $q.notify({ type: 'positive', message: 'Historial recuperado correctamente' })
-      await load()
+      await api.put(rutas.recuperarCliente(row.id))
+
+      $q.notify({
+        type: 'positive',
+        message: 'Cliente recuperado correctamente'
+      })
+
+      await loadAll()
     } catch (error) {
-      $q.notify({ type: 'negative', message: getErrorMessage(error) })
-    } finally {
-      loadingAction.value = false
+      $q.notify({
+        type: 'negative',
+        message: getErrorMessage(error)
+      })
     }
   })
 }
 
-function limpiarHistorial() {
-  if (totalEliminados.value === 0) {
-    $q.notify({ type: 'info', message: 'No hay historial para limpiar' })
-    return
-  }
-
+function eliminarClienteDefinitivo(row) {
   $q.dialog({
-    title: 'Limpiar historial',
-    message: 'Esta acción eliminará definitivamente clientes, citas y pagos del historial. ¿Deseas continuar?',
+    title: 'Eliminar definitivamente',
+    message: `Esta acción no se podrá deshacer. ¿Deseas eliminar definitivamente a "${row.nombre || 'este cliente'}"?`,
     persistent: true,
-    ok: { label: 'Eliminar definitivo', color: 'negative', unelevated: true },
-    cancel: { label: 'Cancelar', flat: true, color: 'grey-7' }
+    ok: {
+      label: 'Sí, eliminar',
+      color: 'negative',
+      unelevated: true
+    },
+    cancel: {
+      label: 'Cancelar',
+      color: 'grey-7',
+      flat: true
+    }
   }).onOk(async () => {
-    loadingAction.value = true
-
     try {
-      await api.delete('/historial/limpiar')
-      $q.notify({ type: 'positive', message: 'Historial limpiado correctamente' })
-      await load()
+      await api.delete(rutas.eliminarClienteDefinitivo(row.id))
+
+      $q.notify({
+        type: 'positive',
+        message: 'Cliente eliminado definitivamente'
+      })
+
+      await loadAll()
     } catch (error) {
-      $q.notify({ type: 'negative', message: getErrorMessage(error) })
-    } finally {
-      loadingAction.value = false
+      $q.notify({
+        type: 'negative',
+        message: getErrorMessage(error)
+      })
     }
   })
 }
 
-onMounted(load)
+function recuperarCita(row) {
+  $q.dialog({
+    title: 'Recuperar cita',
+    message: `¿Deseas recuperar "${row.servicio || 'esta cita'}"?`,
+    persistent: true,
+    ok: {
+      label: 'Recuperar',
+      color: 'positive',
+      unelevated: true
+    },
+    cancel: {
+      label: 'Cancelar',
+      color: 'grey-7',
+      flat: true
+    }
+  }).onOk(async () => {
+    try {
+      await api.put(rutas.recuperarCita(row.id))
+
+      $q.notify({
+        type: 'positive',
+        message: 'Cita recuperada correctamente'
+      })
+
+      await loadAll()
+    } catch (error) {
+      $q.notify({
+        type: 'negative',
+        message: getErrorMessage(error)
+      })
+    }
+  })
+}
+
+function eliminarCitaDefinitiva(row) {
+  $q.dialog({
+    title: 'Eliminar definitivamente',
+    message: `Esta acción no se podrá deshacer. ¿Deseas eliminar definitivamente "${row.servicio || 'esta cita'}"?`,
+    persistent: true,
+    ok: {
+      label: 'Sí, eliminar',
+      color: 'negative',
+      unelevated: true
+    },
+    cancel: {
+      label: 'Cancelar',
+      color: 'grey-7',
+      flat: true
+    }
+  }).onOk(async () => {
+    try {
+      await api.delete(rutas.eliminarCitaDefinitiva(row.id))
+
+      $q.notify({
+        type: 'positive',
+        message: 'Cita eliminada definitivamente'
+      })
+
+      await loadAll()
+    } catch (error) {
+      $q.notify({
+        type: 'negative',
+        message: getErrorMessage(error)
+      })
+    }
+  })
+}
+
+onMounted(loadAll)
 </script>
 
 <style scoped>
 .historial-page {
   min-height: 100vh;
-  background: #fbf7fc;
+  background:
+    radial-gradient(circle at top left, rgba(233, 30, 99, 0.10), transparent 32%),
+    linear-gradient(180deg, #fff7fb 0%, #f7f7fb 100%);
 }
 
-.historial-hero {
+.page-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
+  align-items: center;
+  gap: 14px;
 }
 
-.hero-actions {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
-.btn-recuperar,
-.btn-limpiar {
+.btn-glamur {
+  background: linear-gradient(135deg, #e91e63, #9c27b0);
   color: white;
   font-weight: 900;
-  border-radius: 14px;
+  border-radius: 16px;
   padding: 10px 18px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.18);
-}
-
-.btn-recuperar {
-  background: linear-gradient(135deg, #00a884, #00897b);
-}
-
-.btn-limpiar {
-  background: linear-gradient(135deg, #3f51b5, #c62828);
+  box-shadow: 0 12px 28px rgba(233, 30, 99, 0.26);
 }
 
 .historial-card {
-  border-radius: 22px;
+  border-radius: 28px;
   overflow: hidden;
   background: white;
-  box-shadow: 0 14px 35px rgba(156, 39, 176, 0.10);
+  box-shadow: 0 16px 38px rgba(156, 39, 176, 0.12);
 }
 
-.pagos-card {
-  max-width: 100%;
-}
-
-.card-title-row {
+.section-header {
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
   gap: 12px;
+  padding: 24px;
 }
 
-.tabla-historial {
-  border-radius: 16px;
-  overflow: hidden;
+.count-badge {
+  background: #e91e63;
+  color: white;
+  font-size: 14px;
+  font-weight: 900;
+  padding: 8px 12px;
 }
 
-.tabla-historial :deep(.q-table thead tr) {
+.count-badge.purple {
+  background: #9c27b0;
+}
+
+.tabla-glamur {
+  background: white;
+}
+
+.tabla-glamur :deep(.q-table__middle) {
+  overflow-x: auto;
+}
+
+.tabla-glamur :deep(.q-table thead tr) {
   background: linear-gradient(135deg, #fce4ec, #f3e5f5);
   color: #880e4f;
 }
 
-.tabla-historial :deep(.q-table th) {
+.tabla-glamur :deep(.q-table th) {
   font-weight: 900;
   font-size: 13px;
 }
 
-.tabla-historial :deep(.q-table tbody tr:hover) {
+.tabla-glamur :deep(.q-table tbody tr:hover) {
   background: #fff0f6;
 }
 
-.empty-state {
-  text-align: center;
-  padding: 28px 12px;
+.telefono-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  color: #2e7d32;
+  white-space: nowrap;
+}
+
+.acciones {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.acciones .q-btn {
+  margin: 2px;
 }
 
 @media (max-width: 700px) {
@@ -570,17 +642,33 @@ onMounted(load)
     padding: 12px;
   }
 
-  .historial-hero {
+  .page-header {
     flex-direction: column;
+    align-items: flex-start;
   }
 
-  .hero-actions,
-  .hero-actions .q-btn {
+  .page-header .q-btn {
     width: 100%;
   }
 
+  .section-header {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 20px;
+  }
+
   .historial-card {
-    border-radius: 18px;
+    border-radius: 22px;
+  }
+
+  .tabla-glamur :deep(.q-table th),
+  .tabla-glamur :deep(.q-table td) {
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+
+  .acciones {
+    gap: 6px;
   }
 }
 </style>
