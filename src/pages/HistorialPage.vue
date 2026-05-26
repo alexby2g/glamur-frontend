@@ -327,13 +327,11 @@ const columnsCitas = [
 function responseToArray(data) {
   if (Array.isArray(data)) return data
   if (Array.isArray(data?.data)) return data.data
-  if (Array.isArray(data?.clientes)) return data.clientes
   if (Array.isArray(data?.clientes_eliminados)) return data.clientes_eliminados
-  if (Array.isArray(data?.citas)) return data.citas
   if (Array.isArray(data?.citas_eliminadas)) return data.citas_eliminadas
+  if (Array.isArray(data?.pagos_eliminados)) return data.pagos_eliminados
   return []
 }
-
 function getErrorMessage(error) {
   const data = error?.response?.data
 
