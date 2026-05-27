@@ -1289,7 +1289,7 @@ async function verPerfil(row) {
         pagos: Array.isArray(encontrado.pagos) ? encontrado.pagos : []
       }
     }
-  } catch (error) {
+  } catch {
     $q.notify({
       type: 'warning',
       message: 'Se abrió el perfil básico, pero no se pudo cargar el historial completo.'
