@@ -1,23 +1,39 @@
 <template>
   <q-page class="q-pa-md calendario-page">
 
-    <div class="calendar-hero q-mb-lg">
+    <!-- HERO -->
+    <section class="calendar-hero q-mb-lg">
       <div>
-        <div class="text-h4 text-weight-bold text-white">
+        <div class="hero-badge">
+          Agenda inteligente
+        </div>
+
+        <div class="text-h4 text-weight-bold text-white q-mt-sm">
           📅 Calendario Glamur
         </div>
 
-        <div class="text-subtitle2 text-white">
-          Control mensual de citas, estados y extractos
+        <div class="text-subtitle2 text-white hero-subtitle">
+          Control mensual de citas, estados, pagos y extractos
         </div>
       </div>
 
       <div class="hero-actions">
         <q-btn
           class="btn-white"
+          icon="today"
+          label="Hoy"
+          unelevated
+          rounded
+          @click="irHoy"
+        />
+
+        <q-btn
+          class="btn-white"
           icon="picture_as_pdf"
           label="Extracto PDF"
           :loading="descargandoPdf"
+          unelevated
+          rounded
           @click="descargarExtractoPDF"
         />
 
@@ -26,11 +42,141 @@
           icon="refresh"
           label="Actualizar"
           :loading="loading"
+          unelevated
+          rounded
           @click="load"
         />
       </div>
+    </section>
+
+    <q-linear-progress
+      v-if="loading"
+      indeterminate
+      color="pink"
+      class="q-mb-md"
+    />
+
+    <!-- RESUMEN -->
+    <div class="row q-col-gutter-md q-mb-md">
+      <div
+        v-for="card in resumenCards"
+        :key="card.titulo"
+        class="col-12 col-sm-6 col-md-4 col-lg-2"
+      >
+        <q-card class="summary-card">
+          <q-card-section>
+            <div class="row items-center justify-between no-wrap">
+              <div class="summary-info">
+                <div class="summary-title">
+                  {{ card.titulo }}
+                </div>
+
+                <div class="summary-value">
+                  {{ card.valor }}
+                </div>
+
+                <div class="summary-detail">
+                  {{ card.detalle }}
+                </div>
+              </div>
+
+              <q-avatar :class="card.clase" size="48px">
+                <q-icon :name="card.icono" color="white" size="25px" />
+              </q-avatar>
+            </div>
+          </q-card-section>
+        </q-card>
+      </div>
     </div>
 
+    <!-- FILTROS -->
+    <q-card class="filters-card q-mb-md">
+      <q-card-section>
+        <div class="filters-header q-mb-md">
+          <div>
+            <div class="filters-title">
+              🔎 Buscar y filtrar calendario
+            </div>
+
+            <div class="filters-subtitle">
+              Filtra por cliente, servicio, estado de cita o estado de pago
+            </div>
+          </div>
+
+          <q-btn
+            flat
+            rounded
+            icon="cleaning_services"
+            label="Limpiar filtros"
+            color="pink-7"
+            @click="limpiarFiltros"
+          />
+        </div>
+
+        <div class="row q-col-gutter-md">
+          <div class="col-12 col-md-5">
+            <q-input
+              v-model="busqueda"
+              outlined
+              rounded
+              dense
+              clearable
+              debounce="250"
+              bg-color="white"
+              placeholder="Buscar cliente, servicio, fecha, hora o monto..."
+            >
+              <template #prepend>
+                <q-icon name="search" color="pink" />
+              </template>
+            </q-input>
+          </div>
+
+          <div class="col-12 col-sm-6 col-md-3">
+            <q-select
+              v-model="filtroEstado"
+              :options="opcionesEstado"
+              outlined
+              rounded
+              dense
+              emit-value
+              map-options
+              bg-color="white"
+              label="Estado cita"
+            >
+              <template #prepend>
+                <q-icon name="event_available" color="purple" />
+              </template>
+            </q-select>
+          </div>
+
+          <div class="col-12 col-sm-6 col-md-2">
+            <q-select
+              v-model="filtroPago"
+              :options="opcionesPago"
+              outlined
+              rounded
+              dense
+              emit-value
+              map-options
+              bg-color="white"
+              label="Pago"
+            >
+              <template #prepend>
+                <q-icon name="payments" color="green" />
+              </template>
+            </q-select>
+          </div>
+
+          <div class="col-12 col-md-2">
+            <q-badge class="result-badge" rounded>
+              {{ citasMesFiltradas.length }} de {{ citasMes.length }}
+            </q-badge>
+          </div>
+        </div>
+      </q-card-section>
+    </q-card>
+
+    <!-- CALENDARIO -->
     <q-card class="calendar-card">
 
       <q-card-section class="calendar-toolbar">
@@ -57,11 +203,11 @@
 
       <q-separator />
 
-      <q-card-section>
+      <q-card-section class="calendar-content">
         <div class="legend q-mb-md">
           <div class="legend-item">
             <span class="dot dot-green"></span>
-            Realizadas
+            Concluidas
           </div>
 
           <div class="legend-item">
@@ -73,101 +219,127 @@
             <span class="dot dot-red"></span>
             Canceladas
           </div>
-        </div>
 
-        <div class="week-grid q-mb-sm">
-          <div
-            v-for="dia in diasSemana"
-            :key="dia"
-            class="week-day"
-          >
-            {{ dia }}
+          <div class="legend-item">
+            <span class="dot dot-blue"></span>
+            Hoy
           </div>
         </div>
 
-        <div class="calendar-grid">
-
-          <div
-            v-for="n in espaciosInicio"
-            :key="`empty-${n}`"
-            class="day-box empty-day"
-          ></div>
-
-          <div
-            v-for="dia in diasDelMes"
-            :key="dia.fecha"
-            class="day-box"
-            :class="claseDia(dia)"
-            @click="seleccionarDia(dia.fecha)"
-          >
-            <div class="day-number">
-              {{ dia.dia }}
+        <div class="calendar-scroll">
+          <div class="week-grid q-mb-sm">
+            <div
+              v-for="dia in diasSemana"
+              :key="dia"
+              class="week-day"
+            >
+              {{ dia }}
             </div>
+          </div>
+
+          <div class="calendar-grid">
 
             <div
-              v-if="dia.citas.length > 0"
-              class="day-summary"
+              v-for="n in espaciosInicio"
+              :key="`empty-${n}`"
+              class="day-box empty-day"
+            ></div>
+
+            <div
+              v-for="dia in diasDelMes"
+              :key="dia.fecha"
+              class="day-box"
+              :class="[claseDia(dia), { 'today-day': dia.fecha === hoy }]"
+              @click="seleccionarDia(dia.fecha)"
             >
-              <q-badge
-                rounded
-                class="summary-badge"
-                :color="colorPrincipalDia(dia)"
+              <div class="day-header">
+                <div class="day-number">
+                  {{ dia.dia }}
+                </div>
+
+                <q-icon
+                  v-if="dia.fecha === hoy"
+                  name="today"
+                  color="blue"
+                  size="18px"
+                />
+              </div>
+
+              <div
+                v-if="dia.citas.length > 0"
+                class="day-summary"
               >
-                {{ dia.citas.length }} cita(s)
-              </q-badge>
-
-              <div class="mini-states">
-                <span
-                  v-if="resumenDia(dia).concluidas > 0"
-                  class="mini mini-green"
+                <q-badge
+                  rounded
+                  class="summary-badge"
+                  :color="colorPrincipalDia(dia)"
                 >
-                  {{ resumenDia(dia).concluidas }}
-                </span>
+                  {{ dia.citas.length }} cita(s)
+                </q-badge>
 
-                <span
-                  v-if="resumenDia(dia).pendientes > 0"
-                  class="mini mini-yellow"
-                >
-                  {{ resumenDia(dia).pendientes }}
-                </span>
+                <div class="mini-states">
+                  <span
+                    v-if="resumenLista(dia.citas).concluidas > 0"
+                    class="mini mini-green"
+                  >
+                    {{ resumenLista(dia.citas).concluidas }}
+                  </span>
 
-                <span
-                  v-if="resumenDia(dia).canceladas > 0"
-                  class="mini mini-red"
-                >
-                  {{ resumenDia(dia).canceladas }}
-                </span>
+                  <span
+                    v-if="resumenLista(dia.citas).pendientes > 0"
+                    class="mini mini-yellow"
+                  >
+                    {{ resumenLista(dia.citas).pendientes }}
+                  </span>
+
+                  <span
+                    v-if="resumenLista(dia.citas).canceladas > 0"
+                    class="mini mini-red"
+                  >
+                    {{ resumenLista(dia.citas).canceladas }}
+                  </span>
+                </div>
+
+                <div class="day-total">
+                  Bs {{ money(totalLista(dia.citas)) }}
+                </div>
+
+                <div class="day-paid">
+                  Pagado: Bs {{ money(totalPagadoLista(dia.citas)) }}
+                </div>
               </div>
 
-              <div class="day-total">
-                Total: Bs {{ money(totalDia(dia.citas)) }}
+              <div
+                v-else
+                class="free-day"
+              >
+                Libre
               </div>
             </div>
 
-            <div
-              v-else
-              class="text-caption text-grey-6 q-mt-sm"
-            >
-              Libre
-            </div>
           </div>
-
         </div>
       </q-card-section>
 
     </q-card>
 
-    <q-dialog v-model="dialog">
+    <!-- DIALOG DÍA -->
+    <q-dialog
+      v-model="dialog"
+      :maximized="$q.screen.lt.sm"
+      transition-show="slide-up"
+      transition-hide="slide-down"
+    >
       <q-card class="dialog-card">
 
-        <q-card-section class="dialog-header row items-center">
+        <q-card-section class="dialog-header">
           <div>
             <div class="text-h6 text-weight-bold">
               📅 {{ fechaBonita(diaSeleccionado) }}
             </div>
 
             <div class="text-caption">
-              {{ citasDia.length }} cita(s) registradas
+              {{ citasDia.length }} cita(s) visibles según filtros
             </div>
           </div>
 
@@ -185,85 +357,89 @@
 
         <q-card-section class="dialog-body">
 
+          <div class="day-panel q-mb-md">
+            <div class="day-panel-item">
+              <div class="panel-label">Citas</div>
+              <div class="panel-value">{{ citasDia.length }}</div>
+            </div>
+
+            <div class="day-panel-item">
+              <div class="panel-label">Total</div>
+              <div class="panel-value green">Bs {{ money(totalLista(citasDia)) }}</div>
+            </div>
+
+            <div class="day-panel-item">
+              <div class="panel-label">Pagado</div>
+              <div class="panel-value green">Bs {{ money(totalPagadoLista(citasDia)) }}</div>
+            </div>
+          </div>
+
           <div
             v-if="citasDia.length === 0"
             class="empty-box"
           >
-            <q-icon name="event_available" size="46px" color="pink-6" />
+            <q-icon name="event_available" size="52px" color="pink-6" />
 
             <div class="text-weight-bold q-mt-sm">
-              No hay citas este día
+              No hay citas visibles este día
             </div>
 
             <div class="text-caption text-grey-7">
-              Puedes registrar una nueva cita con esta fecha.
+              Puedes registrar una nueva cita o limpiar los filtros.
             </div>
           </div>
 
-          <div v-else>
-            <div class="day-total-card q-mb-md">
-              <div>
-                <div class="total-label">
-                  Total generado este día
-                </div>
-
-                <div class="total-value">
-                  Bs {{ money(totalDia(citasDia)) }}
-                </div>
-              </div>
-
-              <q-icon name="payments" size="34px" color="green-7" />
-            </div>
-
-            <q-list
-              separator
-              class="citas-list"
+          <q-list
+            v-else
+            separator
+            class="citas-list"
+          >
+            <q-item
+              v-for="cita in citasDia"
+              :key="cita.id"
+              class="cita-item"
             >
-              <q-item
-                v-for="cita in citasDia"
-                :key="cita.id"
-                class="cita-item"
-              >
-                <q-item-section avatar>
-                  <q-avatar :color="colorEstado(cita.estado)" text-color="white">
-                    <q-icon name="event" />
-                  </q-avatar>
-                </q-item-section>
+              <q-item-section avatar>
+                <q-avatar :color="colorEstado(cita.estado)" text-color="white">
+                  <q-icon :name="iconEstado(cita.estado)" />
+                </q-avatar>
+              </q-item-section>
 
-                <q-item-section>
-                  <q-item-label class="text-weight-bold">
-                    {{ horaBonita(cita.hora) }} - {{ cita.cliente?.nombre || 'Sin cliente' }}
-                  </q-item-label>
+              <q-item-section>
+                <q-item-label class="text-weight-bold cita-title">
+                  {{ horaBonita(cita.hora) }} - {{ clienteCita(cita) }}
+                </q-item-label>
 
-                  <q-item-label caption>
-                    {{ cita.servicio }}
-                  </q-item-label>
+                <q-item-label caption>
+                  {{ servicioCita(cita) }}
+                </q-item-label>
 
-                  <q-item-label caption>
-                    Bs {{ money(cita.precio) }}
-                  </q-item-label>
-                </q-item-section>
+                <q-item-label caption>
+                  Bs {{ money(cita.precio) }}
+                </q-item-label>
+              </q-item-section>
 
-                <q-item-section side>
+              <q-item-section side>
+                <div class="badge-column">
                   <q-badge
                     rounded
                     :color="colorEstado(cita.estado)"
                     class="estado-badge"
                   >
-                    {{ cita.estado || 'pendiente' }}
+                    {{ textoEstado(cita.estado) }}
                   </q-badge>
 
                   <q-badge
                     rounded
-                    class="estado-badge q-mt-xs"
-                    :color="cita.estado_pago === 'pagado' ? 'green' : 'orange'"
+                    class="estado-badge"
+                    :color="colorPago(cita)"
                   >
-                    {{ cita.estado_pago || 'pendiente' }}
+                    {{ textoPago(cita) }}
                   </q-badge>
-                </q-item-section>
-              </q-item>
-            </q-list>
-          </div>
+                </div>
+              </q-item-section>
+            </q-item>
+          </q-list>
 
         </q-card-section>
 
@@ -273,6 +449,14 @@
             label="Cerrar"
             color="grey-7"
             v-close-popup
+          />
+
+          <q-btn
+            outline
+            color="pink-7"
+            icon="event"
+            label="Ver citas"
+            @click="verCitasDelDia"
           />
 
           <q-btn
@@ -308,9 +492,12 @@ const descargandoPdf = ref(false)
 
 const dialog = ref(false)
 const diaSeleccionado = ref('')
-const citasDia = ref([])
 
 const fecha = ref(new Date())
+
+const busqueda = ref('')
+const filtroEstado = ref('todos')
+const filtroPago = ref('todos')
 
 const meses = [
   'Enero',
@@ -337,12 +524,60 @@ const diasSemana = [
   'Sáb'
 ]
 
+const opcionesEstado = [
+  { label: 'Todas', value: 'todos' },
+  { label: 'Pendientes', value: 'pendiente' },
+  { label: 'Concluidas', value: 'concluida' },
+  { label: 'Canceladas', value: 'cancelada' }
+]
+
+const opcionesPago = [
+  { label: 'Todos', value: 'todos' },
+  { label: 'Pagados', value: 'pagado' },
+  { label: 'Pendientes', value: 'pendiente' }
+]
+
+const hoy = computed(() => hoyISO())
 const nombreMes = computed(() => meses[fecha.value.getMonth()])
 const anio = computed(() => fecha.value.getFullYear())
 const mesNumero = computed(() => fecha.value.getMonth() + 1)
 
+const mesClave = computed(() => {
+  return `${anio.value}-${String(mesNumero.value).padStart(2, '0')}`
+})
+
 const espaciosInicio = computed(() => {
   return new Date(anio.value, fecha.value.getMonth(), 1).getDay()
+})
+
+const citasFiltradas = computed(() => {
+  const texto = normalizarTexto(busqueda.value)
+
+  return citas.value.filter((cita) => {
+    const cumpleTexto = !texto || [
+      cita.id,
+      cita.fecha,
+      cita.hora,
+      cita.precio,
+      cita.estado,
+      cita.estado_pago,
+      clienteCita(cita),
+      servicioCita(cita)
+    ].some(item => normalizarTexto(item).includes(texto))
+
+    const cumpleEstado = estadoCumpleFiltro(cita)
+    const cumplePago = pagoCumpleFiltro(cita)
+
+    return cumpleTexto && cumpleEstado && cumplePago
+  })
+})
+
+const citasMes = computed(() => {
+  return citas.value.filter((cita) => fechaISO(cita.fecha).startsWith(mesClave.value))
+})
+
+const citasMesFiltradas = computed(() => {
+  return citasFiltradas.value.filter((cita) => fechaISO(cita.fecha).startsWith(mesClave.value))
 })
 
 const diasDelMes = computed(() => {
@@ -355,7 +590,9 @@ const diasDelMes = computed(() => {
   for (let i = 1; i <= lastDay; i++) {
     const fechaStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`
 
-    const citasDelDia = citas.value.filter((cita) => cita.fecha === fechaStr)
+    const citasDelDia = citasMesFiltradas.value
+      .filter((cita) => fechaISO(cita.fecha) === fechaStr)
+      .sort((a, b) => String(a.hora || '').localeCompare(String(b.hora || '')))
 
     dias.push({
       dia: i,
@@ -366,6 +603,83 @@ const diasDelMes = computed(() => {
 
   return dias
 })
+
+const citasDia = computed(() => {
+  if (!diaSeleccionado.value) return []
+
+  return citasFiltradas.value
+    .filter((cita) => fechaISO(cita.fecha) === diaSeleccionado.value)
+    .sort((a, b) => String(a.hora || '').localeCompare(String(b.hora || '')))
+})
+
+const pendientesMes = computed(() => {
+  return citasMes.value.filter(cita => esPendiente(cita.estado)).length
+})
+
+const concluidasMes = computed(() => {
+  return citasMes.value.filter(cita => esConcluida(cita.estado)).length
+})
+
+const canceladasMes = computed(() => {
+  return citasMes.value.filter(cita => esCancelada(cita.estado)).length
+})
+
+const pagadasMes = computed(() => {
+  return citasMes.value.filter(cita => esPagado(cita)).length
+})
+
+const totalMes = computed(() => {
+  return totalLista(citasMes.value)
+})
+
+const totalPagadoMes = computed(() => {
+  return totalPagadoLista(citasMes.value)
+})
+
+const resumenCards = computed(() => [
+  {
+    titulo: 'Citas mes',
+    valor: citasMes.value.length,
+    detalle: `${citasMesFiltradas.value.length} visibles`,
+    icono: 'calendar_month',
+    clase: 'bg-pink-7'
+  },
+  {
+    titulo: 'Pendientes',
+    valor: pendientesMes.value,
+    detalle: 'Citas por atender',
+    icono: 'schedule',
+    clase: 'bg-orange-7'
+  },
+  {
+    titulo: 'Concluidas',
+    valor: concluidasMes.value,
+    detalle: 'Citas finalizadas',
+    icono: 'check_circle',
+    clase: 'bg-green-7'
+  },
+  {
+    titulo: 'Canceladas',
+    valor: canceladasMes.value,
+    detalle: 'Citas canceladas',
+    icono: 'cancel',
+    clase: 'bg-red-7'
+  },
+  {
+    titulo: 'Pagadas',
+    valor: pagadasMes.value,
+    detalle: `Bs ${money(totalPagadoMes.value)}`,
+    icono: 'payments',
+    clase: 'bg-teal-7'
+  },
+  {
+    titulo: 'Total mes',
+    valor: `Bs ${money(totalMes.value)}`,
+    detalle: 'Monto programado',
+    icono: 'account_balance_wallet',
+    clase: 'bg-purple-7'
+  }
+])
 
 function getErrorMessage(error) {
   const data = error?.response?.data
@@ -396,30 +710,89 @@ async function load() {
   }
 }
 
+function normalizarTexto(value) {
+  return String(value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+}
+
+function fechaISO(value) {
+  if (!value) return ''
+
+  return String(value).slice(0, 10)
+}
+
+function dateToISO(date) {
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+  return local.toISOString().slice(0, 10)
+}
+
+function hoyISO() {
+  return dateToISO(new Date())
+}
+
 function estadoNormalizado(estado) {
-  return String(estado || 'pendiente').toLowerCase().trim()
+  return normalizarTexto(estado || 'pendiente')
 }
 
 function esConcluida(estado) {
   const valor = estadoNormalizado(estado)
 
-  return valor === 'concluida' ||
-    valor === 'finalizada' ||
-    valor === 'realizada'
+  return (
+    valor.includes('conclu') ||
+    valor.includes('final') ||
+    valor.includes('realiz') ||
+    valor.includes('complet')
+  )
 }
 
 function esPendiente(estado) {
-  return estadoNormalizado(estado) === 'pendiente'
+  const valor = estadoNormalizado(estado)
+
+  return (
+    valor.includes('pend') ||
+    (!esConcluida(estado) && !esCancelada(estado))
+  )
 }
 
 function esCancelada(estado) {
-  return estadoNormalizado(estado) === 'cancelada'
+  const valor = estadoNormalizado(estado)
+
+  return (
+    valor.includes('cancel') ||
+    valor.includes('anulad')
+  )
 }
 
-function resumenDia(dia) {
-  const pendientes = dia.citas.filter((cita) => esPendiente(cita.estado)).length
-  const concluidas = dia.citas.filter((cita) => esConcluida(cita.estado)).length
-  const canceladas = dia.citas.filter((cita) => esCancelada(cita.estado)).length
+function esPagado(cita) {
+  const pago = normalizarTexto(cita?.estado_pago || cita?.pago_estado || '')
+
+  return pago.includes('pag')
+}
+
+function estadoCumpleFiltro(cita) {
+  if (filtroEstado.value === 'todos') return true
+  if (filtroEstado.value === 'pendiente') return esPendiente(cita.estado)
+  if (filtroEstado.value === 'concluida') return esConcluida(cita.estado)
+  if (filtroEstado.value === 'cancelada') return esCancelada(cita.estado)
+
+  return true
+}
+
+function pagoCumpleFiltro(cita) {
+  if (filtroPago.value === 'todos') return true
+  if (filtroPago.value === 'pagado') return esPagado(cita)
+  if (filtroPago.value === 'pendiente') return !esPagado(cita)
+
+  return true
+}
+
+function resumenLista(lista) {
+  const pendientes = lista.filter((cita) => esPendiente(cita.estado)).length
+  const concluidas = lista.filter((cita) => esConcluida(cita.estado)).length
+  const canceladas = lista.filter((cita) => esCancelada(cita.estado)).length
 
   return {
     pendientes,
@@ -428,8 +801,16 @@ function resumenDia(dia) {
   }
 }
 
-function totalDia(listaCitas) {
+function totalLista(listaCitas) {
   return listaCitas.reduce((total, cita) => {
+    return total + Number(cita.precio || 0)
+  }, 0)
+}
+
+function totalPagadoLista(listaCitas) {
+  return listaCitas.reduce((total, cita) => {
+    if (!esPagado(cita)) return total
+
     return total + Number(cita.precio || 0)
   }, 0)
 }
@@ -437,7 +818,7 @@ function totalDia(listaCitas) {
 function claseDia(dia) {
   if (dia.citas.length === 0) return ''
 
-  const resumen = resumenDia(dia)
+  const resumen = resumenLista(dia.citas)
 
   return {
     'has-citas': true,
@@ -448,7 +829,7 @@ function claseDia(dia) {
 }
 
 function colorPrincipalDia(dia) {
-  const resumen = resumenDia(dia)
+  const resumen = resumenLista(dia.citas)
 
   if (resumen.canceladas > 0) return 'red'
   if (resumen.pendientes > 0) return 'orange'
@@ -464,20 +845,45 @@ function colorEstado(estado) {
   return 'orange'
 }
 
+function iconEstado(estado) {
+  if (esConcluida(estado)) return 'check_circle'
+  if (esCancelada(estado)) return 'cancel'
+
+  return 'schedule'
+}
+
+function textoEstado(estado) {
+  if (esConcluida(estado)) return 'Concluida'
+  if (esCancelada(estado)) return 'Cancelada'
+
+  return 'Pendiente'
+}
+
+function textoPago(cita) {
+  return esPagado(cita) ? 'Pagado' : 'Pago pendiente'
+}
+
+function colorPago(cita) {
+  return esPagado(cita) ? 'green' : 'orange'
+}
+
 function seleccionarDia(fechaSel) {
   diaSeleccionado.value = fechaSel
-  citasDia.value = citas.value.filter((cita) => cita.fecha === fechaSel)
   dialog.value = true
 }
 
 function mesAnterior() {
   fecha.value = new Date(anio.value, fecha.value.getMonth() - 1, 1)
-  load()
 }
 
 function mesSiguiente() {
   fecha.value = new Date(anio.value, fecha.value.getMonth() + 1, 1)
-  load()
+}
+
+function irHoy() {
+  fecha.value = new Date()
+  diaSeleccionado.value = hoy.value
+  dialog.value = true
 }
 
 function nuevaCita() {
@@ -486,9 +892,26 @@ function nuevaCita() {
   router.push({
     path: '/citas',
     query: {
-      fecha: diaSeleccionado.value
+      fecha: diaSeleccionado.value || hoy.value
     }
   })
+}
+
+function verCitasDelDia() {
+  dialog.value = false
+
+  router.push({
+    path: '/citas',
+    query: {
+      fecha: diaSeleccionado.value || hoy.value
+    }
+  })
+}
+
+function limpiarFiltros() {
+  busqueda.value = ''
+  filtroEstado.value = 'todos'
+  filtroPago.value = 'todos'
 }
 
 function money(value) {
@@ -497,7 +920,26 @@ function money(value) {
 
 function horaBonita(hora) {
   if (!hora) return '--:--'
+
   return String(hora).slice(0, 5)
+}
+
+function clienteCita(cita) {
+  return (
+    cita?.cliente?.nombre ||
+    cita?.cliente_nombre ||
+    cita?.nombre_cliente ||
+    'Sin cliente'
+  )
+}
+
+function servicioCita(cita) {
+  return (
+    cita?.servicio ||
+    cita?.nombre_servicio ||
+    cita?.servicio_nombre ||
+    'Sin servicio'
+  )
 }
 
 function fechaBonita(valor) {
@@ -557,23 +999,55 @@ onMounted(() => {
 <style scoped>
 .calendario-page {
   min-height: 100vh;
-  background: #faf7fb;
+  background:
+    radial-gradient(circle at top left, rgba(233, 30, 99, 0.10), transparent 32%),
+    linear-gradient(180deg, #fff7fb 0%, #f7f7fb 100%);
 }
+
+/* HERO */
 
 .calendar-hero {
   background: linear-gradient(135deg, #e91e63, #9c27b0);
-  border-radius: 28px;
-  padding: 28px;
+  border-radius: 30px;
+  padding: 30px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 16px 40px rgba(233, 30, 99, 0.25);
+  box-shadow: 0 18px 45px rgba(156, 39, 176, 0.28);
+  position: relative;
+  overflow: hidden;
+}
+
+.calendar-hero::after {
+  content: "";
+  position: absolute;
+  width: 220px;
+  height: 220px;
+  right: -65px;
+  top: -70px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.hero-badge {
+  display: inline-block;
+  padding: 7px 14px;
+  border-radius: 999px;
+  color: white;
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(8px);
+}
+
+.hero-subtitle {
+  opacity: 0.92;
 }
 
 .hero-actions {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+  z-index: 1;
 }
 
 .btn-white {
@@ -591,10 +1065,91 @@ onMounted(() => {
   border-radius: 16px;
 }
 
-.calendar-card {
-  border-radius: 26px;
-  overflow: hidden;
+/* SUMMARY */
+
+.summary-card {
+  min-height: 132px;
+  border-radius: 24px;
+  background: white;
   box-shadow: 0 14px 35px rgba(156, 39, 176, 0.12);
+  border: 1px solid rgba(233, 30, 99, 0.08);
+  transition: all 0.25s ease;
+}
+
+.summary-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 18px 42px rgba(233, 30, 99, 0.18);
+}
+
+.summary-info {
+  min-width: 0;
+}
+
+.summary-title {
+  color: #777;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.summary-value {
+  color: #222;
+  font-size: 20px;
+  font-weight: 900;
+  margin-top: 4px;
+  word-break: break-word;
+}
+
+.summary-detail {
+  color: #888;
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+/* FILTROS */
+
+.filters-card {
+  border-radius: 26px;
+  background: white;
+  box-shadow: 0 14px 35px rgba(156, 39, 176, 0.12);
+  border: 1px solid rgba(233, 30, 99, 0.08);
+}
+
+.filters-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.filters-title {
+  color: #c2185b;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.filters-subtitle {
+  color: #777;
+  font-size: 13px;
+}
+
+.result-badge {
+  width: 100%;
+  min-height: 40px;
+  justify-content: center;
+  background: linear-gradient(135deg, #e91e63, #9c27b0);
+  color: white;
+  font-weight: 900;
+  padding: 9px 12px;
+}
+
+/* CALENDARIO */
+
+.calendar-card {
+  border-radius: 28px;
+  overflow: hidden;
+  background: white;
+  box-shadow: 0 16px 38px rgba(156, 39, 176, 0.12);
+  border: 1px solid rgba(233, 30, 99, 0.08);
 }
 
 .calendar-toolbar {
@@ -603,6 +1158,7 @@ onMounted(() => {
   justify-content: center;
   gap: 16px;
   background: white;
+  padding: 18px;
 }
 
 .nav-btn {
@@ -619,6 +1175,10 @@ onMounted(() => {
   text-transform: capitalize;
 }
 
+.calendar-content {
+  background: white;
+}
+
 .legend {
   display: flex;
   gap: 14px;
@@ -631,7 +1191,7 @@ onMounted(() => {
   gap: 6px;
   font-size: 13px;
   color: #555;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 .dot {
@@ -652,24 +1212,34 @@ onMounted(() => {
   background: #c62828;
 }
 
+.dot-blue {
+  background: #1976d2;
+}
+
+.calendar-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
 .week-grid,
 .calendar-grid {
   display: grid;
-  grid-template-columns: repeat(7, minmax(110px, 1fr));
+  grid-template-columns: repeat(7, minmax(112px, 1fr));
   gap: 10px;
+  min-width: 780px;
 }
 
 .week-day {
   text-align: center;
   font-weight: 900;
   color: #880e4f;
-  padding: 8px;
+  padding: 9px;
   background: #fce4ec;
   border-radius: 14px;
 }
 
 .day-box {
-  min-height: 130px;
+  min-height: 145px;
   border: 1px solid #ead7e2;
   padding: 12px;
   cursor: pointer;
@@ -696,10 +1266,21 @@ onMounted(() => {
   box-shadow: none;
 }
 
+.day-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 .day-number {
   font-size: 20px;
   font-weight: 900;
   color: #2b1730;
+}
+
+.today-day {
+  outline: 2px solid #1976d2;
+  outline-offset: -2px;
 }
 
 .has-citas {
@@ -769,104 +1350,165 @@ onMounted(() => {
   display: inline-block;
 }
 
+.day-paid {
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 900;
+  color: #00695c;
+}
+
+.free-day {
+  margin-top: 12px;
+  color: #999;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* DIALOG */
+
 .dialog-card {
-  width: 640px;
+  width: 720px;
   max-width: 96vw;
-  border-radius: 24px;
+  max-height: 88vh;
+  border-radius: 26px;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: white;
 }
 
 .dialog-header {
+  flex: 0 0 auto;
   background: linear-gradient(135deg, #e91e63, #9c27b0);
   color: white;
+  display: flex;
+  align-items: center;
+  padding: 20px 22px;
 }
 
 .dialog-body {
+  flex: 1 1 auto;
+  min-height: 0;
   background: white;
   padding: 20px;
-  max-height: 65vh;
   overflow-y: auto;
+}
+
+.day-panel {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.day-panel-item {
+  background: #fff7fb;
+  border: 1px solid rgba(233, 30, 99, 0.10);
+  border-radius: 18px;
+  padding: 14px;
+}
+
+.panel-label {
+  color: #777;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.panel-value {
+  color: #c2185b;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.panel-value.green {
+  color: #2e7d32;
 }
 
 .empty-box {
   text-align: center;
-  padding: 28px 14px;
+  padding: 32px 14px;
   border: 1px dashed #e9b5ce;
   border-radius: 20px;
   background: #fff7fb;
 }
 
-.day-total-card {
-  background: linear-gradient(135deg, #f1fff4, #ffffff);
-  border: 1px solid #c8e6c9;
-  border-radius: 20px;
-  padding: 14px 18px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.total-label {
-  font-size: 13px;
-  font-weight: 800;
-  color: #4b4b4b;
-}
-
-.total-value {
-  font-size: 24px;
-  font-weight: 900;
-  color: #2e7d32;
+.citas-list {
+  border-radius: 18px;
+  overflow: hidden;
 }
 
 .cita-item {
   border-radius: 16px;
   margin-bottom: 8px;
   background: #fff7fb;
+  border: 1px solid rgba(233, 30, 99, 0.08);
+}
+
+.cita-title {
+  color: #c2185b;
+}
+
+.badge-column {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
 }
 
 .estado-badge {
   text-transform: capitalize;
   font-weight: 800;
+  padding: 5px 9px;
 }
 
 .dialog-actions {
-  padding: 16px 20px;
+  flex: 0 0 auto;
+  padding: 14px 18px;
   background: white;
-  border-top: 1px solid #eee;
+  border-top: 1px solid #eeeeee;
+  box-shadow: 0 -8px 22px rgba(0, 0, 0, 0.08);
+  gap: 10px;
 }
 
-@media (max-width: 900px) {
-  .week-grid,
-  .calendar-grid {
-    grid-template-columns: repeat(7, minmax(88px, 1fr));
-    overflow-x: auto;
-  }
+/* MOBILE */
 
-  .calendar-card {
-    overflow-x: auto;
-  }
-}
-
-@media (max-width: 600px) {
+@media (max-width: 700px) {
   .calendario-page {
     padding: 10px;
   }
 
   .calendar-hero {
-    padding: 20px;
-    border-radius: 20px;
+    padding: 22px;
+    border-radius: 22px;
     flex-direction: column;
     align-items: flex-start;
-    gap: 14px;
+    gap: 16px;
+  }
+
+  .calendar-hero .text-h4 {
+    font-size: 28px;
   }
 
   .hero-actions,
-  .btn-white {
+  .hero-actions .q-btn {
+    width: 100%;
+  }
+
+  .summary-card {
+    min-height: auto;
+  }
+
+  .filters-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .filters-header .q-btn {
     width: 100%;
   }
 
   .calendar-toolbar {
     gap: 10px;
+    padding: 14px 10px;
   }
 
   .month-title {
@@ -877,10 +1519,11 @@ onMounted(() => {
   .week-grid,
   .calendar-grid {
     grid-template-columns: repeat(7, 96px);
+    min-width: 710px;
   }
 
   .day-box {
-    min-height: 118px;
+    min-height: 132px;
     padding: 10px;
   }
 
@@ -890,17 +1533,42 @@ onMounted(() => {
   }
 
   .dialog-card {
-    width: 100%;
-    max-width: 100%;
+    width: 100vw;
+    max-width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+  }
+
+  .dialog-header {
+    padding: 18px;
+  }
+
+  .dialog-body {
+    padding: 14px;
+  }
+
+  .day-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .cita-item {
+    padding: 10px;
+  }
+
+  .badge-column {
+    align-items: flex-start;
+    margin-top: 8px;
   }
 
   .dialog-actions {
+    padding: 12px 14px calc(14px + env(safe-area-inset-bottom));
     flex-wrap: wrap;
-    gap: 10px;
   }
 
   .dialog-actions .q-btn {
     width: 100%;
+    min-height: 44px;
   }
 }
 </style>
