@@ -1,8 +1,8 @@
 {
-    "name": "quasar-project",
+    "name": "aurea-beauty-salon",
     "version": "0.0.1",
-    "description": "A Quasar Project",
-    "productName": "Quasar App",
+    "description": "Sistema inteligente para salones de belleza",
+    "productName": "AUREA Beauty Salon",
     "author": "",
     "type": "module",
     "private": true,

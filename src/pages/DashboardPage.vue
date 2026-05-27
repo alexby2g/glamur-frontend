@@ -10,7 +10,7 @@
         </div>
 
         <div class="glamur-title q-mt-sm">
-          Dashboard Glamur
+          Panel principal AUREA
         </div>
 
         <div class="glamur-subtitle q-mt-xs">

@@ -9,7 +9,7 @@
         </div>
 
         <div class="text-h4 text-weight-bold text-white q-mt-sm">
-          🕘 Historial Glamur
+          🕘 Historial AUREA
         </div>
 
         <div class="text-subtitle2 text-white hero-subtitle">

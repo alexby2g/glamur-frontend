@@ -9,7 +9,7 @@
         </div>
 
         <div class="text-h4 text-weight-bold text-white q-mt-sm">
-          👥 Clientes Glamur
+          👥 Clientes AUREA
         </div>
 
         <div class="text-subtitle2 text-white hero-subtitle">
@@ -163,7 +163,7 @@
                 </div>
 
                 <div class="text-caption text-grey-7">
-                  Cliente Glamur #{{ props.row.id }}
+                  Cliente AUREA #{{ props.row.id }}
                 </div>
               </div>
             </div>
@@ -1321,7 +1321,7 @@ function abrirWhatsApp(cliente) {
   }
 
   const mensaje = encodeURIComponent(
-    `Hola ${cliente.nombre || ''}, le escribimos de Glamur para coordinar su cita.`
+    `Hola ${cliente.nombre || ''}, le escribimos de AUREA Beauty Salon para coordinar su cita.`
   )
 
   window.open(`https://wa.me/${numero}?text=${mensaje}`, '_blank')

@@ -8,15 +8,15 @@
           <!-- HEADER -->
           <q-card-section class="login-header">
             <q-avatar class="login-logo" size="78px">
-              <q-icon name="spa" color="white" size="44px" />
+              <img src="~assets/logo-glamur.png" alt="AUREA Beauty" />
             </q-avatar>
 
             <div class="login-title">
-              Glamur
+              AUREA
             </div>
 
             <div class="login-subtitle">
-              Iniciar sesión en el sistema
+              Beauty Salon | Sistema inteligente
             </div>
           </q-card-section>
 
@@ -82,7 +82,7 @@
 
           <!-- FOOTER -->
           <q-card-section class="login-footer">
-            Accede con tu cuenta registrada en Glamur
+            Accede con tu cuenta registrada en AUREA Beauty
           </q-card-section>
 
         </q-card>

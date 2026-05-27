@@ -218,7 +218,7 @@
                 </div>
 
                 <div class="text-caption text-grey-7">
-                  Cliente Glamur
+                  Cliente AUREA
                 </div>
               </div>
             </div>

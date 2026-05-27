@@ -5,15 +5,15 @@
         <q-card class="register-card">
           <q-card-section class="register-header">
             <q-avatar class="register-logo" size="78px">
-              <q-icon name="spa" color="white" size="44px" />
+              <img src="~assets/logo-glamur.png" alt="AUREA Beauty" />
             </q-avatar>
 
             <div class="register-title">
-              Crear cuenta
+              Crear cuenta AUREA
             </div>
 
             <div class="register-subtitle">
-              Regístrate con tu correo Gmail
+              Regístrate para administrar Beauty Salon
             </div>
           </q-card-section>
 

@@ -1,43 +1,11 @@
-# Quasar App (quasar-project)
+# AUREA Beauty Salon
 
-A Quasar Project
+Sistema inteligente para gestión de salón de belleza.
 
-## Install the dependencies
+## Comandos útiles
 
 ```bash
-yarn
-# or
 npm install
+npx quasar build
+npx cap sync android
 ```
-
-### Start the app in development mode (hot-code reloading, error reporting, etc.)
-
-```bash
-quasar dev
-```
-
-### Lint the files
-
-```bash
-yarn lint
-# or
-npm run lint
-```
-
-### Format the files
-
-```bash
-yarn format
-# or
-npm run format
-```
-
-### Build the app for production
-
-```bash
-quasar build
-```
-
-### Customize the configuration
-
-See [Configuring quasar.config.js](https://v2.quasar.dev/quasar-cli-vite/quasar-config-js).

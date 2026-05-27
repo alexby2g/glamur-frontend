@@ -121,8 +121,8 @@ async function prepararCanalNotificaciones() {
   try {
     await LocalNotifications.createChannel({
       id: CANAL_ID,
-      name: 'Pagos y avisos Glamur',
-      description: 'Notificaciones de pagos, citas y avisos del sistema Glamur',
+      name: 'Pagos y avisos AUREA Beauty',
+      description: 'Notificaciones de pagos, citas y avisos del sistema AUREA Beauty',
       importance: 5,
       visibility: 1,
       sound: 'default',
@@ -156,14 +156,14 @@ async function mostrarNotificacionMovil(notificacion) {
 
   const titulo = textoSeguro(
     notificacion.titulo,
-    esPago ? 'Pago registrado' : 'Nueva notificación Glamur'
+    esPago ? 'Pago registrado' : 'Nueva notificación AUREA Beauty'
   )
 
   const cuerpo = textoSeguro(
     notificacion.mensaje || notificacion.descripcion,
     esPago
       ? 'Se registró un nuevo pago en el sistema.'
-      : 'Tienes una nueva notificación en Glamur.'
+      : 'Tienes una nueva notificación en AUREA Beauty.'
   )
 
   const ruta = esPago ? '/pagos' : '/dashboard'

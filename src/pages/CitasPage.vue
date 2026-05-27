@@ -89,7 +89,7 @@
           </div>
 
           <div class="text-caption text-grey-7">
-            Servicio Glamur
+            Servicio AUREA
           </div>
         </q-td>
       </template>

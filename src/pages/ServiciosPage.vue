@@ -8,7 +8,7 @@
         </div>
 
         <div class="text-subtitle2 text-white">
-          Administra los servicios predeterminados de Glamur
+          Administra los servicios predeterminados de AUREA Beauty Salon
         </div>
       </div>
 

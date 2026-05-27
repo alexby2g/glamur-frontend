@@ -18,16 +18,16 @@
         <q-toolbar-title class="row items-center no-wrap">
 
           <q-avatar class="top-logo" size="42px">
-            <q-icon name="spa" color="white" size="24px" />
+            <img src="~assets/logo-glamur.png" alt="AUREA Beauty" />
           </q-avatar>
 
           <div class="q-ml-sm">
             <div class="top-title">
-              Glamur
+              AUREA
             </div>
 
             <div class="top-subtitle">
-              Sistema de gestión
+              Beauty Salon
             </div>
           </div>
 
@@ -124,7 +124,7 @@
                     </q-item-label>
 
                     <q-item-label caption lines="2">
-                      {{ n.mensaje || 'Nueva actividad registrada en Glamur.' }}
+                      {{ n.mensaje || 'Nueva actividad registrada en AUREA Beauty.' }}
                     </q-item-label>
 
                     <q-item-label caption class="notification-date">
@@ -222,15 +222,15 @@
       <div class="drawer-brand">
 
         <q-avatar class="drawer-logo" size="72px">
-          <q-icon name="spa" color="white" size="38px" />
+          <img src="~assets/logo-glamur.png" alt="AUREA Beauty" />
         </q-avatar>
 
         <div class="drawer-title">
-          Glamur
+          AUREA
         </div>
 
         <div class="drawer-subtitle">
-          Panel administrativo
+          Beauty Salon
         </div>
 
       </div>
@@ -404,8 +404,8 @@ export default {
         if (Capacitor.getPlatform() === 'android') {
           await LocalNotifications.createChannel({
             id: 'glamur_pagos',
-            name: 'Pagos Glamur',
-            description: 'Notificaciones de pagos registrados en Glamur',
+            name: 'Pagos AUREA Beauty',
+            description: 'Notificaciones de pagos registrados en AUREA Beauty',
             importance: 5,
             visibility: 1,
             sound: 'default'
@@ -434,7 +434,7 @@ export default {
           notifications: [
             {
               id: idSeguro,
-              title: notificacion?.titulo || 'Glamur',
+              title: notificacion?.titulo || 'AUREA Beauty',
               body: notificacion?.mensaje || 'Nueva notificación registrada',
               schedule: {
                 at: new Date(Date.now() + 1000)

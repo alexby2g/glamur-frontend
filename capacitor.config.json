@@ -1,6 +1,6 @@
 {
   "appId": "com.glamur.app",
-  "appName": "Glamur",
+  "appName": "AUREA Beauty",
   "webDir": "dist/spa",
   "server": {
     "url": "https://glamur-frontend.vercel.app",

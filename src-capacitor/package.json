@@ -1,7 +1,7 @@
 {
-  "name": "quasar-project",
+  "name": "aurea-beauty-salon-capacitor",
   "version": "0.0.1",
-  "description": "A Quasar Project",
+  "description": "Sistema inteligente para salones de belleza",
   "private": true,
   "dependencies": {
     "@capacitor/android": "^8.3.4",
