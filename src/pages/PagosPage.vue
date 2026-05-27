@@ -316,126 +316,135 @@
     </q-card>
 
     <!-- DIALOG DETALLE -->
-    <q-dialog v-model="dialogDetalle" :maximized="$q.screen.lt.sm">
-      <q-card class="detalle-card">
+    <!-- DIALOG DETALLE -->
+<q-dialog
+  v-model="dialogDetalle"
+  :maximized="$q.screen.lt.sm"
+  transition-show="slide-up"
+  transition-hide="slide-down"
+>
+  <q-card class="detalle-card">
 
-        <q-card-section class="detalle-header">
-          <div>
-            <div class="text-h6 text-weight-bold">
-              🧾 Detalle del pago
-            </div>
+    <!-- CABECERA FIJA -->
+    <q-card-section class="detalle-header">
+      <div>
+        <div class="text-h6 text-weight-bold">
+          🧾 Detalle del pago
+        </div>
 
-            <div class="text-caption text-white">
-              Información completa del ingreso registrado
-            </div>
-          </div>
+        <div class="text-caption text-white">
+          Información completa del ingreso registrado
+        </div>
+      </div>
 
-          <q-space />
+      <q-space />
 
-          <q-btn
-            icon="close"
-            flat
-            round
-            dense
-            color="white"
-            v-close-popup
-          />
-        </q-card-section>
+      <q-btn
+        icon="close"
+        flat
+        round
+        dense
+        color="white"
+        v-close-popup
+      />
+    </q-card-section>
 
-        <q-card-section v-if="pagoSeleccionado" class="detalle-body">
-          <div class="detalle-total">
-            <div class="detalle-total-label">
-              Monto pagado
-            </div>
+    <!-- CUERPO CON SCROLL -->
+    <q-card-section v-if="pagoSeleccionado" class="detalle-body">
+      <div class="detalle-total">
+        <div class="detalle-total-label">
+          Monto pagado
+        </div>
 
-            <div class="detalle-total-value">
-              Bs {{ money(pagoSeleccionado.monto) }}
-            </div>
-          </div>
+        <div class="detalle-total-value">
+          Bs {{ money(pagoSeleccionado.monto) }}
+        </div>
+      </div>
 
-          <q-list bordered separator class="detalle-list">
-            <q-item>
-              <q-item-section avatar>
-                <q-icon name="person" color="pink" />
-              </q-item-section>
+      <q-list bordered separator class="detalle-list">
+        <q-item>
+          <q-item-section avatar>
+            <q-icon name="person" color="pink" />
+          </q-item-section>
 
-              <q-item-section>
-                <q-item-label caption>Cliente</q-item-label>
-                <q-item-label class="text-weight-bold">
-                  {{ clientePago(pagoSeleccionado) }}
-                </q-item-label>
-              </q-item-section>
-            </q-item>
+          <q-item-section>
+            <q-item-label caption>Cliente</q-item-label>
+            <q-item-label class="text-weight-bold">
+              {{ clientePago(pagoSeleccionado) }}
+            </q-item-label>
+          </q-item-section>
+        </q-item>
 
-            <q-item>
-              <q-item-section avatar>
-                <q-icon name="spa" color="purple" />
-              </q-item-section>
+        <q-item>
+          <q-item-section avatar>
+            <q-icon name="spa" color="purple" />
+          </q-item-section>
 
-              <q-item-section>
-                <q-item-label caption>Servicio</q-item-label>
-                <q-item-label class="text-weight-bold">
-                  {{ servicioPago(pagoSeleccionado) }}
-                </q-item-label>
-              </q-item-section>
-            </q-item>
+          <q-item-section>
+            <q-item-label caption>Servicio</q-item-label>
+            <q-item-label class="text-weight-bold">
+              {{ servicioPago(pagoSeleccionado) }}
+            </q-item-label>
+          </q-item-section>
+        </q-item>
 
-            <q-item>
-              <q-item-section avatar>
-                <q-icon name="payments" color="green" />
-              </q-item-section>
+        <q-item>
+          <q-item-section avatar>
+            <q-icon name="payments" color="green" />
+          </q-item-section>
 
-              <q-item-section>
-                <q-item-label caption>Método de pago</q-item-label>
-                <q-item-label class="text-weight-bold">
-                  {{ metodoTexto(pagoSeleccionado.metodo) }}
-                </q-item-label>
-              </q-item-section>
-            </q-item>
+          <q-item-section>
+            <q-item-label caption>Método de pago</q-item-label>
+            <q-item-label class="text-weight-bold">
+              {{ metodoTexto(pagoSeleccionado.metodo) }}
+            </q-item-label>
+          </q-item-section>
+        </q-item>
 
-            <q-item>
-              <q-item-section avatar>
-                <q-icon name="verified" color="blue" />
-              </q-item-section>
+        <q-item>
+          <q-item-section avatar>
+            <q-icon name="verified" color="blue" />
+          </q-item-section>
 
-              <q-item-section>
-                <q-item-label caption>Estado</q-item-label>
-                <q-item-label class="text-weight-bold">
-                  {{ estadoPagoTexto(pagoSeleccionado.estado) }}
-                </q-item-label>
-              </q-item-section>
-            </q-item>
+          <q-item-section>
+            <q-item-label caption>Estado</q-item-label>
+            <q-item-label class="text-weight-bold">
+              {{ estadoPagoTexto(pagoSeleccionado.estado) }}
+            </q-item-label>
+          </q-item-section>
+        </q-item>
 
-            <q-item>
-              <q-item-section avatar>
-                <q-icon name="event" color="orange" />
-              </q-item-section>
+        <q-item>
+          <q-item-section avatar>
+            <q-icon name="event" color="orange" />
+          </q-item-section>
 
-              <q-item-section>
-                <q-item-label caption>Fecha de pago</q-item-label>
-                <q-item-label class="text-weight-bold">
-                  {{ formatFecha(pagoSeleccionado.fecha_pago) }}
-                </q-item-label>
-              </q-item-section>
-            </q-item>
-          </q-list>
-        </q-card-section>
+          <q-item-section>
+            <q-item-label caption>Fecha de pago</q-item-label>
+            <q-item-label class="text-weight-bold">
+              {{ formatFecha(pagoSeleccionado.fecha_pago) }}
+            </q-item-label>
+          </q-item-section>
+        </q-item>
+      </q-list>
+    </q-card-section>
 
-        <q-card-actions align="right" class="detalle-actions">
-          <q-btn
-            flat
-            label="Cerrar"
-            color="grey-7"
-            v-close-popup
-          />
+    <!-- BOTONES FIJOS ABAJO -->
+    <q-card-actions align="right" class="detalle-actions">
+      <q-btn
+        flat
+        label="Cerrar"
+        color="grey-7"
+        v-close-popup
+      />
 
-          <q-btn
-            class="btn-glamur"
-            icon="print"
-            label="Imprimir"
-            @click="imprimirDetalle"
-          />
-        </q-card-actions>
+      <q-btn
+        class="btn-glamur"
+        icon="print"
+        label="Imprimir"
+        @click="imprimirDetalle"
+      />
+    </q-card-actions>
 
       </q-card>
     </q-dialog>
@@ -1106,23 +1115,33 @@ onMounted(load)
   flex-wrap: wrap;
 }
 
-/* DIALOG */
+/* DIALOG DETALLE PAGO */
 
 .detalle-card {
-  width: 520px;
+  width: 560px;
   max-width: 95vw;
+  max-height: 88vh;
   border-radius: 24px;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: white;
 }
 
 .detalle-header {
+  flex: 0 0 auto;
   background: linear-gradient(135deg, #e91e63, #9c27b0);
   color: white;
   display: flex;
   align-items: center;
+  padding: 20px 22px;
 }
 
 .detalle-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
   background: #fff7fb;
   padding: 22px;
 }
@@ -1154,58 +1173,48 @@ onMounted(load)
 }
 
 .detalle-actions {
+  flex: 0 0 auto;
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
   padding: 14px 18px;
   background: white;
+  border-top: 1px solid #eeeeee;
+  box-shadow: 0 -8px 22px rgba(0, 0, 0, 0.08);
+  gap: 10px;
 }
 
 /* MOBILE */
-
 @media (max-width: 700px) {
-  .pagos-page {
-    padding: 12px;
-  }
-
-  .page-hero {
-    padding: 22px;
-    border-radius: 22px;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-  }
-
-  .page-hero .text-h4 {
-    font-size: 28px;
-  }
-
-  .btn-glamur-white {
-    width: 100%;
-  }
-
-  .summary-card {
-    min-height: auto;
-  }
-
-  .filters-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .filters-header .q-btn {
-    width: 100%;
-  }
-
-  .result-badge {
-    width: 100%;
-  }
-
   .detalle-card {
-    width: 100%;
-    max-width: 100%;
+    width: 100vw;
+    max-width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
     border-radius: 0;
+  }
+
+  .detalle-header {
+    padding: 18px;
+  }
+
+  .detalle-body {
+    padding: 16px;
+    padding-bottom: 24px;
   }
 
   .detalle-total-value {
     font-size: 28px;
+  }
+
+  .detalle-actions {
+    padding: 12px 14px calc(14px + env(safe-area-inset-bottom));
+    flex-wrap: wrap;
+  }
+
+  .detalle-actions .q-btn {
+    width: 100%;
+    min-height: 44px;
   }
 }
 </style>
