@@ -68,6 +68,16 @@ const routes = [
       },
 
       {
+        path: 'mis-citas',
+        name: 'mis-citas',
+        component: () => import('pages/MisCitasPage.vue'),
+        meta: {
+          requiresAuth: true,
+          roles: ['empleado']
+        }
+      },
+
+      {
         path: 'servicios',
         name: 'servicios',
         component: () => import('pages/ServiciosPage.vue'),

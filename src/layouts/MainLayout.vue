@@ -376,6 +376,13 @@ export default {
         },
 
         {
+          label: 'Mis citas',
+          icon: 'event_available',
+          to: '/mis-citas',
+          roles: ['empleado']
+        },
+
+        {
           label: 'Servicios',
           icon: 'spa',
           to: '/servicios',
@@ -545,12 +552,10 @@ export default {
         return
       }
 
-      const rutasPermitidasEmpleado = [
-        '/servicios'
-      ]
+      const rutasPermitidas = this.menuFiltrado.map((item) => item.to)
 
-      if (!rutasPermitidasEmpleado.includes(rutaActual)) {
-        this.$router.replace('/servicios')
+      if (!rutasPermitidas.includes(rutaActual)) {
+        this.$router.replace('/mis-citas')
       }
     },
 

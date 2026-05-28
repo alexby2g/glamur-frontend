@@ -8,7 +8,7 @@ import {
 
 import routes from './routes'
 
-function obtenerUsuarioLocal() {
+function obtenerUsuarioLocal () {
   try {
     const usuarioGuardado = localStorage.getItem('glamur_user')
 
@@ -22,7 +22,7 @@ function obtenerUsuarioLocal() {
   }
 }
 
-function normalizarRol(rol) {
+function normalizarRol (rol) {
   const rolLimpio = String(rol || '').toLowerCase().trim()
 
   if (['admin', 'empleado'].includes(rolLimpio)) {
@@ -32,26 +32,49 @@ function normalizarRol(rol) {
   return 'admin'
 }
 
-function obtenerRolUsuario() {
+function obtenerRolUsuario () {
   const usuario = obtenerUsuarioLocal()
 
   return normalizarRol(usuario?.rol || 'admin')
 }
 
-function rutaInicioPorRol(rol) {
+function rutaInicioPorRol (rol) {
   if (rol === 'empleado') {
-    return '/servicios'
+    return '/mis-citas'
   }
 
   return '/dashboard'
 }
 
-function empleadoPuedeEntrar(path) {
-  const rutasPermitidasEmpleado = [
-    '/servicios'
-  ]
+function obtenerRolesPermitidos (to) {
+  const roles = []
 
-  return rutasPermitidasEmpleado.includes(path)
+  to.matched.forEach((record) => {
+    const rolesRuta = record.meta?.roles
+
+    if (Array.isArray(rolesRuta)) {
+      roles.push(...rolesRuta)
+      return
+    }
+
+    if (typeof rolesRuta === 'string') {
+      roles.push(rolesRuta)
+    }
+  })
+
+  return roles
+    .map((rol) => normalizarRol(rol))
+    .filter((rol, index, array) => array.indexOf(rol) === index)
+}
+
+function usuarioTienePermiso (to, rol) {
+  const rolesPermitidos = obtenerRolesPermitidos(to)
+
+  if (rolesPermitidos.length === 0) {
+    return true
+  }
+
+  return rolesPermitidos.includes(rol)
 }
 
 export default route(function () {
@@ -72,27 +95,22 @@ export default route(function () {
     const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
     const guestOnly = to.matched.some(record => record.meta.guestOnly)
 
-    // Si la ruta necesita sesión y no hay token, mandar al login
     if (requiresAuth && !token) {
       next('/login')
       return
     }
 
-    // Si ya inició sesión y quiere entrar a login/register, mandarlo a su inicio
     if (guestOnly && token) {
       next(rutaInicioPorRol(rol))
       return
     }
 
-    // Si es empleado, bloquear rutas de administrador aunque escriba la URL manualmente
-    if (requiresAuth && token && rol === 'empleado') {
-      if (!empleadoPuedeEntrar(to.path)) {
-        next({
-          path: rutaInicioPorRol(rol),
-          replace: true
-        })
-        return
-      }
+    if (requiresAuth && token && !usuarioTienePermiso(to, rol)) {
+      next({
+        path: rutaInicioPorRol(rol),
+        replace: true
+      })
+      return
     }
 
     next()
