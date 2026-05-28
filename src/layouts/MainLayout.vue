@@ -394,6 +394,12 @@ export default {
         },
 
         {
+          label: 'Reporte empleados',
+          icon: 'analytics',
+          to: '/reporte-empleados'
+        },
+
+        {
           label: 'Historial',
           icon: 'history',
           to: '/historial'

@@ -100,6 +100,15 @@ const routes = [
       },
 
       {
+        path: 'reporte-empleados',
+        name: 'reporte-empleados',
+        component: () => import('pages/ReporteEmpleadosPage.vue'),
+        meta: {
+          requiresAuth: true
+        }
+      },
+
+      {
         path: 'historial',
         name: 'historial',
         component: () => import('pages/HistorialPage.vue'),
