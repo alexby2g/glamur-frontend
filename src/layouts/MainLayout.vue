@@ -382,6 +382,12 @@ export default {
         },
 
         {
+          label: 'Caja diaria',
+          icon: 'point_of_sale',
+          to: '/caja-diaria'
+        },
+
+        {
           label: 'Historial',
           icon: 'history',
           to: '/historial'

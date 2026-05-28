@@ -82,6 +82,15 @@ const routes = [
       },
 
       {
+        path: 'caja-diaria',
+        name: 'caja-diaria',
+        component: () => import('pages/CajaDiariaPage.vue'),
+        meta: {
+          requiresAuth: true
+        }
+      },
+
+      {
         path: 'historial',
         name: 'historial',
         component: () => import('pages/HistorialPage.vue'),
