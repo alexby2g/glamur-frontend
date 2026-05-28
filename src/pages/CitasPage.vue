@@ -9,7 +9,7 @@
         </div>
 
         <div class="text-subtitle2 text-white">
-          Gestión de reservas, servicios, pagos y estados
+          Gestión de reservas, servicios, empleados, pagos y estados
         </div>
       </div>
 
@@ -42,7 +42,7 @@
           clearable
           bg-color="white"
           debounce="200"
-          placeholder="Buscar por cliente, teléfono, servicio, fecha, estado o pago..."
+          placeholder="Buscar por cliente, empleado, teléfono, servicio, fecha, estado o pago..."
         >
           <template #prepend>
             <q-icon name="search" color="pink" />
@@ -77,6 +77,19 @@
 
           <div class="text-caption text-grey-7">
             {{ props.row.cliente?.telefono || 'Sin teléfono' }}
+          </div>
+        </q-td>
+      </template>
+
+      <!-- EMPLEADO -->
+      <template #body-cell-empleado="props">
+        <q-td :props="props">
+          <div class="text-weight-bold text-purple-7">
+            {{ empleadoNombre(props.row) }}
+          </div>
+
+          <div class="text-caption text-grey-7">
+            {{ empleadoDetalle(props.row) }}
           </div>
         </q-td>
       </template>
@@ -273,6 +286,59 @@
                 <q-item>
                   <q-item-section class="text-grey">
                     No se encontraron clientes
+                  </q-item-section>
+                </q-item>
+              </template>
+            </q-select>
+
+            <!-- EMPLEADO -->
+            <q-select
+              v-model="form.empleado_id"
+              :options="empleadosFiltrados"
+              option-label="nombre"
+              option-value="id"
+              emit-value
+              map-options
+              use-input
+              input-debounce="0"
+              clearable
+              label="Empleado que atenderá"
+              outlined
+              rounded
+              bg-color="white"
+              class="form-field"
+              @filter="filtrarEmpleados"
+            >
+              <template #prepend>
+                <q-icon name="groups" color="purple" />
+              </template>
+
+              <template #option="scope">
+                <q-item v-bind="scope.itemProps">
+                  <q-item-section avatar>
+                    <q-avatar color="purple" text-color="white" icon="person" />
+                  </q-item-section>
+
+                  <q-item-section>
+                    <q-item-label class="text-weight-bold">
+                      {{ scope.opt.nombre }}
+                    </q-item-label>
+
+                    <q-item-label caption>
+                      {{ scope.opt.especialidad || scope.opt.cargo || 'Empleado general' }}
+                    </q-item-label>
+
+                    <q-item-label caption>
+                      {{ scope.opt.telefono || 'Sin teléfono' }}
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
+              </template>
+
+              <template #no-option>
+                <q-item>
+                  <q-item-section class="text-grey">
+                    No se encontraron empleados activos
                   </q-item-section>
                 </q-item>
               </template>
@@ -656,6 +722,8 @@ const citas = ref([])
 const busqueda = ref('')
 const clientes = ref([])
 const clientesFiltrados = ref([])
+const empleados = ref([])
+const empleadosFiltrados = ref([])
 const servicios = ref([])
 const serviciosFiltrados = ref([])
 const categoriaSeleccionada = ref('cejas')
@@ -712,6 +780,7 @@ const metodosPago = [
 const form = ref({
   id: null,
   cliente_id: null,
+  empleado_id: null,
   servicioOption: null,
   combo: '',
   detalle: '',
@@ -732,6 +801,13 @@ const columns = [
     name: 'cliente',
     label: 'Cliente',
     field: row => row.cliente?.nombre || 'Sin cliente',
+    align: 'left',
+    sortable: true
+  },
+  {
+    name: 'empleado',
+    label: 'Empleado',
+    field: row => row.empleado?.nombre || 'Sin empleado',
     align: 'left',
     sortable: true
   },
@@ -822,8 +898,6 @@ function fechaLocal(date = new Date()) {
 }
 
 function hoy() {
-  // Importante: no usamos toISOString porque en Bolivia después de cierta hora
-  // puede adelantar la fecha por el cambio a UTC. Esto mantiene el día local.
   return fechaLocal(new Date())
 }
 
@@ -846,6 +920,10 @@ const citasFiltradas = computed(() => {
       cita.id,
       cita.cliente?.nombre,
       cita.cliente?.telefono,
+      cita.empleado?.nombre,
+      cita.empleado?.telefono,
+      cita.empleado?.cargo,
+      cita.empleado?.especialidad,
       cita.servicio,
       cita.precio,
       cita.fecha,
@@ -865,6 +943,7 @@ function responseToArray(data) {
   if (Array.isArray(data?.data)) return data.data
   if (Array.isArray(data?.servicios)) return data.servicios
   if (Array.isArray(data?.clientes)) return data.clientes
+  if (Array.isArray(data?.empleados)) return data.empleados
   if (Array.isArray(data?.citas)) return data.citas
   if (Array.isArray(data?.pagos)) return data.pagos
   return []
@@ -878,6 +957,18 @@ function getErrorMessage(error) {
   }
 
   return data?.message || data?.error || 'Ocurrió un error'
+}
+
+function empleadoNombre(row) {
+  return row?.empleado?.nombre || 'Sin empleado asignado'
+}
+
+function empleadoDetalle(row) {
+  if (!row?.empleado) {
+    return 'Puedes asignarlo al editar'
+  }
+
+  return row.empleado.especialidad || row.empleado.cargo || row.empleado.telefono || 'Empleado del salón'
 }
 
 function mapServicio(item) {
@@ -982,6 +1073,26 @@ async function loadClientes() {
   }
 }
 
+async function loadEmpleados() {
+  try {
+    const { data } = await api.get('/empleados/activos')
+
+    empleados.value = responseToArray(data).filter(empleado => {
+      return empleado.activo !== false && empleado.activo !== 0 && empleado.activo !== '0'
+    })
+
+    empleadosFiltrados.value = empleados.value
+  } catch (error) {
+    empleados.value = []
+    empleadosFiltrados.value = []
+
+    $q.notify({
+      type: 'warning',
+      message: getErrorMessage(error)
+    })
+  }
+}
+
 async function loadServicios() {
   try {
     const { data } = await api.get('/servicios')
@@ -1014,6 +1125,25 @@ function filtrarClientes(valor, update) {
     clientesFiltrados.value = clientes.value.filter(cliente => {
       return normalizar(cliente.nombre).includes(texto) ||
         normalizar(cliente.telefono).includes(texto)
+    })
+  })
+}
+
+function filtrarEmpleados(valor, update) {
+  update(() => {
+    const texto = normalizar(valor)
+
+    if (!texto) {
+      empleadosFiltrados.value = empleados.value
+      return
+    }
+
+    empleadosFiltrados.value = empleados.value.filter(empleado => {
+      return normalizar(empleado.nombre).includes(texto) ||
+        normalizar(empleado.telefono).includes(texto) ||
+        normalizar(empleado.ci).includes(texto) ||
+        normalizar(empleado.cargo).includes(texto) ||
+        normalizar(empleado.especialidad).includes(texto)
     })
   })
 }
@@ -1065,6 +1195,7 @@ function openDialog(fechaSeleccionada = null) {
   form.value = {
     id: null,
     cliente_id: null,
+    empleado_id: null,
     servicioOption: null,
     combo: '',
     detalle: '',
@@ -1073,6 +1204,9 @@ function openDialog(fechaSeleccionada = null) {
     hora: '',
     estado: 'pendiente'
   }
+
+  empleadosFiltrados.value = empleados.value
+  clientesFiltrados.value = clientes.value
 
   dialog.value = true
 }
@@ -1091,12 +1225,20 @@ function edit(row) {
     activo: true
   }
 
+  const empleadoId = row.empleado_id || row.empleado?.id || null
+
+  if (row.empleado && empleadoId && !empleados.value.some(empleado => Number(empleado.id) === Number(empleadoId))) {
+    empleados.value = [...empleados.value, row.empleado]
+    empleadosFiltrados.value = empleados.value
+  }
+
   categoriaSeleccionada.value = categoriaDeServicio(servicioTemporal.servicio)
   actualizarServiciosFiltrados()
 
   form.value = {
     id: row.id,
     cliente_id: row.cliente_id,
+    empleado_id: empleadoId,
     servicioOption: servicioTemporal,
     combo: row.servicio || servicioTemporal.combo || '',
     detalle: servicioTemporal.detalle || '',
@@ -1105,6 +1247,9 @@ function edit(row) {
     hora: row.hora ? String(row.hora).slice(0, 5) : '',
     estado: row.estado || 'pendiente'
   }
+
+  empleadosFiltrados.value = empleados.value
+  clientesFiltrados.value = clientes.value
 
   dialog.value = true
 }
@@ -1151,6 +1296,7 @@ async function save() {
   try {
     const payload = {
       cliente_id: form.value.cliente_id,
+      empleado_id: form.value.empleado_id || null,
       servicio: form.value.combo,
       precio: Number(form.value.precio || 0),
       fecha: form.value.fecha,
@@ -1320,7 +1466,12 @@ watch(
   () => route.query.fecha,
   async nuevaFecha => {
     if (nuevaFecha) {
-      await loadServicios()
+      await Promise.all([
+        loadClientes(),
+        loadEmpleados(),
+        loadServicios()
+      ])
+
       openDialog(String(nuevaFecha))
       router.replace({ path: '/citas' })
     }
@@ -1331,6 +1482,7 @@ onMounted(async () => {
   await Promise.all([
     load(),
     loadClientes(),
+    loadEmpleados(),
     loadServicios()
   ])
 
