@@ -97,6 +97,15 @@ const routes = [
         meta: {
           requiresAuth: true
         }
+      },
+
+      {
+        path: 'configuracion',
+        name: 'configuracion',
+        component: () => import('pages/ConfiguracionPage.vue'),
+        meta: {
+          requiresAuth: true
+        }
       }
     ]
   },

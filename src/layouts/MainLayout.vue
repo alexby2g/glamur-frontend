@@ -361,6 +361,12 @@ export default {
           label: 'Historial Clientes',
           icon: 'manage_search',
           to: '/historial-clientes'
+        },
+
+        {
+          label: 'Configuración',
+          icon: 'settings',
+          to: '/configuracion'
         }
       ]
     }
