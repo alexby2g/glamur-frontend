@@ -5,15 +5,19 @@
         <q-card class="register-card">
           <q-card-section class="register-header">
             <q-avatar class="register-logo" size="78px">
-              <img src="~assets/logo-glamur.png" alt="AUREA Beauty" />
+              <img
+                :src="logoSistema"
+                :alt="nombreCorto"
+                @error="usarLogoBase"
+              />
             </q-avatar>
 
             <div class="register-title">
-              Crear cuenta AUREA
+              Crear cuenta {{ marcaPrincipal }}
             </div>
 
             <div class="register-subtitle">
-              Regístrate para administrar Beauty Salon
+              Regístrate para administrar {{ marcaSubtitulo }}
             </div>
           </q-card-section>
 
@@ -162,10 +166,12 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useQuasar } from 'quasar'
 import { useRouter } from 'vue-router'
+import axios from 'axios'
 import { api } from 'boot/axios'
+import logoBase from 'assets/logo-glamur.png'
 
 defineOptions({
   name: 'RegisterPage'
@@ -179,6 +185,23 @@ const showPassword = ref(false)
 const showPassword2 = ref(false)
 const showCode = ref(false)
 
+const valoresBaseConfiguracion = {
+  nombre_negocio: 'AUREA Beauty Salon',
+  nombre_corto: 'AUREA Beauty',
+  slogan: 'Sistema inteligente para salones de belleza',
+  telefono: '',
+  whatsapp: '',
+  direccion: '',
+  mensaje_whatsapp: 'Hola, quiero información sobre los servicios de AUREA Beauty Salon.',
+  logo_url: '',
+  moneda: 'Bs',
+  activo: true
+}
+
+const configuracion = ref({
+  ...valoresBaseConfiguracion
+})
+
 const form = ref({
   nombre: '',
   usuario: '',
@@ -186,6 +209,83 @@ const form = ref({
   password_confirmation: '',
   codigo_registro: ''
 })
+
+const nombreCorto = computed(() => {
+  return configuracion.value.nombre_corto || valoresBaseConfiguracion.nombre_corto
+})
+
+const logoSistema = computed(() => {
+  return configuracion.value.logo_url || logoBase
+})
+
+const marcaPrincipal = computed(() => {
+  const partes = String(nombreCorto.value || 'AUREA Beauty').trim().split(' ')
+  return partes[0] || 'AUREA'
+})
+
+const marcaSubtitulo = computed(() => {
+  const texto = String(nombreCorto.value || 'AUREA Beauty')
+    .replace(marcaPrincipal.value, '')
+    .trim()
+
+  return texto || 'Beauty Salon'
+})
+
+function normalizarConfiguracion(config = {}) {
+  return {
+    ...valoresBaseConfiguracion,
+    ...config,
+    activo: config?.activo === undefined ? true : Boolean(config.activo)
+  }
+}
+
+function aplicarConfiguracion(config = {}) {
+  configuracion.value = normalizarConfiguracion(config)
+}
+
+function guardarConfiguracionLocal(config = {}) {
+  localStorage.setItem('aurea_configuracion', JSON.stringify(normalizarConfiguracion(config)))
+}
+
+function cargarConfiguracionLocal() {
+  try {
+    const guardado = localStorage.getItem('aurea_configuracion')
+    return guardado ? JSON.parse(guardado) : null
+  } catch {
+    return null
+  }
+}
+
+async function cargarConfiguracionNegocio() {
+  const local = cargarConfiguracionLocal()
+
+  if (local) {
+    aplicarConfiguracion(local)
+  }
+
+  try {
+    const { data } = await axios.get(`${api.defaults.baseURL}/configuracion-publica`, {
+  headers: {
+    Accept: 'application/json'
+  }
+})
+
+    const config = data?.configuracion || data || valoresBaseConfiguracion
+
+    aplicarConfiguracion(config)
+    guardarConfiguracionLocal(config)
+  } catch {
+    if (!local) {
+      aplicarConfiguracion(valoresBaseConfiguracion)
+    }
+  }
+}
+
+function usarLogoBase(event) {
+  if (event?.target) {
+    event.target.src = logoBase
+  }
+}
 
 function getErrorMessage(error) {
   const data = error?.response?.data
@@ -296,6 +396,8 @@ async function register() {
     loading.value = false
   }
 }
+
+onMounted(cargarConfiguracionNegocio)
 </script>
 
 <style scoped>
@@ -340,6 +442,10 @@ async function register() {
       #9c27b0
     );
   box-shadow: 0 18px 42px rgba(233, 30, 99, 0.45);
+}
+
+.register-logo img {
+  object-fit: cover;
 }
 
 .register-title {

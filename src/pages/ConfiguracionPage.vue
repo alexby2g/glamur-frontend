@@ -8,7 +8,7 @@
         </div>
 
         <div class="glamur-title q-mt-sm">
-          Identidad de AUREA
+          Identidad de {{ form.nombre_corto || 'AUREA Beauty' }}
         </div>
 
         <div class="glamur-subtitle q-mt-xs">
@@ -147,6 +147,7 @@
                   outlined
                   autogrow
                   class="aurea-input"
+                  hint="Puedes usar {cliente} y {negocio} para personalizar mensajes después."
                 >
                   <template #prepend>
                     <q-icon name="sms" color="pink-7" />
@@ -162,6 +163,7 @@
                   dense
                   class="aurea-input"
                   hint="Opcional. Puedes dejarlo vacío para usar el logo actual."
+                  @update:model-value="logoError = false"
                 >
                   <template #prepend>
                     <q-icon name="image" color="pink-7" />
@@ -232,11 +234,12 @@
           <q-card-section class="preview-header">
             <q-avatar class="preview-logo" size="78px">
               <img
-                v-if="form.logo_url"
+                v-if="form.logo_url && !logoError"
                 :src="form.logo_url"
                 alt="Logo"
                 @error="logoError = true"
               />
+
               <img
                 v-else
                 src="~assets/logo-glamur.png"
@@ -275,6 +278,14 @@
               <q-icon name="payments" color="teal-7" />
               <span>Moneda: {{ form.moneda || 'Bs' }}</span>
             </div>
+
+            <div class="info-row">
+              <q-icon
+                :name="form.activo ? 'check_circle' : 'cancel'"
+                :color="form.activo ? 'positive' : 'negative'"
+              />
+              <span>{{ form.activo ? 'Negocio activo' : 'Negocio inactivo' }}</span>
+            </div>
           </q-card-section>
 
           <q-card-section class="q-pt-none">
@@ -282,6 +293,7 @@
               <div class="message-title">
                 Mensaje WhatsApp
               </div>
+
               <div class="message-body">
                 {{ form.mensaje_whatsapp || 'Hola, quiero información sobre los servicios de AUREA Beauty Salon.' }}
               </div>
@@ -332,18 +344,28 @@ function required(value) {
   return !!String(value || '').trim() || 'Este campo es obligatorio'
 }
 
-function aplicarConfiguracion(configuracion = {}) {
-  Object.assign(form, {
+function normalizarConfiguracion(configuracion = {}) {
+  return {
     ...valoresBase,
     ...configuracion,
     activo: configuracion?.activo === undefined ? true : Boolean(configuracion.activo)
-  })
+  }
+}
 
+function aplicarConfiguracion(configuracion = {}) {
+  Object.assign(form, normalizarConfiguracion(configuracion))
   logoError.value = false
 }
 
 function guardarLocal(configuracion) {
-  localStorage.setItem('aurea_configuracion', JSON.stringify(configuracion))
+  const normalizada = normalizarConfiguracion(configuracion)
+  localStorage.setItem('aurea_configuracion', JSON.stringify(normalizada))
+
+  window.dispatchEvent(
+    new CustomEvent('aurea-configuracion-actualizada', {
+      detail: normalizada
+    })
+  )
 }
 
 function cargarLocal() {
@@ -369,12 +391,14 @@ async function cargarConfiguracion() {
 
     if (local) {
       aplicarConfiguracion(local)
+
       $q.notify({
         type: 'warning',
         message: 'Se cargó la configuración guardada en este dispositivo.'
       })
     } else {
       aplicarConfiguracion(valoresBase)
+
       $q.notify({
         type: 'warning',
         message: getErrorMessage(error, 'No se pudo cargar la configuración del servidor.')
@@ -386,18 +410,19 @@ async function cargarConfiguracion() {
 }
 
 async function guardarConfiguracion() {
-  if (!form.nombre_negocio || !form.nombre_corto) {
+  if (!String(form.nombre_negocio || '').trim() || !String(form.nombre_corto || '').trim()) {
     $q.notify({
       type: 'warning',
       message: 'Completa el nombre del negocio y el nombre corto.'
     })
+
     return
   }
 
   saving.value = true
 
   try {
-    const payload = { ...form }
+    const payload = normalizarConfiguracion({ ...form })
     const { data } = await api.put('/configuracion', payload)
     const configuracion = data?.configuracion || payload
 
@@ -438,6 +463,12 @@ function restaurarValoresBase() {
     }
   }).onOk(() => {
     aplicarConfiguracion(valoresBase)
+    guardarLocal(valoresBase)
+
+    $q.notify({
+      type: 'positive',
+      message: 'Valores base restaurados. Presiona guardar para enviarlos al servidor.'
+    })
   })
 }
 
@@ -478,6 +509,10 @@ onMounted(cargarConfiguracion)
   box-shadow: 0 16px 34px rgba(233, 30, 99, 0.35);
 }
 
+.preview-logo img {
+  object-fit: cover;
+}
+
 .preview-name {
   margin-top: 14px;
   font-size: 24px;
@@ -508,7 +543,7 @@ onMounted(cargarConfiguracion)
   padding: 14px;
   border-radius: 18px;
   background: #fff7fb;
-  border: 1px solid rgba(233, 30, 99, 0.12);
+  border: 1px solid rgba(233, 30, 99, 0.10);
 }
 
 .message-title {
@@ -518,9 +553,10 @@ onMounted(cargarConfiguracion)
 }
 
 .message-body {
-  color: #7a6f80;
+  color: #4a3a50;
   font-size: 13px;
   line-height: 1.45;
+  white-space: pre-line;
 }
 
 @media (max-width: 700px) {
@@ -529,8 +565,7 @@ onMounted(cargarConfiguracion)
   }
 
   .actions-bar {
-    align-items: stretch;
-    flex-direction: column-reverse;
+    justify-content: stretch;
   }
 
   .actions-bar .q-btn {

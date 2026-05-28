@@ -29,10 +29,18 @@ api.interceptors.response.use(
     return response
   },
   (error) => {
-    if (error.response?.status === 401 && window.location.pathname !== '/login') {
+    const status = error.response?.status
+    const hash = window.location.hash || ''
+    const pathname = window.location.pathname || ''
+
+    const estaEnLogin =
+      hash.includes('/login') ||
+      pathname.includes('/login')
+
+    if (status === 401 && !estaEnLogin) {
       localStorage.removeItem('glamur_token')
       localStorage.removeItem('glamur_user')
-      window.location.href = '/login'
+      window.location.href = '/#/login'
     }
 
     return Promise.reject(error)

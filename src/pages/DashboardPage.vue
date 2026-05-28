@@ -10,11 +10,11 @@
         </div>
 
         <div class="glamur-title q-mt-sm">
-          Panel principal AUREA
+          Panel principal {{ marcaPrincipal }}
         </div>
 
         <div class="glamur-subtitle q-mt-xs">
-          Vista estratégica de citas, clientes, pagos y servicios del negocio.
+          Vista estratégica de citas, clientes, pagos y servicios de {{ nombreNegocio }}.
         </div>
       </div>
 
@@ -141,7 +141,7 @@
             </div>
 
             <div class="glamur-section-subtitle">
-              Entradas principales del sistema.
+              Entradas principales de {{ nombreCorto }}.
             </div>
           </q-card-section>
 
@@ -209,7 +209,7 @@
                 </div>
 
                 <div class="bar-value">
-                  Bs {{ money(item.ingresos) }}
+                  {{ currency(item.ingresos) }}
                 </div>
               </div>
             </div>
@@ -261,7 +261,7 @@
                 />
 
                 <div class="service-income">
-                  Bs {{ money(servicio.ingresos) }} en ingresos
+                  {{ currency(servicio.ingresos) }} en ingresos
                 </div>
               </div>
             </div>
@@ -298,7 +298,7 @@
                 </div>
 
                 <div class="month-value">
-                  Bs {{ money(mes.ingresos) }}
+                  {{ currency(mes.ingresos) }}
                 </div>
 
                 <q-linear-progress
@@ -369,7 +369,7 @@
 
               <q-item-section side>
                 <div class="latest-price">
-                  Bs {{ money(cita.precio) }}
+                  {{ currency(cita.precio) }}
                 </div>
               </q-item-section>
             </q-item>
@@ -443,7 +443,7 @@
                 </q-item-label>
 
                 <q-item-label caption>
-                  {{ formatDate(cita.fecha) }} · {{ formatTime(cita.hora) }} · Bs {{ money(cita.precio) }}
+                  {{ formatDate(cita.fecha) }} · {{ formatTime(cita.hora) }} · {{ currency(cita.precio) }}
                 </q-item-label>
               </q-item-section>
 
@@ -491,6 +491,23 @@ const historialDialog = ref(false)
 const filtroHistorial = ref('todas')
 const citas = ref([])
 
+const valoresBaseConfiguracion = {
+  nombre_negocio: 'AUREA Beauty Salon',
+  nombre_corto: 'AUREA Beauty',
+  slogan: 'Sistema inteligente para salones de belleza',
+  telefono: '',
+  whatsapp: '',
+  direccion: '',
+  mensaje_whatsapp: 'Hola, quiero información sobre los servicios de AUREA Beauty Salon.',
+  logo_url: '',
+  moneda: 'Bs',
+  activo: true
+}
+
+const configuracion = ref({
+  ...valoresBaseConfiguracion
+})
+
 const data = ref({
   total: 0,
   citas_hoy: 0,
@@ -509,6 +526,23 @@ const data = ref({
   ultimas_citas: []
 })
 
+const nombreNegocio = computed(() => {
+  return configuracion.value.nombre_negocio || valoresBaseConfiguracion.nombre_negocio
+})
+
+const nombreCorto = computed(() => {
+  return configuracion.value.nombre_corto || valoresBaseConfiguracion.nombre_corto
+})
+
+const monedaNegocio = computed(() => {
+  return configuracion.value.moneda || valoresBaseConfiguracion.moneda
+})
+
+const marcaPrincipal = computed(() => {
+  const partes = String(nombreCorto.value || 'AUREA Beauty').trim().split(' ')
+  return partes[0] || 'AUREA'
+})
+
 const quickActions = [
   { label: 'Nueva cita', icon: 'add_circle', to: '/citas' },
   { label: 'Clientes', icon: 'people', to: '/clientes' },
@@ -522,9 +556,9 @@ const metricCards = computed(() => [
   card('citas_hoy', 'Citas hoy', data.value.citas_hoy, 'Programadas para hoy', 'today', 'bg-pink-7'),
   card('total', 'Total citas', data.value.total, 'Citas activas registradas', 'event', 'bg-purple-7'),
   card('clientes', 'Clientes', data.value.clientes_total, 'Clientes activos', 'people', 'bg-blue-7'),
-  card('ingreso_dia', 'Ingresos hoy', `Bs ${money(data.value.ingreso_dia)}`, 'Pagos del día', 'payments', 'bg-teal-7'),
-  card('ingreso_mes', 'Ingresos mes', `Bs ${money(data.value.ingreso_mes)}`, 'Mes actual', 'calendar_month', 'bg-indigo-7'),
-  card('ingreso_anio', 'Ingresos año', `Bs ${money(data.value.ingreso_anio)}`, 'Año actual', 'trending_up', 'bg-deep-purple-7'),
+  card('ingreso_dia', 'Ingresos hoy', currency(data.value.ingreso_dia), 'Pagos del día', 'payments', 'bg-teal-7'),
+  card('ingreso_mes', 'Ingresos mes', currency(data.value.ingreso_mes), 'Mes actual', 'calendar_month', 'bg-indigo-7'),
+  card('ingreso_anio', 'Ingresos año', currency(data.value.ingreso_anio), 'Año actual', 'trending_up', 'bg-deep-purple-7'),
   card('pendientes', 'Pendientes', data.value.pendientes, 'Por atender', 'schedule', 'bg-orange-7'),
   card('concluidas', 'Concluidas', data.value.concluidas, 'Finalizadas', 'check_circle', 'bg-green-7')
 ])
@@ -571,6 +605,51 @@ function status(key, label, value, total, icon, color) {
   }
 }
 
+function normalizarConfiguracion(config = {}) {
+  return {
+    ...valoresBaseConfiguracion,
+    ...config,
+    activo: config?.activo === undefined ? true : Boolean(config.activo)
+  }
+}
+
+function aplicarConfiguracion(config = {}) {
+  configuracion.value = normalizarConfiguracion(config)
+}
+
+function guardarConfiguracionLocal(config = {}) {
+  localStorage.setItem('aurea_configuracion', JSON.stringify(normalizarConfiguracion(config)))
+}
+
+function cargarConfiguracionLocal() {
+  try {
+    const guardado = localStorage.getItem('aurea_configuracion')
+    return guardado ? JSON.parse(guardado) : null
+  } catch {
+    return null
+  }
+}
+
+async function cargarConfiguracionNegocio() {
+  const local = cargarConfiguracionLocal()
+
+  if (local) {
+    aplicarConfiguracion(local)
+  }
+
+  try {
+    const { data: configData } = await api.get('/configuracion')
+    const config = configData?.configuracion || configData || valoresBaseConfiguracion
+
+    aplicarConfiguracion(config)
+    guardarConfiguracionLocal(config)
+  } catch {
+    if (!local) {
+      aplicarConfiguracion(valoresBaseConfiguracion)
+    }
+  }
+}
+
 function statusOf(cita) {
   return estadoCita(cita)
 }
@@ -585,6 +664,10 @@ function chartWidth(value, max) {
 
 function progressValue(value, max) {
   return Math.min(Number(value || 0) / Number(max || 1), 1)
+}
+
+function currency(value) {
+  return `${monedaNegocio.value} ${money(value)}`
 }
 
 function clienteName(cita) {
@@ -620,6 +703,8 @@ async function load() {
   loading.value = true
 
   try {
+    await cargarConfiguracionNegocio()
+
     const [dashboardResult, citasResult] = await Promise.allSettled([
       api.get('/dashboard'),
       api.get('/citas')

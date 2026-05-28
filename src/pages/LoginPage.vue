@@ -8,15 +8,19 @@
           <!-- HEADER -->
           <q-card-section class="login-header">
             <q-avatar class="login-logo" size="78px">
-              <img src="~assets/logo-glamur.png" alt="AUREA Beauty" />
+              <img
+                :src="logoSistema"
+                :alt="nombreCorto"
+                @error="usarLogoBase"
+              />
             </q-avatar>
 
             <div class="login-title">
-              AUREA
+              {{ marcaPrincipal }}
             </div>
 
             <div class="login-subtitle">
-              Beauty Salon | Sistema inteligente
+              {{ marcaSubtitulo }} | {{ sloganNegocio }}
             </div>
           </q-card-section>
 
@@ -82,7 +86,7 @@
 
           <!-- FOOTER -->
           <q-card-section class="login-footer">
-            Accede con tu cuenta registrada en AUREA Beauty
+            Accede con tu cuenta registrada en {{ nombreCorto }}
           </q-card-section>
 
         </q-card>
@@ -93,10 +97,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
+import axios from 'axios'
 import { api } from 'boot/axios'
+import logoBase from 'assets/logo-glamur.png'
 
 defineOptions({
   name: 'LoginPage'
@@ -108,10 +114,108 @@ const $q = useQuasar()
 const loading = ref(false)
 const showPassword = ref(false)
 
+const valoresBaseConfiguracion = {
+  nombre_negocio: 'AUREA Beauty Salon',
+  nombre_corto: 'AUREA Beauty',
+  slogan: 'Sistema inteligente',
+  telefono: '',
+  whatsapp: '',
+  direccion: '',
+  mensaje_whatsapp: 'Hola, quiero información sobre los servicios de AUREA Beauty Salon.',
+  logo_url: '',
+  moneda: 'Bs',
+  activo: true
+}
+
+const configuracion = ref({
+  ...valoresBaseConfiguracion
+})
+
 const form = ref({
   usuario: '',
   password: ''
 })
+
+const nombreCorto = computed(() => {
+  return configuracion.value.nombre_corto || valoresBaseConfiguracion.nombre_corto
+})
+
+const sloganNegocio = computed(() => {
+  return configuracion.value.slogan || valoresBaseConfiguracion.slogan
+})
+
+const logoSistema = computed(() => {
+  return configuracion.value.logo_url || logoBase
+})
+
+const marcaPrincipal = computed(() => {
+  const partes = String(nombreCorto.value || 'AUREA Beauty').trim().split(' ')
+  return partes[0] || 'AUREA'
+})
+
+const marcaSubtitulo = computed(() => {
+  const texto = String(nombreCorto.value || 'AUREA Beauty')
+    .replace(marcaPrincipal.value, '')
+    .trim()
+
+  return texto || 'Beauty Salon'
+})
+
+function normalizarConfiguracion(config = {}) {
+  return {
+    ...valoresBaseConfiguracion,
+    ...config,
+    activo: config?.activo === undefined ? true : Boolean(config.activo)
+  }
+}
+
+function aplicarConfiguracion(config = {}) {
+  configuracion.value = normalizarConfiguracion(config)
+}
+
+function guardarConfiguracionLocal(config = {}) {
+  localStorage.setItem('aurea_configuracion', JSON.stringify(normalizarConfiguracion(config)))
+}
+
+function cargarConfiguracionLocal() {
+  try {
+    const guardado = localStorage.getItem('aurea_configuracion')
+    return guardado ? JSON.parse(guardado) : null
+  } catch {
+    return null
+  }
+}
+
+async function cargarConfiguracionNegocio() {
+  const local = cargarConfiguracionLocal()
+
+  if (local) {
+    aplicarConfiguracion(local)
+  }
+
+  try {
+     const { data } = await axios.get(`${api.defaults.baseURL}/configuracion-publica`, {
+      headers: {
+        Accept: 'application/json'
+      }
+    })
+
+    const config = data?.configuracion || data || valoresBaseConfiguracion
+
+    aplicarConfiguracion(config)
+    guardarConfiguracionLocal(config)
+  } catch {
+    if (!local) {
+      aplicarConfiguracion(valoresBaseConfiguracion)
+    }
+  }
+}
+
+function usarLogoBase(event) {
+  if (event?.target) {
+    event.target.src = logoBase
+  }
+}
 
 function getErrorMessage(error) {
   const data = error?.response?.data
@@ -170,6 +274,8 @@ async function login() {
 }
 
 onMounted(async () => {
+  await cargarConfiguracionNegocio()
+
   const token = localStorage.getItem('glamur_token')
 
   if (!token) return
@@ -224,6 +330,10 @@ onMounted(async () => {
 .login-logo {
   background: linear-gradient(135deg, #e91e63, #9c27b0);
   box-shadow: 0 18px 40px rgba(233, 30, 99, 0.45);
+}
+
+.login-logo img {
+  object-fit: cover;
 }
 
 .login-title {

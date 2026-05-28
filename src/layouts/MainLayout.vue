@@ -18,16 +18,20 @@
         <q-toolbar-title class="row items-center no-wrap">
 
           <q-avatar class="top-logo" size="42px">
-            <img src="~assets/logo-glamur.png" alt="AUREA Beauty" />
+            <img
+              :src="logoSistema"
+              :alt="nombreCorto"
+              @error="usarLogoBase"
+            />
           </q-avatar>
 
           <div class="q-ml-sm">
             <div class="top-title">
-              AUREA
+              {{ marcaPrincipal }}
             </div>
 
             <div class="top-subtitle">
-              Beauty Salon
+              {{ marcaSubtitulo }}
             </div>
           </div>
 
@@ -63,7 +67,7 @@
                 </div>
 
                 <div class="notification-subtitle">
-                  Pagos y actividad del sistema
+                  Actividad de {{ nombreCorto }}
                 </div>
               </div>
 
@@ -124,7 +128,7 @@
                     </q-item-label>
 
                     <q-item-label caption lines="2">
-                      {{ n.mensaje || 'Nueva actividad registrada en AUREA Beauty.' }}
+                      {{ n.mensaje || ('Nueva actividad registrada en ' + nombreCorto + '.') }}
                     </q-item-label>
 
                     <q-item-label caption class="notification-date">
@@ -222,15 +226,23 @@
       <div class="drawer-brand">
 
         <q-avatar class="drawer-logo" size="72px">
-          <img src="~assets/logo-glamur.png" alt="AUREA Beauty" />
+          <img
+            :src="logoSistema"
+            :alt="nombreCorto"
+            @error="usarLogoBase"
+          />
         </q-avatar>
 
         <div class="drawer-title">
-          AUREA
+          {{ marcaPrincipal }}
         </div>
 
         <div class="drawer-subtitle">
-          Beauty Salon
+          {{ marcaSubtitulo }}
+        </div>
+
+        <div class="drawer-slogan">
+          {{ sloganNegocio }}
         </div>
 
       </div>
@@ -298,6 +310,20 @@
 import { api } from 'boot/axios'
 import { Capacitor } from '@capacitor/core'
 import { LocalNotifications } from '@capacitor/local-notifications'
+import logoBase from 'assets/logo-glamur.png'
+
+const valoresBaseConfiguracion = {
+  nombre_negocio: 'AUREA Beauty Salon',
+  nombre_corto: 'AUREA Beauty',
+  slogan: 'Sistema inteligente para salones de belleza',
+  telefono: '',
+  whatsapp: '',
+  direccion: '',
+  mensaje_whatsapp: 'Hola, quiero información sobre los servicios de AUREA Beauty Salon.',
+  logo_url: '',
+  moneda: 'Bs',
+  activo: true
+}
 
 export default {
   name: 'MainLayout',
@@ -307,6 +333,10 @@ export default {
       drawer: false,
 
       usuarioNombre: 'Administrador',
+
+      configuracion: {
+        ...valoresBaseConfiguracion
+      },
 
       notificaciones: [],
       noLeidas: 0,
@@ -372,10 +402,44 @@ export default {
     }
   },
 
+  computed: {
+    nombreNegocio () {
+      return this.configuracion.nombre_negocio || valoresBaseConfiguracion.nombre_negocio
+    },
+
+    nombreCorto () {
+      return this.configuracion.nombre_corto || valoresBaseConfiguracion.nombre_corto
+    },
+
+    sloganNegocio () {
+      return this.configuracion.slogan || valoresBaseConfiguracion.slogan
+    },
+
+    logoSistema () {
+      return this.configuracion.logo_url || logoBase
+    },
+
+    marcaPrincipal () {
+      const partes = String(this.nombreCorto || 'AUREA Beauty').trim().split(' ')
+      return partes[0] || 'AUREA'
+    },
+
+    marcaSubtitulo () {
+      const texto = String(this.nombreCorto || 'AUREA Beauty')
+        .replace(this.marcaPrincipal, '')
+        .trim()
+
+      return texto || 'Beauty Salon'
+    }
+  },
+
   mounted () {
+    this.cargarConfiguracionNegocio()
     this.cargarUsuario()
     this.prepararNotificacionesCelular()
     this.cargarNotificaciones()
+
+    window.addEventListener('aurea-configuracion-actualizada', this.recibirConfiguracionActualizada)
 
     this.intervaloNotificaciones = setInterval(() => {
       this.cargarNotificaciones()
@@ -386,9 +450,62 @@ export default {
     if (this.intervaloNotificaciones) {
       clearInterval(this.intervaloNotificaciones)
     }
+
+    window.removeEventListener('aurea-configuracion-actualizada', this.recibirConfiguracionActualizada)
   },
 
   methods: {
+    normalizarConfiguracion (configuracion = {}) {
+      return {
+        ...valoresBaseConfiguracion,
+        ...configuracion,
+        activo: configuracion?.activo === undefined ? true : Boolean(configuracion.activo)
+      }
+    },
+
+    aplicarConfiguracion (configuracion = {}) {
+      this.configuracion = this.normalizarConfiguracion(configuracion)
+    },
+
+    guardarConfiguracionLocal (configuracion = {}) {
+      localStorage.setItem(
+        'aurea_configuracion',
+        JSON.stringify(this.normalizarConfiguracion(configuracion))
+      )
+    },
+
+    cargarConfiguracionLocal () {
+      try {
+        const guardado = localStorage.getItem('aurea_configuracion')
+        return guardado ? JSON.parse(guardado) : null
+      } catch {
+        return null
+      }
+    },
+
+    recibirConfiguracionActualizada (event) {
+      this.aplicarConfiguracion(event?.detail || valoresBaseConfiguracion)
+    },
+
+    async cargarConfiguracionNegocio () {
+      try {
+        const { data } = await api.get('/configuracion')
+        const configuracion = data?.configuracion || data || valoresBaseConfiguracion
+
+        this.aplicarConfiguracion(configuracion)
+        this.guardarConfiguracionLocal(configuracion)
+      } catch {
+        const local = this.cargarConfiguracionLocal()
+        this.aplicarConfiguracion(local || valoresBaseConfiguracion)
+      }
+    },
+
+    usarLogoBase (event) {
+      if (event?.target) {
+        event.target.src = logoBase
+      }
+    },
+
     async prepararNotificacionesCelular () {
       if (!Capacitor.isNativePlatform()) {
         return
@@ -410,8 +527,8 @@ export default {
         if (Capacitor.getPlatform() === 'android') {
           await LocalNotifications.createChannel({
             id: 'glamur_pagos',
-            name: 'Pagos AUREA Beauty',
-            description: 'Notificaciones de pagos registrados en AUREA Beauty',
+            name: `Pagos ${this.nombreCorto}`,
+            description: `Notificaciones de pagos registrados en ${this.nombreCorto}`,
             importance: 5,
             visibility: 1,
             sound: 'default'
@@ -440,7 +557,7 @@ export default {
           notifications: [
             {
               id: idSeguro,
-              title: notificacion?.titulo || 'AUREA Beauty',
+              title: notificacion?.titulo || this.nombreCorto,
               body: notificacion?.mensaje || 'Nueva notificación registrada',
               schedule: {
                 at: new Date(Date.now() + 1000)
@@ -613,26 +730,13 @@ export default {
 </script>
 
 <style scoped>
-
-/* GENERAL */
-
 .main-layout {
   background: #f6f7fb;
 }
 
-/* HEADER */
-
 .main-header {
-  background:
-    linear-gradient(
-      135deg,
-      #15111f,
-      #241329 45%,
-      #e91e63
-    );
-
-  box-shadow:
-    0 10px 30px rgba(15, 10, 25, 0.35);
+  background: linear-gradient(135deg, #15111f, #241329 45%, #e91e63);
+  box-shadow: 0 10px 30px rgba(15, 10, 25, 0.35);
 }
 
 .toolbar {
@@ -641,19 +745,17 @@ export default {
 }
 
 .menu-toggle {
-  background: rgba(255,255,255,0.08);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .top-logo {
-  background:
-    linear-gradient(
-      135deg,
-      #e91e63,
-      #9c27b0
-    );
+  background: linear-gradient(135deg, #e91e63, #9c27b0);
+  box-shadow: 0 8px 22px rgba(233, 30, 99, 0.4);
+}
 
-  box-shadow:
-    0 8px 22px rgba(233,30,99,0.4);
+.top-logo img,
+.drawer-logo img {
+  object-fit: cover;
 }
 
 .top-title {
@@ -665,17 +767,15 @@ export default {
 
 .top-subtitle {
   font-size: 11px;
-  color: rgba(255,255,255,0.72);
+  color: rgba(255, 255, 255, 0.72);
 }
 
-/* NOTIFICACIONES */
-
 .notification-btn {
-  background: rgba(255,255,255,0.08);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .notification-btn:hover {
-  background: rgba(255,255,255,0.14);
+  background: rgba(255, 255, 255, 0.14);
 }
 
 .notification-menu {
@@ -683,19 +783,13 @@ export default {
   max-width: 94vw;
   border-radius: 20px;
   overflow: hidden;
-  box-shadow: 0 18px 50px rgba(20,10,30,0.28);
+  box-shadow: 0 18px 50px rgba(20, 10, 30, 0.28);
 }
 
 .notification-header {
   padding: 16px;
-  background:
-    linear-gradient(
-      135deg,
-      #15111f,
-      #e91e63
-    );
+  background: linear-gradient(135deg, #15111f, #e91e63);
   color: white;
-
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -708,7 +802,7 @@ export default {
 
 .notification-subtitle {
   font-size: 12px;
-  color: rgba(255,255,255,0.72);
+  color: rgba(255, 255, 255, 0.72);
 }
 
 .notification-scroll {
@@ -735,12 +829,7 @@ export default {
 }
 
 .notif-avatar-unread {
-  background:
-    linear-gradient(
-      135deg,
-      #e91e63,
-      #9c27b0
-    );
+  background: linear-gradient(135deg, #e91e63, #9c27b0);
 }
 
 .notif-avatar-read {
@@ -752,18 +841,16 @@ export default {
   color: #9e9e9e;
 }
 
-/* USUARIO HEADER */
-
 .user-dropdown {
   min-height: 44px;
   border-radius: 18px;
   padding: 4px 8px;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(248,215,161,0.18);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(248, 215, 161, 0.18);
 }
 
 .user-dropdown:hover {
-  background: rgba(255,255,255,0.14);
+  background: rgba(255, 255, 255, 0.14);
 }
 
 .user-label {
@@ -771,15 +858,8 @@ export default {
 }
 
 .user-avatar {
-  background:
-    linear-gradient(
-      135deg,
-      #e91e63,
-      #b8860b
-    );
-
-  box-shadow:
-    0 8px 20px rgba(233,30,99,0.35);
+  background: linear-gradient(135deg, #e91e63, #b8860b);
+  box-shadow: 0 8px 20px rgba(233, 30, 99, 0.35);
 }
 
 .user-info {
@@ -799,7 +879,7 @@ export default {
 
 .user-role {
   font-size: 10px;
-  color: rgba(255,236,200,0.78);
+  color: rgba(255, 236, 200, 0.78);
 }
 
 .user-menu {
@@ -809,23 +889,14 @@ export default {
 }
 
 .menu-user-avatar {
-  background:
-    linear-gradient(
-      135deg,
-      #e91e63,
-      #b8860b
-    );
+  background: linear-gradient(135deg, #e91e63, #b8860b);
 }
-
-/* SIDEBAR */
 
 .premium-drawer {
   background: #15111f !important;
   color: white !important;
   border: none;
-
-  box-shadow:
-    12px 0 35px rgba(20,10,30,0.28);
+  box-shadow: 12px 0 35px rgba(20, 10, 30, 0.28);
 }
 
 .premium-drawer :deep(.q-drawer__content) {
@@ -833,23 +904,14 @@ export default {
   color: white !important;
 }
 
-/* BRAND */
-
 .drawer-brand {
-  padding: 28px 18px 24px;
+  padding: 28px 18px 20px;
   text-align: center;
 }
 
 .drawer-logo {
-  background:
-    linear-gradient(
-      135deg,
-      #e91e63,
-      #9c27b0
-    );
-
-  box-shadow:
-    0 16px 35px rgba(233,30,99,0.45);
+  background: linear-gradient(135deg, #e91e63, #9c27b0);
+  box-shadow: 0 16px 35px rgba(233, 30, 99, 0.45);
 }
 
 .drawer-title {
@@ -865,7 +927,13 @@ export default {
   color: rgba(255, 236, 200, 0.82);
 }
 
-/* MENU */
+.drawer-slogan {
+  max-width: 190px;
+  margin: 8px auto 0;
+  font-size: 11px;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.58);
+}
 
 .menu-list {
   padding: 0 12px 110px;
@@ -879,100 +947,49 @@ export default {
   padding-left: 10px;
 }
 
-/* ITEM */
-
 .menu-item {
   width: 100%;
   min-height: 64px;
-
   margin-bottom: 14px;
-
   border-radius: 22px;
-
   color: white !important;
-
-  background:
-    linear-gradient(
-      135deg,
-      #2a1b35,
-      #1c1428
-    );
-
-  border:
-    1px solid rgba(248, 215, 161, 0.25);
-
+  background: linear-gradient(135deg, #2a1b35, #1c1428);
+  border: 1px solid rgba(248, 215, 161, 0.25);
   font-weight: 800;
-
   transition: all 0.25s ease;
-
   padding-left: 8px;
   padding-right: 8px;
-
-  box-shadow:
-    0 10px 24px rgba(20,10,30,0.30);
+  box-shadow: 0 10px 24px rgba(20, 10, 30, 0.30);
 }
 
 .menu-item:hover {
   color: white !important;
-
-  background:
-    linear-gradient(
-      135deg,
-      #e91e63,
-      #b8860b
-    );
-
+  background: linear-gradient(135deg, #e91e63, #b8860b);
   transform: translateX(5px);
-
-  box-shadow:
-    0 14px 30px rgba(233,30,99,0.38);
+  box-shadow: 0 14px 30px rgba(233, 30, 99, 0.38);
 }
-
-/* ACTIVE */
 
 .menu-active {
   color: white !important;
-
-  background:
-    linear-gradient(
-      135deg,
-      #e91e63,
-      #b8860b
-    ) !important;
-
-  border:
-    1px solid rgba(248, 215, 161, 0.45);
-
-  box-shadow:
-    0 14px 34px rgba(233,30,99,0.45);
+  background: linear-gradient(135deg, #e91e63, #b8860b) !important;
+  border: 1px solid rgba(248, 215, 161, 0.45);
+  box-shadow: 0 14px 34px rgba(233, 30, 99, 0.45);
 }
-
-/* ICON */
 
 .menu-icon-box {
   width: 46px;
   height: 46px;
-
   border-radius: 16px;
-
   display: grid;
   place-items: center;
-
-  background:
-    rgba(233,30,99,0.22);
-
+  background: rgba(233, 30, 99, 0.22);
   color: white;
-
-  box-shadow:
-    inset 0 0 0 1px rgba(255,255,255,0.12);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
 }
 
 .menu-active .menu-icon-box {
-  background:
-    rgba(255,255,255,0.20);
+  background: rgba(255, 255, 255, 0.20);
 }
-
-/* LABEL */
 
 .menu-label {
   font-size: 15px;
@@ -981,74 +998,62 @@ export default {
   color: white !important;
 }
 
-/* FOOTER */
-
 .drawer-footer {
   position: absolute;
-
-  left: 14px;
-  right: 14px;
-  bottom: 18px;
-
-  padding: 13px;
-
-  border-radius: 18px;
-
+  left: 12px;
+  right: 12px;
+  bottom: 14px;
+  min-height: 62px;
+  padding: 12px;
+  border-radius: 20px;
   display: flex;
   align-items: center;
-  gap: 12px;
-
-  background:
-    rgba(255,255,255,0.08);
-
-  border:
-    1px solid rgba(248,215,161,0.15);
+  gap: 11px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(248, 215, 161, 0.18);
 }
 
 .status-dot {
-  width: 13px;
-  height: 13px;
-
-  background: #00e676;
-
-  border-radius: 50%;
-
-  box-shadow:
-    0 0 18px rgba(0,230,118,0.85);
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: #4caf50;
+  box-shadow: 0 0 0 6px rgba(76, 175, 80, 0.14);
 }
 
 .footer-title {
+  color: white;
   font-size: 13px;
   font-weight: 900;
-  color: #f8d7a1;
 }
 
 .footer-subtitle {
+  margin-top: 2px;
+  color: rgba(255, 255, 255, 0.58);
   font-size: 11px;
-  color: rgba(255, 236, 200, 0.75);
 }
-
-/* CONTENT */
 
 .page-container {
   background: #f6f7fb;
 }
 
-/* MOBILE */
-
-@media (max-width: 600px) {
-
+@media (max-width: 700px) {
   .toolbar {
-    min-height: 62px;
+    min-height: 64px;
     padding: 0 10px;
   }
 
   .top-title {
-    font-size: 18px;
+    font-size: 17px;
   }
 
   .top-subtitle {
-    display: none;
+    font-size: 10px;
+  }
+
+  .top-logo {
+    width: 36px !important;
+    height: 36px !important;
   }
 
   .user-info {
@@ -1057,21 +1062,10 @@ export default {
 
   .user-dropdown {
     padding: 4px;
-    border-radius: 50%;
-  }
-
-  .drawer-title {
-    font-size: 24px;
-  }
-
-  .menu-item {
-    min-height: 56px;
   }
 
   .notification-menu {
-    width: 92vw;
+    width: 330px;
   }
-
 }
-
 </style>
