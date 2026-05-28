@@ -358,6 +358,12 @@ export default {
         },
 
         {
+          label: 'Empleados',
+          icon: 'groups',
+          to: '/empleados'
+        },
+
+        {
           label: 'Citas',
           icon: 'event',
           to: '/citas'

@@ -46,6 +46,15 @@ const routes = [
       },
 
       {
+        path: 'empleados',
+        name: 'empleados',
+        component: () => import('pages/EmpleadosPage.vue'),
+        meta: {
+          requiresAuth: true
+        }
+      },
+
+      {
         path: 'citas',
         name: 'citas',
         component: () => import('pages/CitasPage.vue'),
