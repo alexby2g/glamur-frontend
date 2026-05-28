@@ -9,11 +9,11 @@
         </div>
 
         <div class="text-h4 text-weight-bold text-white q-mt-sm">
-          📅 Calendario AUREA
+          📅 Calendario {{ marcaPrincipal }}
         </div>
 
         <div class="text-subtitle2 text-white hero-subtitle">
-          Control mensual de citas, estados, pagos y extractos
+          Control mensual de citas, estados, pagos y extractos de {{ nombreNegocio }}
         </div>
       </div>
 
@@ -301,11 +301,11 @@
                 </div>
 
                 <div class="day-total">
-                  Bs {{ money(totalLista(dia.citas)) }}
+                  {{ currency(totalLista(dia.citas)) }}
                 </div>
 
                 <div class="day-paid">
-                  Pagado: Bs {{ money(totalPagadoLista(dia.citas)) }}
+                  Pagado: {{ currency(totalPagadoLista(dia.citas)) }}
                 </div>
               </div>
 
@@ -365,12 +365,12 @@
 
             <div class="day-panel-item">
               <div class="panel-label">Total</div>
-              <div class="panel-value green">Bs {{ money(totalLista(citasDia)) }}</div>
+              <div class="panel-value green">{{ currency(totalLista(citasDia)) }}</div>
             </div>
 
             <div class="day-panel-item">
               <div class="panel-label">Pagado</div>
-              <div class="panel-value green">Bs {{ money(totalPagadoLista(citasDia)) }}</div>
+              <div class="panel-value green">{{ currency(totalPagadoLista(citasDia)) }}</div>
             </div>
           </div>
 
@@ -415,7 +415,7 @@
                 </q-item-label>
 
                 <q-item-label caption>
-                  Bs {{ money(cita.precio) }}
+                  {{ currency(cita.precio) }}
                 </q-item-label>
               </q-item-section>
 
@@ -485,6 +485,93 @@ defineOptions({
 
 const router = useRouter()
 const $q = useQuasar()
+
+
+const valoresBaseConfiguracion = {
+  nombre_negocio: 'AUREA Beauty Salon',
+  nombre_corto: 'AUREA Beauty',
+  slogan: 'Sistema inteligente para salones de belleza',
+  telefono: '',
+  whatsapp: '',
+  direccion: '',
+  mensaje_whatsapp: 'Hola {cliente}, le escribimos de {negocio} para coordinar su cita.',
+  logo_url: '',
+  moneda: 'Bs',
+  activo: true
+}
+
+const configuracion = ref({
+  ...valoresBaseConfiguracion
+})
+
+const nombreNegocio = computed(() => {
+  return configuracion.value.nombre_negocio || valoresBaseConfiguracion.nombre_negocio
+})
+
+const nombreCorto = computed(() => {
+  return configuracion.value.nombre_corto || valoresBaseConfiguracion.nombre_corto
+})
+
+const monedaNegocio = computed(() => {
+  return configuracion.value.moneda || valoresBaseConfiguracion.moneda
+})
+
+const marcaPrincipal = computed(() => {
+  const partes = String(nombreCorto.value || 'AUREA Beauty').trim().split(' ')
+  return partes[0] || 'AUREA'
+})
+
+function normalizarConfiguracionNegocio(config = {}) {
+  return {
+    ...valoresBaseConfiguracion,
+    ...config,
+    activo: config?.activo === undefined ? true : Boolean(config.activo)
+  }
+}
+
+function aplicarConfiguracionNegocio(config = {}) {
+  configuracion.value = normalizarConfiguracionNegocio(config)
+}
+
+function guardarConfiguracionNegocioLocal(config = {}) {
+  localStorage.setItem(
+    'aurea_configuracion',
+    JSON.stringify(normalizarConfiguracionNegocio(config))
+  )
+}
+
+function cargarConfiguracionNegocioLocal() {
+  try {
+    const guardado = localStorage.getItem('aurea_configuracion')
+    return guardado ? JSON.parse(guardado) : null
+  } catch {
+    return null
+  }
+}
+
+async function cargarConfiguracionNegocio() {
+  const local = cargarConfiguracionNegocioLocal()
+
+  if (local) {
+    aplicarConfiguracionNegocio(local)
+  }
+
+  try {
+    const { data } = await api.get('/configuracion')
+    const config = data?.configuracion || data || valoresBaseConfiguracion
+
+    aplicarConfiguracionNegocio(config)
+    guardarConfiguracionNegocioLocal(config)
+  } catch {
+    if (!local) {
+      aplicarConfiguracionNegocio(valoresBaseConfiguracion)
+    }
+  }
+}
+
+function currency(value) {
+  return `${monedaNegocio.value} ${money(value)}`
+}
 
 const citas = ref([])
 const loading = ref(false)
@@ -668,13 +755,13 @@ const resumenCards = computed(() => [
   {
     titulo: 'Pagadas',
     valor: pagadasMes.value,
-    detalle: `Bs ${money(totalPagadoMes.value)}`,
+    detalle: currency(totalPagadoMes.value),
     icono: 'payments',
     clase: 'bg-teal-7'
   },
   {
     titulo: 'Total mes',
-    valor: `Bs ${money(totalMes.value)}`,
+    valor: currency(totalMes.value),
     detalle: 'Monto programado',
     icono: 'account_balance_wallet',
     clase: 'bg-purple-7'
@@ -991,8 +1078,9 @@ async function descargarExtractoPDF() {
   }
 }
 
-onMounted(() => {
-  load()
+onMounted(async () => {
+  await cargarConfiguracionNegocio()
+  await load()
 })
 </script>
 

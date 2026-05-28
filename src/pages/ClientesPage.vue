@@ -9,7 +9,7 @@
         </div>
 
         <div class="text-h4 text-weight-bold text-white q-mt-sm">
-          👥 Clientes AUREA
+          👥 Clientes {{ marcaPrincipal }}
         </div>
 
         <div class="text-subtitle2 text-white hero-subtitle">
@@ -163,7 +163,7 @@
                 </div>
 
                 <div class="text-caption text-grey-7">
-                  Cliente AUREA #{{ props.row.id }}
+                  Cliente {{ marcaPrincipal }} #{{ props.row.id }}
                 </div>
               </div>
             </div>
@@ -488,7 +488,7 @@
                     </q-item-label>
 
                     <q-item-label caption>
-                      Bs {{ money(cita.precio) }}
+                      {{ currency(cita.precio) }}
                     </q-item-label>
                   </q-item-section>
 
@@ -545,7 +545,7 @@
 
                   <q-item-section>
                     <q-item-label class="text-weight-bold text-green-8">
-                      Bs {{ money(pago.monto) }}
+                      {{ currency(pago.monto) }}
                     </q-item-label>
 
                     <q-item-label caption>
@@ -822,6 +822,103 @@ defineOptions({
 const router = useRouter()
 const $q = useQuasar()
 
+
+const valoresBaseConfiguracion = {
+  nombre_negocio: 'AUREA Beauty Salon',
+  nombre_corto: 'AUREA Beauty',
+  slogan: 'Sistema inteligente para salones de belleza',
+  telefono: '',
+  whatsapp: '',
+  direccion: '',
+  mensaje_whatsapp: 'Hola {cliente}, le escribimos de {negocio} para coordinar su cita.',
+  logo_url: '',
+  moneda: 'Bs',
+  activo: true
+}
+
+const configuracion = ref({
+  ...valoresBaseConfiguracion
+})
+
+const nombreNegocio = computed(() => {
+  return configuracion.value.nombre_negocio || valoresBaseConfiguracion.nombre_negocio
+})
+
+const nombreCorto = computed(() => {
+  return configuracion.value.nombre_corto || valoresBaseConfiguracion.nombre_corto
+})
+
+const monedaNegocio = computed(() => {
+  return configuracion.value.moneda || valoresBaseConfiguracion.moneda
+})
+
+const marcaPrincipal = computed(() => {
+  const partes = String(nombreCorto.value || 'AUREA Beauty').trim().split(' ')
+  return partes[0] || 'AUREA'
+})
+
+function normalizarConfiguracionNegocio(config = {}) {
+  return {
+    ...valoresBaseConfiguracion,
+    ...config,
+    activo: config?.activo === undefined ? true : Boolean(config.activo)
+  }
+}
+
+function aplicarConfiguracionNegocio(config = {}) {
+  configuracion.value = normalizarConfiguracionNegocio(config)
+}
+
+function guardarConfiguracionNegocioLocal(config = {}) {
+  localStorage.setItem(
+    'aurea_configuracion',
+    JSON.stringify(normalizarConfiguracionNegocio(config))
+  )
+}
+
+function cargarConfiguracionNegocioLocal() {
+  try {
+    const guardado = localStorage.getItem('aurea_configuracion')
+    return guardado ? JSON.parse(guardado) : null
+  } catch {
+    return null
+  }
+}
+
+async function cargarConfiguracionNegocio() {
+  const local = cargarConfiguracionNegocioLocal()
+
+  if (local) {
+    aplicarConfiguracionNegocio(local)
+  }
+
+  try {
+    const { data } = await api.get('/configuracion')
+    const config = data?.configuracion || data || valoresBaseConfiguracion
+
+    aplicarConfiguracionNegocio(config)
+    guardarConfiguracionNegocioLocal(config)
+  } catch {
+    if (!local) {
+      aplicarConfiguracionNegocio(valoresBaseConfiguracion)
+    }
+  }
+}
+
+function currency(value) {
+  return `${monedaNegocio.value} ${money(value)}`
+}
+
+function mensajeWhatsAppCliente(cliente) {
+  const mensajeBase = configuracion.value.mensaje_whatsapp || valoresBaseConfiguracion.mensaje_whatsapp
+  const nombreCliente = cliente?.nombre || ''
+
+  return mensajeBase
+    .replaceAll('{cliente}', nombreCliente)
+    .replaceAll('{negocio}', nombreNegocio.value)
+    .trim()
+}
+
 const clientes = ref([])
 const busquedaCliente = ref('')
 const dialog = ref(false)
@@ -1037,7 +1134,7 @@ const perfilCards = computed(() => [
   },
   {
     titulo: 'Total pagado',
-    valor: `Bs ${money(totalPagadoPerfil.value)}`,
+    valor: currency(totalPagadoPerfil.value),
     icono: 'payments',
     color: 'green'
   },
@@ -1321,7 +1418,7 @@ function abrirWhatsApp(cliente) {
   }
 
   const mensaje = encodeURIComponent(
-    `Hola ${cliente.nombre || ''}, le escribimos de AUREA Beauty Salon para coordinar su cita.`
+    mensajeWhatsAppCliente(cliente)
   )
 
   window.open(`https://wa.me/${numero}?text=${mensaje}`, '_blank')
@@ -1625,7 +1722,10 @@ async function guardarContactosSeleccionados() {
   }
 }
 
-onMounted(load)
+onMounted(async () => {
+  await cargarConfiguracionNegocio()
+  await load()
+})
 </script>
 
 <style scoped>

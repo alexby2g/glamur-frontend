@@ -9,7 +9,7 @@
         </div>
 
         <div class="text-subtitle2 text-white">
-          Gestión de reservas, servicios, pagos y estados
+          Gestión de reservas, servicios, pagos y estados de {{ nombreNegocio }}
         </div>
       </div>
 
@@ -89,7 +89,7 @@
           </div>
 
           <div class="text-caption text-grey-7">
-            Servicio AUREA
+            Servicio {{ marcaPrincipal }}
           </div>
         </q-td>
       </template>
@@ -98,7 +98,7 @@
       <template #body-cell-precio="props">
         <q-td :props="props">
           <div class="text-weight-bold text-green-8">
-            Bs {{ money(props.row.precio) }}
+            {{ currency(props.row.precio) }}
           </div>
         </q-td>
       </template>
@@ -346,7 +346,7 @@
                       {{ scope.opt.detalle }}
                     </q-item-label>
                     <q-item-label caption class="text-pink text-weight-bold">
-                      Bs {{ money(scope.opt.precio) }}
+                      {{ currency(scope.opt.precio) }}
                     </q-item-label>
                   </q-item-section>
                 </q-item>
@@ -601,7 +601,7 @@
             <template #body-cell-monto="props">
               <q-td :props="props">
                 <b class="text-green-8">
-                  Bs {{ money(props.row.monto) }}
+                  {{ currency(props.row.monto) }}
                 </b>
               </q-td>
             </template>
@@ -651,6 +651,93 @@ defineOptions({
 const $q = useQuasar()
 const route = useRoute()
 const router = useRouter()
+
+
+const valoresBaseConfiguracion = {
+  nombre_negocio: 'AUREA Beauty Salon',
+  nombre_corto: 'AUREA Beauty',
+  slogan: 'Sistema inteligente para salones de belleza',
+  telefono: '',
+  whatsapp: '',
+  direccion: '',
+  mensaje_whatsapp: 'Hola {cliente}, le escribimos de {negocio} para coordinar su cita.',
+  logo_url: '',
+  moneda: 'Bs',
+  activo: true
+}
+
+const configuracion = ref({
+  ...valoresBaseConfiguracion
+})
+
+const nombreNegocio = computed(() => {
+  return configuracion.value.nombre_negocio || valoresBaseConfiguracion.nombre_negocio
+})
+
+const nombreCorto = computed(() => {
+  return configuracion.value.nombre_corto || valoresBaseConfiguracion.nombre_corto
+})
+
+const monedaNegocio = computed(() => {
+  return configuracion.value.moneda || valoresBaseConfiguracion.moneda
+})
+
+const marcaPrincipal = computed(() => {
+  const partes = String(nombreCorto.value || 'AUREA Beauty').trim().split(' ')
+  return partes[0] || 'AUREA'
+})
+
+function normalizarConfiguracionNegocio(config = {}) {
+  return {
+    ...valoresBaseConfiguracion,
+    ...config,
+    activo: config?.activo === undefined ? true : Boolean(config.activo)
+  }
+}
+
+function aplicarConfiguracionNegocio(config = {}) {
+  configuracion.value = normalizarConfiguracionNegocio(config)
+}
+
+function guardarConfiguracionNegocioLocal(config = {}) {
+  localStorage.setItem(
+    'aurea_configuracion',
+    JSON.stringify(normalizarConfiguracionNegocio(config))
+  )
+}
+
+function cargarConfiguracionNegocioLocal() {
+  try {
+    const guardado = localStorage.getItem('aurea_configuracion')
+    return guardado ? JSON.parse(guardado) : null
+  } catch {
+    return null
+  }
+}
+
+async function cargarConfiguracionNegocio() {
+  const local = cargarConfiguracionNegocioLocal()
+
+  if (local) {
+    aplicarConfiguracionNegocio(local)
+  }
+
+  try {
+    const { data } = await api.get('/configuracion')
+    const config = data?.configuracion || data || valoresBaseConfiguracion
+
+    aplicarConfiguracionNegocio(config)
+    guardarConfiguracionNegocioLocal(config)
+  } catch {
+    if (!local) {
+      aplicarConfiguracionNegocio(valoresBaseConfiguracion)
+    }
+  }
+}
+
+function currency(value) {
+  return `${monedaNegocio.value} ${money(value)}`
+}
 
 const citas = ref([])
 const busqueda = ref('')
@@ -1328,6 +1415,8 @@ watch(
 )
 
 onMounted(async () => {
+  await cargarConfiguracionNegocio()
+
   await Promise.all([
     load(),
     loadClientes(),

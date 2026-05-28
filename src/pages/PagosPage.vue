@@ -13,7 +13,7 @@
         </div>
 
         <div class="text-subtitle2 text-white hero-subtitle">
-          Administra, filtra y revisa los ingresos registrados
+          Administra, filtra y revisa los ingresos registrados en {{ nombreNegocio }}
         </div>
       </div>
 
@@ -218,7 +218,7 @@
                 </div>
 
                 <div class="text-caption text-grey-7">
-                  Cliente AUREA
+                  Cliente {{ marcaPrincipal }}
                 </div>
               </div>
             </div>
@@ -242,7 +242,7 @@
         <template #body-cell-monto="props">
           <q-td :props="props">
             <div class="monto-box">
-              Bs {{ money(props.row.monto) }}
+              {{ currency(props.row.monto) }}
             </div>
           </q-td>
         </template>
@@ -357,7 +357,7 @@
         </div>
 
         <div class="detalle-total-value">
-          Bs {{ money(pagoSeleccionado.monto) }}
+          {{ currency(pagoSeleccionado.monto) }}
         </div>
       </div>
 
@@ -462,6 +462,93 @@ defineOptions({
 })
 
 const $q = useQuasar()
+
+
+const valoresBaseConfiguracion = {
+  nombre_negocio: 'AUREA Beauty Salon',
+  nombre_corto: 'AUREA Beauty',
+  slogan: 'Sistema inteligente para salones de belleza',
+  telefono: '',
+  whatsapp: '',
+  direccion: '',
+  mensaje_whatsapp: 'Hola {cliente}, le escribimos de {negocio} para coordinar su cita.',
+  logo_url: '',
+  moneda: 'Bs',
+  activo: true
+}
+
+const configuracion = ref({
+  ...valoresBaseConfiguracion
+})
+
+const nombreNegocio = computed(() => {
+  return configuracion.value.nombre_negocio || valoresBaseConfiguracion.nombre_negocio
+})
+
+const nombreCorto = computed(() => {
+  return configuracion.value.nombre_corto || valoresBaseConfiguracion.nombre_corto
+})
+
+const monedaNegocio = computed(() => {
+  return configuracion.value.moneda || valoresBaseConfiguracion.moneda
+})
+
+const marcaPrincipal = computed(() => {
+  const partes = String(nombreCorto.value || 'AUREA Beauty').trim().split(' ')
+  return partes[0] || 'AUREA'
+})
+
+function normalizarConfiguracionNegocio(config = {}) {
+  return {
+    ...valoresBaseConfiguracion,
+    ...config,
+    activo: config?.activo === undefined ? true : Boolean(config.activo)
+  }
+}
+
+function aplicarConfiguracionNegocio(config = {}) {
+  configuracion.value = normalizarConfiguracionNegocio(config)
+}
+
+function guardarConfiguracionNegocioLocal(config = {}) {
+  localStorage.setItem(
+    'aurea_configuracion',
+    JSON.stringify(normalizarConfiguracionNegocio(config))
+  )
+}
+
+function cargarConfiguracionNegocioLocal() {
+  try {
+    const guardado = localStorage.getItem('aurea_configuracion')
+    return guardado ? JSON.parse(guardado) : null
+  } catch {
+    return null
+  }
+}
+
+async function cargarConfiguracionNegocio() {
+  const local = cargarConfiguracionNegocioLocal()
+
+  if (local) {
+    aplicarConfiguracionNegocio(local)
+  }
+
+  try {
+    const { data } = await api.get('/configuracion')
+    const config = data?.configuracion || data || valoresBaseConfiguracion
+
+    aplicarConfiguracionNegocio(config)
+    guardarConfiguracionNegocioLocal(config)
+  } catch {
+    if (!local) {
+      aplicarConfiguracionNegocio(valoresBaseConfiguracion)
+    }
+  }
+}
+
+function currency(value) {
+  return `${monedaNegocio.value} ${money(value)}`
+}
 
 const pagos = ref([])
 const loading = ref(false)
@@ -592,7 +679,7 @@ const promedioPago = computed(() => {
 const resumenCards = computed(() => [
   {
     titulo: 'Total filtrado',
-    valor: `Bs ${money(totalFiltrado.value)}`,
+    valor: currency(totalFiltrado.value),
     detalle: 'Suma de pagos visibles',
     icono: 'account_balance_wallet',
     clase: 'bg-green-7'
@@ -606,28 +693,28 @@ const resumenCards = computed(() => [
   },
   {
     titulo: 'Efectivo',
-    valor: `Bs ${money(pagosEfectivo.value)}`,
+    valor: currency(pagosEfectivo.value),
     detalle: 'Pagos en efectivo',
     icono: 'payments',
     clase: 'bg-teal-7'
   },
   {
     titulo: 'QR',
-    valor: `Bs ${money(pagosQr.value)}`,
+    valor: currency(pagosQr.value),
     detalle: 'Pagos por QR',
     icono: 'qr_code_2',
     clase: 'bg-purple-7'
   },
   {
     titulo: 'Transferencia',
-    valor: `Bs ${money(pagosTransferencia.value)}`,
+    valor: currency(pagosTransferencia.value),
     detalle: 'Pagos bancarios',
     icono: 'account_balance',
     clase: 'bg-indigo-7'
   },
   {
     titulo: 'Promedio',
-    valor: `Bs ${money(promedioPago.value)}`,
+    valor: currency(promedioPago.value),
     detalle: 'Promedio por pago',
     icono: 'trending_up',
     clase: 'bg-orange-7'
@@ -870,7 +957,7 @@ function imprimirDetalle() {
 function remove(row) {
   $q.dialog({
     title: 'Eliminar pago',
-    message: `¿Seguro que deseas eliminar el pago de Bs ${money(row.monto)} de ${clientePago(row)}? Se enviará al historial y podrás recuperarlo después.`,
+    message: `¿Seguro que deseas eliminar el pago de ${currency(row.monto)} de ${clientePago(row)}? Se enviará al historial y podrás recuperarlo después.`,
     persistent: true,
     ok: {
       label: 'Eliminar',
@@ -901,7 +988,10 @@ function remove(row) {
   })
 }
 
-onMounted(load)
+onMounted(async () => {
+  await cargarConfiguracionNegocio()
+  await load()
+})
 </script>
 
 <style scoped>
