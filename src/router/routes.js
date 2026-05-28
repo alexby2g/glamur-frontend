@@ -1,101 +1,158 @@
-import { route } from 'quasar/wrappers'
-import {
-  createRouter,
-  createMemoryHistory,
-  createWebHistory,
-  createWebHashHistory
-} from 'vue-router'
-
-import routes from './routes'
-
-function obtenerUsuarioLocal () {
-  try {
-    const usuarioGuardado = localStorage.getItem('glamur_user')
-
-    if (!usuarioGuardado) {
-      return null
+const routes = [
+  {
+    path: '/login',
+    name: 'login',
+    component: () => import('pages/LoginPage.vue'),
+    meta: {
+      guestOnly: true
     }
+  },
 
-    return JSON.parse(usuarioGuardado)
-  } catch {
-    return null
-  }
-}
-
-function normalizarRol (rol) {
-  const rolLimpio = String(rol || '').toLowerCase().trim()
-
-  if (['admin', 'empleado'].includes(rolLimpio)) {
-    return rolLimpio
-  }
-
-  return 'admin'
-}
-
-function obtenerRolUsuario () {
-  const usuario = obtenerUsuarioLocal()
-
-  return normalizarRol(usuario?.rol || 'admin')
-}
-
-function rutaInicioPorRol (rol) {
-  if (rol === 'empleado') {
-    return '/servicios'
-  }
-
-  return '/dashboard'
-}
-
-function usuarioTienePermiso (to, rol) {
-  const rutasConRoles = to.matched
-    .map(record => record.meta?.roles)
-    .filter(Boolean)
-
-  if (rutasConRoles.length === 0) {
-    return true
-  }
-
-  return rutasConRoles.some(roles => roles.includes(rol))
-}
-
-export default route(function () {
-  const createHistory = process.env.SERVER
-    ? createMemoryHistory
-    : (process.env.VUE_ROUTER_MODE === 'history' ? createWebHistory : createWebHashHistory)
-
-  const Router = createRouter({
-    scrollBehavior: () => ({ left: 0, top: 0 }),
-    routes,
-    history: createHistory(process.env.VUE_ROUTER_BASE)
-  })
-
-  Router.beforeEach((to, from, next) => {
-    const token = localStorage.getItem('glamur_token')
-    const rol = obtenerRolUsuario()
-
-    const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
-    const guestOnly = to.matched.some(record => record.meta.guestOnly)
-
-    if (requiresAuth && !token) {
-      next('/login')
-      return
+  {
+    path: '/register',
+    name: 'register',
+    component: () => import('pages/RegisterPage.vue'),
+    meta: {
+      guestOnly: true
     }
+  },
 
-    if (guestOnly && token) {
-      next(rutaInicioPorRol(rol))
-      return
-    }
+  {
+    path: '/',
+    component: () => import('layouts/MainLayout.vue'),
 
-    if (requiresAuth && token && !usuarioTienePermiso(to, rol)) {
-      next({
-        path: rutaInicioPorRol(rol),
-        replace: true
-      })
-      return
-    }
+    children: [
+      {
+        path: '',
+        redirect: '/dashboard'
+      },
 
-    next()
-  })
+      {
+        path: 'dashboard',
+        name: 'dashboard',
+        component: () => import('pages/DashboardPage.vue'),
+        meta: {
+          requiresAuth: true,
+          roles: ['admin']
+        }
+      },
 
-  return Router
-})
+      {
+        path: 'clientes',
+        name: 'clientes',
+        component: () => import('pages/ClientesPage.vue'),
+        meta: {
+          requiresAuth: true,
+          roles: ['admin']
+        }
+      },
+
+      {
+        path: 'empleados',
+        name: 'empleados',
+        component: () => import('pages/EmpleadosPage.vue'),
+        meta: {
+          requiresAuth: true,
+          roles: ['admin']
+        }
+      },
+
+      {
+        path: 'citas',
+        name: 'citas',
+        component: () => import('pages/CitasPage.vue'),
+        meta: {
+          requiresAuth: true,
+          roles: ['admin']
+        }
+      },
+
+      {
+        path: 'servicios',
+        name: 'servicios',
+        component: () => import('pages/ServiciosPage.vue'),
+        meta: {
+          requiresAuth: true,
+          roles: ['admin', 'empleado']
+        }
+      },
+
+      {
+        path: 'calendario',
+        name: 'calendario',
+        component: () => import('pages/CalendarioPage.vue'),
+        meta: {
+          requiresAuth: true,
+          roles: ['admin']
+        }
+      },
+
+      {
+        path: 'pagos',
+        name: 'pagos',
+        component: () => import('pages/PagosPage.vue'),
+        meta: {
+          requiresAuth: true,
+          roles: ['admin']
+        }
+      },
+
+      {
+        path: 'caja-diaria',
+        name: 'caja-diaria',
+        component: () => import('pages/CajaDiariaPage.vue'),
+        meta: {
+          requiresAuth: true,
+          roles: ['admin']
+        }
+      },
+
+      {
+        path: 'reporte-empleados',
+        name: 'reporte-empleados',
+        component: () => import('pages/ReporteEmpleadosPage.vue'),
+        meta: {
+          requiresAuth: true,
+          roles: ['admin']
+        }
+      },
+
+      {
+        path: 'historial',
+        name: 'historial',
+        component: () => import('pages/HistorialPage.vue'),
+        meta: {
+          requiresAuth: true,
+          roles: ['admin']
+        }
+      },
+
+      {
+        path: 'historial-clientes',
+        name: 'historial-clientes',
+        component: () => import('pages/HistorialClientesPage.vue'),
+        meta: {
+          requiresAuth: true,
+          roles: ['admin']
+        }
+      },
+
+      {
+        path: 'configuracion',
+        name: 'configuracion',
+        component: () => import('pages/ConfiguracionPage.vue'),
+        meta: {
+          requiresAuth: true,
+          roles: ['admin']
+        }
+      }
+    ]
+  },
+
+  {
+    path: '/:catchAll(.*)*',
+    component: () => import('pages/ErrorNotFound.vue')
+  }
+]
+
+export default routes
