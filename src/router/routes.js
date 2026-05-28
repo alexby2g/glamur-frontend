@@ -32,7 +32,8 @@ const routes = [
         name: 'dashboard',
         component: () => import('pages/DashboardPage.vue'),
         meta: {
-          requiresAuth: true
+          requiresAuth: true,
+          roles: ['admin']
         }
       },
 
@@ -41,7 +42,8 @@ const routes = [
         name: 'clientes',
         component: () => import('pages/ClientesPage.vue'),
         meta: {
-          requiresAuth: true
+          requiresAuth: true,
+          roles: ['admin']
         }
       },
 
@@ -50,7 +52,8 @@ const routes = [
         name: 'empleados',
         component: () => import('pages/EmpleadosPage.vue'),
         meta: {
-          requiresAuth: true
+          requiresAuth: true,
+          roles: ['admin']
         }
       },
 
@@ -59,7 +62,8 @@ const routes = [
         name: 'citas',
         component: () => import('pages/CitasPage.vue'),
         meta: {
-          requiresAuth: true
+          requiresAuth: true,
+          roles: ['admin']
         }
       },
 
@@ -68,7 +72,8 @@ const routes = [
         name: 'servicios',
         component: () => import('pages/ServiciosPage.vue'),
         meta: {
-          requiresAuth: true
+          requiresAuth: true,
+          roles: ['admin', 'empleado']
         }
       },
 
@@ -77,7 +82,8 @@ const routes = [
         name: 'calendario',
         component: () => import('pages/CalendarioPage.vue'),
         meta: {
-          requiresAuth: true
+          requiresAuth: true,
+          roles: ['admin']
         }
       },
 
@@ -86,7 +92,8 @@ const routes = [
         name: 'pagos',
         component: () => import('pages/PagosPage.vue'),
         meta: {
-          requiresAuth: true
+          requiresAuth: true,
+          roles: ['admin']
         }
       },
 
@@ -95,7 +102,8 @@ const routes = [
         name: 'caja-diaria',
         component: () => import('pages/CajaDiariaPage.vue'),
         meta: {
-          requiresAuth: true
+          requiresAuth: true,
+          roles: ['admin']
         }
       },
 
@@ -104,7 +112,8 @@ const routes = [
         name: 'reporte-empleados',
         component: () => import('pages/ReporteEmpleadosPage.vue'),
         meta: {
-          requiresAuth: true
+          requiresAuth: true,
+          roles: ['admin']
         }
       },
 
@@ -113,7 +122,8 @@ const routes = [
         name: 'historial',
         component: () => import('pages/HistorialPage.vue'),
         meta: {
-          requiresAuth: true
+          requiresAuth: true,
+          roles: ['admin']
         }
       },
 
@@ -122,7 +132,8 @@ const routes = [
         name: 'historial-clientes',
         component: () => import('pages/HistorialClientesPage.vue'),
         meta: {
-          requiresAuth: true
+          requiresAuth: true,
+          roles: ['admin']
         }
       },
 
@@ -131,7 +142,8 @@ const routes = [
         name: 'configuracion',
         component: () => import('pages/ConfiguracionPage.vue'),
         meta: {
-          requiresAuth: true
+          requiresAuth: true,
+          roles: ['admin']
         }
       }
     ]

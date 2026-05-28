@@ -167,7 +167,7 @@
                 </div>
 
                 <div class="user-role">
-                  Administrador
+                  {{ usuarioRolTexto }}
                 </div>
               </div>
 
@@ -189,7 +189,7 @@
                 </q-item-label>
 
                 <q-item-label caption>
-                  Sesión activa
+                  {{ usuarioRolTexto }} · Sesión activa
                 </q-item-label>
               </q-item-section>
             </q-item>
@@ -251,11 +251,11 @@
       <q-list class="menu-list">
 
         <q-item-label header class="menu-header">
-          NAVEGACIÓN
+          {{ usuarioEsAdmin ? 'NAVEGACIÓN ADMIN' : 'MENÚ EMPLEADO' }}
         </q-item-label>
 
         <q-item
-          v-for="item in menu"
+          v-for="item in menuFiltrado"
           :key="item.label"
           clickable
           :to="item.to"
@@ -286,7 +286,7 @@
 
         <div>
           <div class="footer-title">
-            Servidor online
+            {{ usuarioRolTexto }}
           </div>
 
           <div class="footer-subtitle">
@@ -333,6 +333,8 @@ export default {
       drawer: false,
 
       usuarioNombre: 'Administrador',
+      usuarioRol: 'admin',
+      usuarioEmpleadoId: null,
 
       configuracion: {
         ...valoresBaseConfiguracion
@@ -348,79 +350,121 @@ export default {
         {
           label: 'Dashboard',
           icon: 'dashboard',
-          to: '/dashboard'
+          to: '/dashboard',
+          roles: ['admin']
         },
 
         {
           label: 'Clientes',
           icon: 'people',
-          to: '/clientes'
+          to: '/clientes',
+          roles: ['admin']
         },
 
         {
           label: 'Empleados',
           icon: 'groups',
-          to: '/empleados'
+          to: '/empleados',
+          roles: ['admin']
         },
 
         {
           label: 'Citas',
           icon: 'event',
-          to: '/citas'
+          to: '/citas',
+          roles: ['admin']
         },
 
         {
           label: 'Servicios',
           icon: 'spa',
-          to: '/servicios'
+          to: '/servicios',
+          roles: ['admin', 'empleado']
         },
 
         {
           label: 'Calendario',
           icon: 'calendar_month',
-          to: '/calendario'
+          to: '/calendario',
+          roles: ['admin']
         },
 
         {
           label: 'Pagos',
           icon: 'payments',
-          to: '/pagos'
+          to: '/pagos',
+          roles: ['admin']
         },
 
         {
           label: 'Caja diaria',
           icon: 'point_of_sale',
-          to: '/caja-diaria'
+          to: '/caja-diaria',
+          roles: ['admin']
         },
 
         {
           label: 'Reporte empleados',
           icon: 'analytics',
-          to: '/reporte-empleados'
+          to: '/reporte-empleados',
+          roles: ['admin']
         },
 
         {
           label: 'Historial',
           icon: 'history',
-          to: '/historial'
+          to: '/historial',
+          roles: ['admin']
         },
 
         {
           label: 'Historial Clientes',
           icon: 'manage_search',
-          to: '/historial-clientes'
+          to: '/historial-clientes',
+          roles: ['admin']
         },
 
         {
           label: 'Configuración',
           icon: 'settings',
-          to: '/configuracion'
+          to: '/configuracion',
+          roles: ['admin']
         }
       ]
     }
   },
 
   computed: {
+    usuarioEsAdmin () {
+      return this.usuarioRol === 'admin'
+    },
+
+    usuarioEsEmpleado () {
+      return this.usuarioRol === 'empleado'
+    },
+
+    usuarioRolTexto () {
+      if (this.usuarioRol === 'admin') {
+        return 'Administrador'
+      }
+
+      if (this.usuarioRol === 'empleado') {
+        return 'Empleado'
+      }
+
+      return 'Usuario'
+    },
+
+    menuFiltrado () {
+      return this.menu.filter((item) => {
+        if (!item.roles || item.roles.length === 0) {
+          return true
+        }
+
+        return item.roles.includes(this.usuarioRol)
+      })
+    },
+
     nombreNegocio () {
       return this.configuracion.nombre_negocio || valoresBaseConfiguracion.nombre_negocio
     },
@@ -454,6 +498,7 @@ export default {
   mounted () {
     this.cargarConfiguracionNegocio()
     this.cargarUsuario()
+    this.cargarUsuarioDesdeServidor()
     this.prepararNotificacionesCelular()
     this.cargarNotificaciones()
 
@@ -473,6 +518,42 @@ export default {
   },
 
   methods: {
+    normalizarRol (rol) {
+      const rolLimpio = String(rol || '').toLowerCase().trim()
+
+      if (['admin', 'empleado'].includes(rolLimpio)) {
+        return rolLimpio
+      }
+
+      return 'admin'
+    },
+
+    aplicarUsuario (usuario = {}) {
+      this.usuarioNombre =
+        usuario?.nombre ||
+        usuario?.usuario ||
+        'Administrador'
+
+      this.usuarioRol = this.normalizarRol(usuario?.rol || 'admin')
+      this.usuarioEmpleadoId = usuario?.empleado_id || null
+    },
+
+    redirigirSiRutaNoPermitida () {
+      const rutaActual = this.$route.path
+
+      if (this.usuarioEsAdmin) {
+        return
+      }
+
+      const rutasPermitidasEmpleado = [
+        '/servicios'
+      ]
+
+      if (!rutasPermitidasEmpleado.includes(rutaActual)) {
+        this.$router.replace('/servicios')
+      }
+    },
+
     normalizarConfiguracion (configuracion = {}) {
       return {
         ...valoresBaseConfiguracion,
@@ -521,6 +602,47 @@ export default {
     usarLogoBase (event) {
       if (event?.target) {
         event.target.src = logoBase
+      }
+    },
+
+    cargarUsuario () {
+      const usuarioGuardado = localStorage.getItem('glamur_user')
+
+      if (!usuarioGuardado) {
+        this.aplicarUsuario({
+          nombre: 'Administrador',
+          rol: 'admin',
+          empleado_id: null
+        })
+
+        return
+      }
+
+      try {
+        const usuario = JSON.parse(usuarioGuardado)
+        this.aplicarUsuario(usuario)
+        this.redirigirSiRutaNoPermitida()
+      } catch {
+        this.aplicarUsuario({
+          nombre: 'Administrador',
+          rol: 'admin',
+          empleado_id: null
+        })
+      }
+    },
+
+    async cargarUsuarioDesdeServidor () {
+      try {
+        const { data } = await api.get('/me')
+        const usuario = data?.usuario || data || null
+
+        if (usuario) {
+          localStorage.setItem('glamur_user', JSON.stringify(usuario))
+          this.aplicarUsuario(usuario)
+          this.redirigirSiRutaNoPermitida()
+        }
+      } catch {
+        // Si falla, usamos el usuario guardado en localStorage.
       }
     },
 
@@ -598,26 +720,6 @@ export default {
 
       this.ultimaNotificacionMostradaId = idNumerico
       localStorage.setItem('glamur_last_notification_id', String(idNumerico))
-    },
-
-    cargarUsuario () {
-      const usuarioGuardado = localStorage.getItem('glamur_user')
-
-      if (!usuarioGuardado) {
-        this.usuarioNombre = 'Administrador'
-        return
-      }
-
-      try {
-        const usuario = JSON.parse(usuarioGuardado)
-
-        this.usuarioNombre =
-          usuario?.nombre ||
-          usuario?.usuario ||
-          'Administrador'
-      } catch {
-        this.usuarioNombre = 'Administrador'
-      }
     },
 
     async cargarNotificaciones () {

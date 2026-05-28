@@ -14,7 +14,7 @@
         </div>
 
         <div class="glamur-subtitle q-mt-xs">
-          Administra el personal, especialidades, estado laboral y datos de contacto.
+          Administra el personal, especialidades, estado laboral y accesos al sistema.
         </div>
       </div>
 
@@ -39,7 +39,7 @@
 
     <!-- MÉTRICAS -->
     <div class="row q-col-gutter-md q-mb-md">
-      <div class="col-12 col-sm-4">
+      <div class="col-12 col-sm-6 col-lg-3">
         <q-card class="glamur-card glamur-card-hover metric-card">
           <q-card-section>
             <div class="row items-center justify-between no-wrap">
@@ -57,7 +57,7 @@
         </q-card>
       </div>
 
-      <div class="col-12 col-sm-4">
+      <div class="col-12 col-sm-6 col-lg-3">
         <q-card class="glamur-card glamur-card-hover metric-card">
           <q-card-section>
             <div class="row items-center justify-between no-wrap">
@@ -75,7 +75,25 @@
         </q-card>
       </div>
 
-      <div class="col-12 col-sm-4">
+      <div class="col-12 col-sm-6 col-lg-3">
+        <q-card class="glamur-card glamur-card-hover metric-card">
+          <q-card-section>
+            <div class="row items-center justify-between no-wrap">
+              <div>
+                <div class="metric-label">Con acceso</div>
+                <div class="metric-value">{{ resumen.con_acceso }}</div>
+                <div class="metric-detail">Pueden iniciar sesión</div>
+              </div>
+
+              <q-avatar class="bg-blue-7" size="58px">
+                <q-icon name="admin_panel_settings" color="white" size="30px" />
+              </q-avatar>
+            </div>
+          </q-card-section>
+        </q-card>
+      </div>
+
+      <div class="col-12 col-sm-6 col-lg-3">
         <q-card class="glamur-card glamur-card-hover metric-card">
           <q-card-section>
             <div class="row items-center justify-between no-wrap">
@@ -175,7 +193,7 @@
           </div>
 
           <div class="glamur-section-subtitle">
-            Crea, edita o desactiva el personal registrado.
+            Crea, edita o desactiva el personal registrado y sus accesos.
           </div>
         </div>
 
@@ -240,6 +258,11 @@
                 <q-icon name="badge" size="16px" />
                 {{ props.row.ci || 'Sin CI' }}
               </div>
+
+              <div class="contact-line">
+                <q-icon name="email" size="16px" />
+                {{ props.row.email || 'Sin correo' }}
+              </div>
             </q-td>
           </template>
 
@@ -259,11 +282,24 @@
             </q-td>
           </template>
 
-          <template #body-cell-salario_base="props">
+          <template #body-cell-acceso="props">
             <q-td :props="props">
-              <div class="money-text">
-                Bs {{ money(props.row.salario_base) }}
+              <div v-if="props.row.cuenta_sistema" class="access-box">
+                <q-badge
+                  :color="props.row.cuenta_sistema.activo ? 'positive' : 'warning'"
+                  rounded
+                >
+                  {{ props.row.cuenta_sistema.activo ? 'Acceso activo' : 'Acceso inactivo' }}
+                </q-badge>
+
+                <div class="access-email">
+                  {{ props.row.cuenta_sistema.usuario }}
+                </div>
               </div>
+
+              <q-badge v-else color="grey-7" rounded>
+                Sin acceso
+              </q-badge>
             </q-td>
           </template>
 
@@ -325,7 +361,7 @@
             </div>
 
             <div class="dialog-subtitle">
-              Completa los datos del personal del salón.
+              Completa los datos del personal y su acceso si corresponde.
             </div>
           </div>
 
@@ -342,6 +378,12 @@
         <q-form @submit.prevent="guardarEmpleado">
           <q-card-section class="dialog-body">
             <div class="row q-col-gutter-md">
+              <div class="col-12">
+                <div class="form-section-title">
+                  Datos del empleado
+                </div>
+              </div>
+
               <div class="col-12 col-md-6">
                 <q-input
                   v-model.trim="form.nombre"
@@ -530,6 +572,99 @@
                   label="Empleado activo"
                 />
               </div>
+
+              <div class="col-12">
+                <q-separator class="q-my-sm" />
+              </div>
+
+              <div class="col-12">
+                <div class="access-panel">
+                  <div class="row items-start justify-between q-gutter-md">
+                    <div>
+                      <div class="form-section-title">
+                        Acceso al sistema
+                      </div>
+
+                      <div class="form-section-subtitle">
+                        Permite que este empleado inicie sesión con rol limitado.
+                      </div>
+                    </div>
+
+                    <q-toggle
+                      v-model="form.crear_usuario"
+                      color="pink"
+                      checked-icon="admin_panel_settings"
+                      unchecked-icon="lock"
+                      :label="form.cuenta_existente ? 'Mantener acceso' : 'Crear acceso'"
+                    />
+                  </div>
+
+                  <div
+                    v-if="form.crear_usuario"
+                    class="row q-col-gutter-md q-mt-sm"
+                  >
+                    <div class="col-12 col-md-6">
+                      <q-input
+                        v-model.trim="form.usuario_login"
+                        label="Correo de acceso"
+                        type="email"
+                        outlined
+                        rounded
+                        dense
+                        bg-color="white"
+                        hint="Puede ser el mismo correo del empleado"
+                        :rules="[val => !!val || 'El correo de acceso es obligatorio']"
+                      >
+                        <template #prepend>
+                          <q-icon name="alternate_email" color="purple" />
+                        </template>
+                      </q-input>
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                      <q-input
+                        v-model.trim="form.password_usuario"
+                        :label="form.cuenta_existente ? 'Nueva contraseña opcional' : 'Contraseña inicial *'"
+                        type="password"
+                        outlined
+                        rounded
+                        dense
+                        bg-color="white"
+                        hint="Mínimo 6 caracteres"
+                        :rules="reglasPassword"
+                      >
+                        <template #prepend>
+                          <q-icon name="key" color="purple" />
+                        </template>
+                      </q-input>
+                    </div>
+
+                    <div class="col-12">
+                      <q-toggle
+                        v-model="form.activo_usuario"
+                        color="positive"
+                        checked-icon="check"
+                        unchecked-icon="close"
+                        label="Acceso activo para iniciar sesión"
+                      />
+                    </div>
+                  </div>
+
+                  <q-banner
+                    v-else
+                    dense
+                    rounded
+                    class="access-warning q-mt-sm"
+                  >
+                    <template #avatar>
+                      <q-icon name="info" color="orange" />
+                    </template>
+
+                    El empleado quedará registrado, pero no podrá iniciar sesión en la app.
+                    Si ya tenía cuenta, al guardar se desactivará su acceso.
+                  </q-banner>
+                </div>
+              </div>
             </div>
           </q-card-section>
 
@@ -562,7 +697,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { api } from 'boot/axios'
 
@@ -583,7 +718,8 @@ const empleados = ref([])
 const resumen = ref({
   total: 0,
   activos: 0,
-  inactivos: 0
+  inactivos: 0,
+  con_acceso: 0
 })
 
 const filtros = ref({
@@ -639,11 +775,11 @@ const columns = [
     sortable: true
   },
   {
-    name: 'salario_base',
-    label: 'Salario',
-    field: 'salario_base',
-    align: 'right',
-    sortable: true
+    name: 'acceso',
+    label: 'Acceso',
+    field: 'acceso',
+    align: 'center',
+    sortable: false
   },
   {
     name: 'activo',
@@ -665,6 +801,48 @@ const empleadosActivos = computed(() => {
   return empleados.value.filter((empleado) => empleado.activo)
 })
 
+const reglasPassword = computed(() => {
+  if (!form.value.crear_usuario) {
+    return []
+  }
+
+  if (form.value.cuenta_existente) {
+    return [
+      val => !val || String(val).length >= 6 || 'La contraseña debe tener mínimo 6 caracteres'
+    ]
+  }
+
+  return [
+    val => !!val || 'La contraseña inicial es obligatoria',
+    val => String(val || '').length >= 6 || 'La contraseña debe tener mínimo 6 caracteres'
+  ]
+})
+
+watch(
+  () => form.value.email,
+  (email) => {
+    if (!form.value.usuario_login && email) {
+      form.value.usuario_login = email
+    }
+  }
+)
+
+watch(
+  () => form.value.crear_usuario,
+  (activo) => {
+    if (activo && !form.value.usuario_login && form.value.email) {
+      form.value.usuario_login = form.value.email
+    }
+
+    if (!activo) {
+      form.value.activo_usuario = false
+      form.value.password_usuario = ''
+    } else if (!form.value.cuenta_existente) {
+      form.value.activo_usuario = true
+    }
+  }
+)
+
 function formBase() {
   return {
     nombre: '',
@@ -678,7 +856,13 @@ function formBase() {
     direccion: '',
     fecha_ingreso: '',
     activo: true,
-    observaciones: ''
+    observaciones: '',
+
+    crear_usuario: false,
+    cuenta_existente: false,
+    usuario_login: '',
+    password_usuario: '',
+    activo_usuario: true
   }
 }
 
@@ -686,6 +870,7 @@ function normalizarEmpleado(empleado = {}) {
   return {
     ...empleado,
     activo: Boolean(empleado.activo),
+    cuenta_sistema: empleado.cuenta_sistema || null,
     comision_porcentaje: Number(empleado.comision_porcentaje || 0),
     salario_base: Number(empleado.salario_base || 0),
     fecha_ingreso: empleado.fecha_ingreso ? String(empleado.fecha_ingreso).slice(0, 10) : ''
@@ -693,7 +878,7 @@ function normalizarEmpleado(empleado = {}) {
 }
 
 function normalizarPayload() {
-  return {
+  const payload = {
     nombre: form.value.nombre,
     telefono: form.value.telefono,
     ci: form.value.ci,
@@ -705,8 +890,25 @@ function normalizarPayload() {
     direccion: form.value.direccion,
     fecha_ingreso: form.value.fecha_ingreso || null,
     activo: Boolean(form.value.activo),
-    observaciones: form.value.observaciones
+    observaciones: form.value.observaciones,
+
+    crear_usuario: Boolean(form.value.crear_usuario),
+    activo_usuario: Boolean(form.value.crear_usuario && form.value.activo_usuario)
   }
+
+  if (form.value.crear_usuario) {
+    payload.usuario_login = form.value.usuario_login || form.value.email || null
+
+    if (form.value.password_usuario) {
+      payload.password_usuario = form.value.password_usuario
+    }
+  }
+
+  if (!form.value.crear_usuario && form.value.cuenta_existente) {
+    payload.activo_usuario = false
+  }
+
+  return payload
 }
 
 function money(value) {
@@ -745,7 +947,8 @@ async function load() {
     resumen.value = {
       total: Number(data?.resumen?.total ?? empleados.value.length),
       activos: Number(data?.resumen?.activos ?? empleadosActivos.value.length),
-      inactivos: Number(data?.resumen?.inactivos ?? 0)
+      inactivos: Number(data?.resumen?.inactivos ?? 0),
+      con_acceso: Number(data?.resumen?.con_acceso ?? empleados.value.filter(e => e.cuenta_sistema).length)
     }
   } catch (error) {
     $q.notify({
@@ -759,11 +962,20 @@ async function load() {
 
 function abrirDialogo(empleado = null) {
   if (empleado) {
+    const normalizado = normalizarEmpleado(empleado)
+    const cuenta = normalizado.cuenta_sistema
+
     editando.value = true
-    empleadoEditandoId.value = empleado.id
+    empleadoEditandoId.value = normalizado.id
+
     form.value = {
       ...formBase(),
-      ...normalizarEmpleado(empleado)
+      ...normalizado,
+      crear_usuario: Boolean(cuenta),
+      cuenta_existente: Boolean(cuenta),
+      usuario_login: cuenta?.usuario || normalizado.email || '',
+      password_usuario: '',
+      activo_usuario: cuenta ? Boolean(cuenta.activo) : true
     }
   } else {
     editando.value = false
@@ -799,7 +1011,9 @@ async function guardarEmpleado() {
 
       $q.notify({
         type: 'positive',
-        message: 'Empleado registrado correctamente'
+        message: payload.crear_usuario
+          ? 'Empleado registrado con acceso al sistema'
+          : 'Empleado registrado correctamente'
       })
     }
 
@@ -818,7 +1032,7 @@ async function guardarEmpleado() {
 function confirmarEliminar(empleado) {
   $q.dialog({
     title: 'Eliminar empleado',
-    message: `¿Deseas eliminar a ${empleado.nombre}? Se moverá al historial interno de Laravel como eliminado.`,
+    message: `¿Deseas eliminar a ${empleado.nombre}? Su acceso al sistema será desactivado.`,
     persistent: true,
     ok: {
       label: 'Sí, eliminar',
@@ -925,8 +1139,24 @@ onMounted(load)
   font-weight: 950;
 }
 
+.access-box {
+  display: grid;
+  gap: 4px;
+  justify-items: center;
+}
+
+.access-email {
+  max-width: 170px;
+  color: #6a536d;
+  font-size: 11px;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .employee-dialog {
-  width: 900px;
+  width: 940px;
   max-width: 96vw;
   border-radius: 26px;
   overflow: hidden;
@@ -956,6 +1186,32 @@ onMounted(load)
   background: #fff7fb;
   max-height: 68vh;
   overflow-y: auto;
+}
+
+.form-section-title {
+  color: #241329;
+  font-size: 15px;
+  font-weight: 950;
+}
+
+.form-section-subtitle {
+  color: #7a6f80;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.access-panel {
+  padding: 16px;
+  border-radius: 22px;
+  background: white;
+  border: 1px solid rgba(233, 30, 99, 0.12);
+  box-shadow: 0 10px 26px rgba(20, 10, 30, 0.06);
+}
+
+.access-warning {
+  background: #fff8e1;
+  color: #6d4c00;
+  font-weight: 700;
 }
 
 @media (max-width: 700px) {
