@@ -12,7 +12,7 @@
         </div>
       </div>
 
-      <div class="hero-actions">
+      <div v-if="isAdmin" class="hero-actions">
         <q-btn
           class="btn-glamur-white"
           icon="playlist_add"
@@ -29,6 +29,25 @@
         />
       </div>
     </div>
+
+    <!-- AVISO MODO EMPLEADO -->
+    <q-banner
+      v-if="!isAdmin"
+      rounded
+      class="employee-mode q-mb-md"
+    >
+      <template #avatar>
+        <q-icon name="visibility" color="pink-7" size="28px" />
+      </template>
+
+      <div class="text-weight-bold">
+        Modo empleado: solo consulta
+      </div>
+
+      <div class="text-caption">
+        Puedes revisar los servicios disponibles, pero no puedes agregar, editar ni eliminar combos.
+      </div>
+    </q-banner>
 
     <!-- BOTONES DE CATEGORÍAS -->
     <div class="categorias-grid q-mb-lg">
@@ -98,9 +117,10 @@
         </div>
 
         <q-btn
+          v-if="isAdmin"
           class="btn-glamur"
           icon="add"
-          :label="`Agregar combo`"
+          label="Agregar combo"
           @click="openDialog(selectedCategoria)"
         />
       </div>
@@ -182,10 +202,10 @@
           </q-td>
         </template>
 
-        <!-- ACCIONES -->
+        <!-- ACCIONES SOLO ADMIN -->
         <template #body-cell-actions="props">
           <q-td :props="props" class="text-center">
-            <div class="acciones">
+            <div v-if="isAdmin" class="acciones">
               <q-btn
                 round
                 unelevated
@@ -208,13 +228,24 @@
                 <q-tooltip>Eliminar</q-tooltip>
               </q-btn>
             </div>
+
+            <q-badge
+              v-else
+              rounded
+              color="grey-4"
+              text-color="grey-8"
+              class="estado-badge"
+            >
+              Solo lectura
+            </q-badge>
           </q-td>
         </template>
       </q-table>
     </q-card>
 
-    <!-- MODAL NUEVO / EDITAR -->
+    <!-- MODAL NUEVO / EDITAR SOLO ADMIN -->
     <q-dialog
+      v-if="isAdmin"
       v-model="dialog"
       persistent
       :maximized="$q.screen.lt.sm"
@@ -479,41 +510,82 @@ const form = ref({
   activo: true
 })
 
-const columns = [
-  {
-    name: 'servicio',
-    label: 'Servicio',
-    field: 'servicio',
-    align: 'left',
-    sortable: true
-  },
-  {
-    name: 'combo',
-    label: 'Combo',
-    field: 'combo',
-    align: 'left',
-    sortable: true
-  },
-  {
-    name: 'precio',
-    label: 'Precio',
-    field: 'precio',
-    align: 'left',
-    sortable: true
-  },
-  {
-    name: 'activo',
-    label: 'Estado',
-    field: 'activo',
-    align: 'center'
-  },
-  {
-    name: 'actions',
-    label: 'Acciones',
-    field: 'actions',
-    align: 'center'
+const usuarioActual = computed(() => {
+  try {
+    if (typeof window === 'undefined') {
+      return null
+    }
+
+    const user = localStorage.getItem('glamur_user')
+
+    if (!user) {
+      return null
+    }
+
+    return JSON.parse(user)
+  } catch {
+    return null
   }
-]
+})
+
+const rolUsuario = computed(() => {
+  const rol = String(usuarioActual.value?.rol || 'admin').toLowerCase().trim()
+
+  if (rol === 'administrador') {
+    return 'admin'
+  }
+
+  if (rol === 'empleado') {
+    return 'empleado'
+  }
+
+  return 'admin'
+})
+
+const isAdmin = computed(() => rolUsuario.value === 'admin')
+
+const columns = computed(() => {
+  const baseColumns = [
+    {
+      name: 'servicio',
+      label: 'Servicio',
+      field: 'servicio',
+      align: 'left',
+      sortable: true
+    },
+    {
+      name: 'combo',
+      label: 'Combo',
+      field: 'combo',
+      align: 'left',
+      sortable: true
+    },
+    {
+      name: 'precio',
+      label: 'Precio',
+      field: 'precio',
+      align: 'left',
+      sortable: true
+    },
+    {
+      name: 'activo',
+      label: 'Estado',
+      field: 'activo',
+      align: 'center'
+    }
+  ]
+
+  if (isAdmin.value) {
+    baseColumns.push({
+      name: 'actions',
+      label: 'Acciones',
+      field: 'actions',
+      align: 'center'
+    })
+  }
+
+  return baseColumns
+})
 
 const categoriaActual = computed(() => {
   return categoriasUI.find(cat => cat.value === selectedCategoria.value) || categoriasUI[0]
@@ -680,6 +752,19 @@ function getErrorMessage(error) {
   return data?.message || data?.error || 'Ocurrió un error'
 }
 
+function validarAdmin(accion = 'realizar esta acción') {
+  if (isAdmin.value) {
+    return true
+  }
+
+  $q.notify({
+    type: 'warning',
+    message: `No tienes permiso para ${accion}.`
+  })
+
+  return false
+}
+
 async function load() {
   loading.value = true
 
@@ -697,6 +782,8 @@ async function load() {
 }
 
 function openDialog(categoria = selectedCategoria.value) {
+  if (!validarAdmin('agregar servicios')) return
+
   const categoriaInicial = categoria || 'CEJAS Y PESTAÑAS'
 
   form.value = {
@@ -712,6 +799,8 @@ function openDialog(categoria = selectedCategoria.value) {
 }
 
 function edit(row) {
+  if (!validarAdmin('editar servicios')) return
+
   const item = normalizarServicioRow(row)
 
   form.value = {
@@ -727,6 +816,8 @@ function edit(row) {
 }
 
 async function save() {
+  if (!validarAdmin('guardar servicios')) return
+
   if (!form.value.servicio) {
     $q.notify({
       type: 'warning',
@@ -798,6 +889,8 @@ async function save() {
 }
 
 function remove(row) {
+  if (!validarAdmin('eliminar servicios')) return
+
   const item = normalizarServicioRow(row)
 
   $q.dialog({
@@ -834,6 +927,8 @@ function remove(row) {
 }
 
 function confirmarCargarBase() {
+  if (!validarAdmin('cargar combos base')) return
+
   $q.dialog({
     title: 'Cargar combos base',
     message: 'Esto registrará o actualizará los combos principales de Cejas y Pestañas.',
@@ -854,6 +949,8 @@ function confirmarCargarBase() {
 }
 
 async function cargarCombosBase() {
+  if (!validarAdmin('cargar combos base')) return
+
   loadingBase.value = true
 
   try {
@@ -918,6 +1015,13 @@ onMounted(load)
   gap: 12px;
   flex-wrap: wrap;
   justify-content: flex-end;
+}
+
+.employee-mode {
+  background: #fff7fb;
+  color: #4b2b55;
+  border: 1px solid rgba(233, 30, 99, 0.16);
+  box-shadow: 0 10px 28px rgba(156, 39, 176, 0.08);
 }
 
 .btn-glamur-white {
