@@ -37,14 +37,26 @@
       class="q-mb-md"
     />
 
-    <!-- MÉTRICAS PRINCIPALES -->
+    <!-- MÉTRICAS PRINCIPALES DINÁMICAS -->
     <div class="row q-col-gutter-md">
       <div
         v-for="card in metricCards"
         :key="card.key"
         class="col-12 col-sm-6 col-md-4 col-lg-3"
       >
-        <q-card class="glamur-card glamur-card-hover metric-card">
+        <q-card
+          class="glamur-card glamur-card-hover metric-card metric-clickable"
+          role="button"
+          tabindex="0"
+          :aria-label="card.tooltip || card.label"
+          @click="accionMetricCard(card)"
+          @keyup.enter="accionMetricCard(card)"
+          @keyup.space.prevent="accionMetricCard(card)"
+        >
+          <q-tooltip>
+            {{ card.tooltip }}
+          </q-tooltip>
+
           <q-card-section>
             <div class="row items-center justify-between no-wrap">
               <div class="metric-content">
@@ -59,9 +71,14 @@
                 <div class="metric-detail">
                   {{ card.detail }}
                 </div>
+
+                <div class="metric-cue">
+                  <q-icon name="touch_app" size="15px" />
+                  {{ card.cta }}
+                </div>
               </div>
 
-              <q-avatar :class="card.avatarClass" size="58px">
+              <q-avatar :class="[card.avatarClass, 'metric-avatar']" size="58px">
                 <q-icon :name="card.icon" size="30px" color="white" />
               </q-avatar>
             </div>
@@ -104,7 +121,18 @@
                 :key="item.key"
                 class="col-12 col-md-4"
               >
-                <div class="status-box" @click="abrirHistorial(item.key)">
+                <div
+                  class="status-box"
+                  role="button"
+                  tabindex="0"
+                  @click="abrirHistorial(item.key)"
+                  @keyup.enter="abrirHistorial(item.key)"
+                  @keyup.space.prevent="abrirHistorial(item.key)"
+                >
+                  <q-tooltip>
+                    Ver citas {{ item.label.toLowerCase() }}
+                  </q-tooltip>
+
                   <div class="row items-center justify-between q-mb-sm">
                     <div class="status-title">
                       <q-icon :name="item.icon" :color="item.color" size="22px" />
@@ -195,8 +223,17 @@
               <div
                 v-for="item in diasChart"
                 :key="item.fecha || item.label"
-                class="bar-row"
+                class="bar-row bar-row-clickable"
+                role="button"
+                tabindex="0"
+                @click="goToCajaDiaria(item.fecha)"
+                @keyup.enter="goToCajaDiaria(item.fecha)"
+                @keyup.space.prevent="goToCajaDiaria(item.fecha)"
               >
+                <q-tooltip>
+                  Ver caja diaria de este día
+                </q-tooltip>
+
                 <div class="bar-label">
                   {{ item.label }}
                 </div>
@@ -241,8 +278,17 @@
               <div
                 v-for="servicio in serviciosChart"
                 :key="servicio.servicio"
-                class="service-card"
+                class="service-card service-card-clickable"
+                role="button"
+                tabindex="0"
+                @click="goTo('/servicios')"
+                @keyup.enter="goTo('/servicios')"
+                @keyup.space.prevent="goTo('/servicios')"
               >
+                <q-tooltip>
+                  Ver servicios registrados
+                </q-tooltip>
+
                 <div class="row items-center justify-between q-mb-xs no-wrap">
                   <div class="service-name ellipsis">
                     {{ servicio.servicio }}
@@ -291,8 +337,17 @@
               <div
                 v-for="mes in mesesChart"
                 :key="mes.label"
-                class="month-card"
+                class="month-card month-card-clickable"
+                role="button"
+                tabindex="0"
+                @click="goTo('/pagos')"
+                @keyup.enter="goTo('/pagos')"
+                @keyup.space.prevent="goTo('/pagos')"
               >
+                <q-tooltip>
+                  Ver pagos registrados
+                </q-tooltip>
+
                 <div class="month-label">
                   {{ mes.label }}
                 </div>
@@ -349,8 +404,14 @@
             <q-item
               v-for="cita in ultimasCitas"
               :key="cita.id"
-              class="latest-item"
+              class="latest-item latest-item-clickable"
+              clickable
+              @click="goTo('/citas')"
             >
+              <q-tooltip>
+                Ver módulo de citas
+              </q-tooltip>
+
               <q-item-section avatar>
                 <q-avatar :color="statusOf(cita).color" text-color="white">
                   <q-icon :name="statusOf(cita).icon" />
@@ -468,6 +529,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useQuasar } from 'quasar'
+import { useRouter } from 'vue-router'
 import { api } from 'boot/axios'
 import {
   barPercent,
@@ -486,6 +548,8 @@ defineOptions({
 })
 
 const $q = useQuasar()
+const router = useRouter()
+
 const loading = ref(false)
 const historialDialog = ref(false)
 const filtroHistorial = ref('todas')
@@ -553,14 +617,119 @@ const quickActions = [
 ]
 
 const metricCards = computed(() => [
-  card('citas_hoy', 'Citas hoy', data.value.citas_hoy, 'Programadas para hoy', 'today', 'bg-pink-7'),
-  card('total', 'Total citas', data.value.total, 'Citas activas registradas', 'event', 'bg-purple-7'),
-  card('clientes', 'Clientes', data.value.clientes_total, 'Clientes activos', 'people', 'bg-blue-7'),
-  card('ingreso_dia', 'Ingresos hoy', currency(data.value.ingreso_dia), 'Pagos del día', 'payments', 'bg-teal-7'),
-  card('ingreso_mes', 'Ingresos mes', currency(data.value.ingreso_mes), 'Mes actual', 'calendar_month', 'bg-indigo-7'),
-  card('ingreso_anio', 'Ingresos año', currency(data.value.ingreso_anio), 'Año actual', 'trending_up', 'bg-deep-purple-7'),
-  card('pendientes', 'Pendientes', data.value.pendientes, 'Por atender', 'schedule', 'bg-orange-7'),
-  card('concluidas', 'Concluidas', data.value.concluidas, 'Finalizadas', 'check_circle', 'bg-green-7')
+  card(
+    'citas_hoy',
+    'Citas hoy',
+    data.value.citas_hoy,
+    'Programadas para hoy',
+    'today',
+    'bg-pink-7',
+    {
+      to: '/calendario',
+      tooltip: 'Abrir calendario para revisar las citas del día',
+      cta: 'Ver calendario'
+    }
+  ),
+
+  card(
+    'total',
+    'Total citas',
+    data.value.total,
+    'Citas activas registradas',
+    'event',
+    'bg-purple-7',
+    {
+      to: '/citas',
+      tooltip: 'Abrir módulo de citas',
+      cta: 'Ver citas'
+    }
+  ),
+
+  card(
+    'clientes',
+    'Clientes',
+    data.value.clientes_total,
+    'Clientes activos',
+    'people',
+    'bg-blue-7',
+    {
+      to: '/clientes',
+      tooltip: 'Abrir módulo de clientes',
+      cta: 'Ver clientes'
+    }
+  ),
+
+  card(
+    'ingreso_dia',
+    'Ingresos hoy',
+    currency(data.value.ingreso_dia),
+    'Pagos del día',
+    'payments',
+    'bg-teal-7',
+    {
+      to: '/caja-diaria',
+      tooltip: 'Abrir caja diaria',
+      cta: 'Ver caja'
+    }
+  ),
+
+  card(
+    'ingreso_mes',
+    'Ingresos mes',
+    currency(data.value.ingreso_mes),
+    'Mes actual',
+    'calendar_month',
+    'bg-indigo-7',
+    {
+      to: '/pagos',
+      tooltip: 'Abrir pagos registrados',
+      cta: 'Ver pagos'
+    }
+  ),
+
+  card(
+    'ingreso_anio',
+    'Ingresos año',
+    currency(data.value.ingreso_anio),
+    'Año actual',
+    'trending_up',
+    'bg-deep-purple-7',
+    {
+      to: '/pagos',
+      tooltip: 'Abrir resumen de pagos',
+      cta: 'Ver ingresos'
+    }
+  ),
+
+  card(
+    'pendientes',
+    'Pendientes',
+    data.value.pendientes,
+    'Por atender',
+    'schedule',
+    'bg-orange-7',
+    {
+      action: 'historial',
+      filter: 'pendiente',
+      tooltip: 'Ver citas pendientes en el historial rápido',
+      cta: 'Ver pendientes'
+    }
+  ),
+
+  card(
+    'concluidas',
+    'Concluidas',
+    data.value.concluidas,
+    'Finalizadas',
+    'check_circle',
+    'bg-green-7',
+    {
+      action: 'historial',
+      filter: 'concluida',
+      tooltip: 'Ver citas concluidas en el historial rápido',
+      cta: 'Ver concluidas'
+    }
+  )
 ])
 
 const statusItems = computed(() => {
@@ -590,8 +759,20 @@ const historialFiltrado = computed(() => {
     .sort((a, b) => `${b.fecha || ''} ${b.hora || ''}`.localeCompare(`${a.fecha || ''} ${a.hora || ''}`))
 })
 
-function card(key, label, value, detail, icon, avatarClass) {
-  return { key, label, value, detail, icon, avatarClass }
+function card(key, label, value, detail, icon, avatarClass, options = {}) {
+  return {
+    key,
+    label,
+    value,
+    detail,
+    icon,
+    avatarClass,
+    tooltip: options.tooltip || `Abrir ${label}`,
+    cta: options.cta || 'Ver detalle',
+    to: options.to || null,
+    action: options.action || null,
+    filter: options.filter || null
+  }
 }
 
 function status(key, label, value, total, icon, color) {
@@ -679,6 +860,44 @@ function abrirHistorial(filtro = 'todas') {
   historialDialog.value = true
 }
 
+function accionMetricCard(cardItem) {
+  if (!cardItem) {
+    return
+  }
+
+  if (cardItem.action === 'historial') {
+    abrirHistorial(cardItem.filter || 'todas')
+    return
+  }
+
+  if (cardItem.to) {
+    goTo(cardItem.to)
+  }
+}
+
+function goTo(to) {
+  if (!to) {
+    return
+  }
+
+  router.push(to)
+}
+
+function goToCajaDiaria(fecha = null) {
+  if (fecha) {
+    router.push({
+      path: '/caja-diaria',
+      query: {
+        fecha
+      }
+    })
+
+    return
+  }
+
+  router.push('/caja-diaria')
+}
+
 function normalizeDashboard(payload) {
   return {
     total: Number(payload?.total || 0),
@@ -745,6 +964,40 @@ onMounted(load)
 
 .metric-card {
   min-height: 138px;
+  outline: none;
+}
+
+.metric-clickable {
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.metric-clickable::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(233, 30, 99, 0.08), rgba(156, 39, 176, 0.07));
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.metric-clickable:hover::after {
+  opacity: 1;
+}
+
+.metric-clickable:focus-visible {
+  box-shadow: 0 0 0 3px rgba(233, 30, 99, 0.28);
+}
+
+.metric-clickable:hover .metric-avatar {
+  transform: scale(1.08) rotate(-4deg);
+  box-shadow: 0 14px 28px rgba(156, 39, 176, 0.24);
+}
+
+.metric-avatar {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .metric-content {
@@ -772,18 +1025,37 @@ onMounted(load)
   margin-top: 4px;
 }
 
+.metric-cue {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #c2185b;
+  font-size: 11px;
+  font-weight: 900;
+  margin-top: 8px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(233, 30, 99, 0.08);
+}
+
 .status-box {
   cursor: pointer;
   padding: 16px;
   border-radius: 20px;
   background: #fff7fb;
   border: 1px solid rgba(233, 30, 99, 0.10);
-  transition: transform 0.2s ease, background 0.2s ease;
+  transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+  outline: none;
 }
 
 .status-box:hover {
   transform: translateY(-2px);
   background: #fff0f6;
+  box-shadow: 0 12px 24px rgba(233, 30, 99, 0.12);
+}
+
+.status-box:focus-visible {
+  box-shadow: 0 0 0 3px rgba(233, 30, 99, 0.28);
 }
 
 .status-title {
@@ -849,6 +1121,23 @@ onMounted(load)
   grid-template-columns: 52px 1fr 98px;
   align-items: center;
   gap: 10px;
+  outline: none;
+}
+
+.bar-row-clickable {
+  cursor: pointer;
+  border-radius: 14px;
+  padding: 4px 6px;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.bar-row-clickable:hover {
+  background: #fff0f6;
+  transform: translateX(2px);
+}
+
+.bar-row-clickable:focus-visible {
+  box-shadow: 0 0 0 3px rgba(233, 30, 99, 0.22);
 }
 
 .bar-label {
@@ -893,6 +1182,27 @@ onMounted(load)
   background: #fff7fb;
   border: 1px solid rgba(233, 30, 99, 0.10);
   padding: 12px;
+  outline: none;
+}
+
+.service-card-clickable,
+.month-card-clickable,
+.latest-item-clickable {
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.service-card-clickable:hover,
+.month-card-clickable:hover,
+.latest-item-clickable:hover {
+  transform: translateY(-2px);
+  background: #fff0f6;
+  box-shadow: 0 12px 24px rgba(233, 30, 99, 0.12);
+}
+
+.service-card-clickable:focus-visible,
+.month-card-clickable:focus-visible {
+  box-shadow: 0 0 0 3px rgba(233, 30, 99, 0.22);
 }
 
 .service-name,
