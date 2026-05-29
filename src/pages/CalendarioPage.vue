@@ -29,6 +29,15 @@
 
         <q-btn
           class="btn-white"
+          icon="point_of_sale"
+          label="Caja hoy"
+          unelevated
+          rounded
+          @click="irCajaHoy"
+        />
+
+        <q-btn
+          class="btn-white"
           icon="picture_as_pdf"
           label="Extracto PDF"
           :loading="descargandoPdf"
@@ -56,14 +65,25 @@
       class="q-mb-md"
     />
 
-    <!-- RESUMEN -->
+    <!-- RESUMEN DINÁMICO -->
     <div class="row q-col-gutter-md q-mb-md">
       <div
         v-for="card in resumenCards"
         :key="card.titulo"
         class="col-12 col-sm-6 col-md-4 col-lg-2"
       >
-        <q-card class="summary-card">
+        <q-card
+          class="summary-card summary-clickable"
+          role="button"
+          tabindex="0"
+          @click="accionResumen(card)"
+          @keyup.enter="accionResumen(card)"
+          @keyup.space.prevent="accionResumen(card)"
+        >
+          <q-tooltip>
+            {{ card.tooltip }}
+          </q-tooltip>
+
           <q-card-section>
             <div class="row items-center justify-between no-wrap">
               <div class="summary-info">
@@ -78,9 +98,14 @@
                 <div class="summary-detail">
                   {{ card.detalle }}
                 </div>
+
+                <div class="summary-action">
+                  <q-icon name="touch_app" size="14px" />
+                  {{ card.accionTexto }}
+                </div>
               </div>
 
-              <q-avatar :class="card.clase" size="48px">
+              <q-avatar :class="[card.clase, 'summary-avatar']" size="48px">
                 <q-icon :name="card.icono" color="white" size="25px" />
               </q-avatar>
             </div>
@@ -248,10 +273,18 @@
             <div
               v-for="dia in diasDelMes"
               :key="dia.fecha"
-              class="day-box"
+              class="day-box dynamic-day"
               :class="[claseDia(dia), { 'today-day': dia.fecha === hoy }]"
+              role="button"
+              tabindex="0"
               @click="seleccionarDia(dia.fecha)"
+              @keyup.enter="seleccionarDia(dia.fecha)"
+              @keyup.space.prevent="seleccionarDia(dia.fecha)"
             >
+              <q-tooltip>
+                {{ tooltipDia(dia) }}
+              </q-tooltip>
+
               <div class="day-header">
                 <div class="day-number">
                   {{ dia.dia }}
@@ -281,6 +314,7 @@
                   <span
                     v-if="resumenLista(dia.citas).concluidas > 0"
                     class="mini mini-green"
+                    title="Concluidas"
                   >
                     {{ resumenLista(dia.citas).concluidas }}
                   </span>
@@ -288,6 +322,7 @@
                   <span
                     v-if="resumenLista(dia.citas).pendientes > 0"
                     class="mini mini-yellow"
+                    title="Pendientes"
                   >
                     {{ resumenLista(dia.citas).pendientes }}
                   </span>
@@ -295,6 +330,7 @@
                   <span
                     v-if="resumenLista(dia.citas).canceladas > 0"
                     class="mini mini-red"
+                    title="Canceladas"
                   >
                     {{ resumenLista(dia.citas).canceladas }}
                   </span>
@@ -307,6 +343,11 @@
                 <div class="day-paid">
                   Pagado: Bs {{ money(totalPagadoLista(dia.citas)) }}
                 </div>
+
+                <div class="day-cue">
+                  <q-icon name="touch_app" size="13px" />
+                  Ver detalle
+                </div>
               </div>
 
               <div
@@ -314,6 +355,10 @@
                 class="free-day"
               >
                 Libre
+                <div class="day-cue">
+                  <q-icon name="add_circle" size="13px" />
+                  Nueva cita
+                </div>
               </div>
             </div>
 
@@ -358,20 +403,73 @@
         <q-card-section class="dialog-body">
 
           <div class="day-panel q-mb-md">
-            <div class="day-panel-item">
+            <div
+              class="day-panel-item panel-clickable"
+              role="button"
+              tabindex="0"
+              @click="verCitasDelDia"
+              @keyup.enter="verCitasDelDia"
+              @keyup.space.prevent="verCitasDelDia"
+            >
+              <q-tooltip>Ver citas de este día</q-tooltip>
               <div class="panel-label">Citas</div>
               <div class="panel-value">{{ citasDia.length }}</div>
             </div>
 
-            <div class="day-panel-item">
+            <div
+              class="day-panel-item panel-clickable"
+              role="button"
+              tabindex="0"
+              @click="irCajaDia"
+              @keyup.enter="irCajaDia"
+              @keyup.space.prevent="irCajaDia"
+            >
+              <q-tooltip>Ver caja diaria de este día</q-tooltip>
               <div class="panel-label">Total</div>
               <div class="panel-value green">Bs {{ money(totalLista(citasDia)) }}</div>
             </div>
 
-            <div class="day-panel-item">
+            <div
+              class="day-panel-item panel-clickable"
+              role="button"
+              tabindex="0"
+              @click="verPagos"
+              @keyup.enter="verPagos"
+              @keyup.space.prevent="verPagos"
+            >
+              <q-tooltip>Ver pagos registrados</q-tooltip>
               <div class="panel-label">Pagado</div>
               <div class="panel-value green">Bs {{ money(totalPagadoLista(citasDia)) }}</div>
             </div>
+          </div>
+
+          <div class="quick-day-actions q-mb-md">
+            <q-btn
+              outline
+              color="pink-7"
+              icon="event"
+              label="Ver citas"
+              no-caps
+              @click="verCitasDelDia"
+            />
+
+            <q-btn
+              outline
+              color="green-7"
+              icon="point_of_sale"
+              label="Caja del día"
+              no-caps
+              @click="irCajaDia"
+            />
+
+            <q-btn
+              outline
+              color="purple-7"
+              icon="payments"
+              label="Pagos"
+              no-caps
+              @click="verPagos"
+            />
           </div>
 
           <div
@@ -397,8 +495,14 @@
             <q-item
               v-for="cita in citasDia"
               :key="cita.id"
-              class="cita-item"
+              class="cita-item dynamic-cita"
+              clickable
+              @click="verCita(cita)"
             >
+              <q-tooltip>
+                Abrir módulo de citas con esta fecha
+              </q-tooltip>
+
               <q-item-section avatar>
                 <q-avatar :color="colorEstado(cita.estado)" text-color="white">
                   <q-icon :name="iconEstado(cita.estado)" />
@@ -457,6 +561,14 @@
             icon="event"
             label="Ver citas"
             @click="verCitasDelDia"
+          />
+
+          <q-btn
+            outline
+            color="green-7"
+            icon="point_of_sale"
+            label="Caja"
+            @click="irCajaDia"
           />
 
           <q-btn
@@ -642,42 +754,66 @@ const resumenCards = computed(() => [
     valor: citasMes.value.length,
     detalle: `${citasMesFiltradas.value.length} visibles`,
     icono: 'calendar_month',
-    clase: 'bg-pink-7'
+    clase: 'bg-pink-7',
+    tipo: 'ruta',
+    ruta: '/citas',
+    accionTexto: 'Ver citas',
+    tooltip: 'Ir al módulo de citas'
   },
   {
     titulo: 'Pendientes',
     valor: pendientesMes.value,
     detalle: 'Citas por atender',
     icono: 'schedule',
-    clase: 'bg-orange-7'
+    clase: 'bg-orange-7',
+    tipo: 'estado',
+    estado: 'pendiente',
+    accionTexto: 'Filtrar',
+    tooltip: 'Filtrar calendario por citas pendientes'
   },
   {
     titulo: 'Concluidas',
     valor: concluidasMes.value,
     detalle: 'Citas finalizadas',
     icono: 'check_circle',
-    clase: 'bg-green-7'
+    clase: 'bg-green-7',
+    tipo: 'estado',
+    estado: 'concluida',
+    accionTexto: 'Filtrar',
+    tooltip: 'Filtrar calendario por citas concluidas'
   },
   {
     titulo: 'Canceladas',
     valor: canceladasMes.value,
     detalle: 'Citas canceladas',
     icono: 'cancel',
-    clase: 'bg-red-7'
+    clase: 'bg-red-7',
+    tipo: 'estado',
+    estado: 'cancelada',
+    accionTexto: 'Filtrar',
+    tooltip: 'Filtrar calendario por citas canceladas'
   },
   {
     titulo: 'Pagadas',
     valor: pagadasMes.value,
     detalle: `Bs ${money(totalPagadoMes.value)}`,
     icono: 'payments',
-    clase: 'bg-teal-7'
+    clase: 'bg-teal-7',
+    tipo: 'pago',
+    pago: 'pagado',
+    accionTexto: 'Filtrar pagos',
+    tooltip: 'Mostrar solo citas pagadas'
   },
   {
     titulo: 'Total mes',
     valor: `Bs ${money(totalMes.value)}`,
     detalle: 'Monto programado',
     icono: 'account_balance_wallet',
-    clase: 'bg-purple-7'
+    clase: 'bg-purple-7',
+    tipo: 'ruta',
+    ruta: '/caja-diaria',
+    accionTexto: 'Ver caja',
+    tooltip: 'Ir a caja diaria'
   }
 ])
 
@@ -707,6 +843,49 @@ async function load() {
     })
   } finally {
     loading.value = false
+  }
+}
+
+function accionResumen(card) {
+  if (!card) return
+
+  if (card.tipo === 'estado') {
+    filtroEstado.value = card.estado || 'todos'
+    filtroPago.value = 'todos'
+
+    $q.notify({
+      type: 'positive',
+      message: `Filtro aplicado: ${card.titulo}`
+    })
+
+    return
+  }
+
+  if (card.tipo === 'pago') {
+    filtroPago.value = card.pago || 'todos'
+    filtroEstado.value = 'todos'
+
+    $q.notify({
+      type: 'positive',
+      message: `Filtro aplicado: ${card.titulo}`
+    })
+
+    return
+  }
+
+  if (card.tipo === 'ruta') {
+    if (card.ruta === '/caja-diaria') {
+      router.push({
+        path: '/caja-diaria',
+        query: {
+          fecha: hoy.value
+        }
+      })
+
+      return
+    }
+
+    router.push(card.ruta)
   }
 }
 
@@ -867,6 +1046,14 @@ function colorPago(cita) {
   return esPagado(cita) ? 'green' : 'orange'
 }
 
+function tooltipDia(dia) {
+  if (dia.citas.length === 0) {
+    return 'Día libre. Clic para crear o revisar este día.'
+  }
+
+  return `Ver detalle de ${dia.citas.length} cita(s)`
+}
+
 function seleccionarDia(fechaSel) {
   diaSeleccionado.value = fechaSel
   dialog.value = true
@@ -886,6 +1073,26 @@ function irHoy() {
   dialog.value = true
 }
 
+function irCajaHoy() {
+  router.push({
+    path: '/caja-diaria',
+    query: {
+      fecha: hoy.value
+    }
+  })
+}
+
+function irCajaDia() {
+  dialog.value = false
+
+  router.push({
+    path: '/caja-diaria',
+    query: {
+      fecha: diaSeleccionado.value || hoy.value
+    }
+  })
+}
+
 function nuevaCita() {
   dialog.value = false
 
@@ -902,6 +1109,29 @@ function verCitasDelDia() {
 
   router.push({
     path: '/citas',
+    query: {
+      fecha: diaSeleccionado.value || hoy.value
+    }
+  })
+}
+
+function verCita(cita) {
+  dialog.value = false
+
+  router.push({
+    path: '/citas',
+    query: {
+      fecha: fechaISO(cita?.fecha) || diaSeleccionado.value || hoy.value,
+      cita_id: cita?.id || ''
+    }
+  })
+}
+
+function verPagos() {
+  dialog.value = false
+
+  router.push({
+    path: '/pagos',
     query: {
       fecha: diaSeleccionado.value || hoy.value
     }
@@ -1074,11 +1304,45 @@ onMounted(() => {
   box-shadow: 0 14px 35px rgba(156, 39, 176, 0.12);
   border: 1px solid rgba(233, 30, 99, 0.08);
   transition: all 0.25s ease;
+  outline: none;
 }
 
 .summary-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 18px 42px rgba(233, 30, 99, 0.18);
+}
+
+.summary-clickable {
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.summary-clickable::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: linear-gradient(135deg, rgba(233, 30, 99, 0.08), rgba(156, 39, 176, 0.08));
+  transition: opacity 0.22s ease;
+  pointer-events: none;
+}
+
+.summary-clickable:hover::after {
+  opacity: 1;
+}
+
+.summary-clickable:focus-visible {
+  box-shadow: 0 0 0 3px rgba(233, 30, 99, 0.28);
+}
+
+.summary-clickable:hover .summary-avatar {
+  transform: scale(1.08) rotate(-4deg);
+  box-shadow: 0 12px 25px rgba(156, 39, 176, 0.24);
+}
+
+.summary-avatar {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .summary-info {
@@ -1103,6 +1367,19 @@ onMounted(() => {
   color: #888;
   font-size: 11px;
   margin-top: 2px;
+}
+
+.summary-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 8px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  color: #c2185b;
+  background: rgba(233, 30, 99, 0.08);
+  font-size: 11px;
+  font-weight: 900;
 }
 
 /* FILTROS */
@@ -1247,11 +1524,16 @@ onMounted(() => {
   background: white;
   transition: all 0.22s ease;
   box-shadow: 0 8px 20px rgba(156, 39, 176, 0.06);
+  outline: none;
 }
 
 .day-box:hover {
   transform: translateY(-3px);
   box-shadow: 0 14px 28px rgba(233, 30, 99, 0.16);
+}
+
+.dynamic-day:focus-visible {
+  box-shadow: 0 0 0 3px rgba(233, 30, 99, 0.28);
 }
 
 .empty-day {
@@ -1357,6 +1639,16 @@ onMounted(() => {
   color: #00695c;
 }
 
+.day-cue {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  color: #c2185b;
+  font-size: 11px;
+  font-weight: 900;
+}
+
 .free-day {
   margin-top: 12px;
   color: #999;
@@ -1405,6 +1697,22 @@ onMounted(() => {
   border: 1px solid rgba(233, 30, 99, 0.10);
   border-radius: 18px;
   padding: 14px;
+  outline: none;
+}
+
+.panel-clickable {
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.panel-clickable:hover {
+  transform: translateY(-2px);
+  background: #fff0f6;
+  box-shadow: 0 12px 24px rgba(233, 30, 99, 0.12);
+}
+
+.panel-clickable:focus-visible {
+  box-shadow: 0 0 0 3px rgba(233, 30, 99, 0.24);
 }
 
 .panel-label {
@@ -1421,6 +1729,12 @@ onMounted(() => {
 
 .panel-value.green {
   color: #2e7d32;
+}
+
+.quick-day-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .empty-box {
@@ -1441,6 +1755,15 @@ onMounted(() => {
   margin-bottom: 8px;
   background: #fff7fb;
   border: 1px solid rgba(233, 30, 99, 0.08);
+}
+
+.dynamic-cita {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dynamic-cita:hover {
+  transform: translateX(3px);
+  box-shadow: 0 12px 24px rgba(233, 30, 99, 0.10);
 }
 
 .cita-title {
@@ -1550,6 +1873,10 @@ onMounted(() => {
 
   .day-panel {
     grid-template-columns: 1fr;
+  }
+
+  .quick-day-actions .q-btn {
+    width: 100%;
   }
 
   .cita-item {
