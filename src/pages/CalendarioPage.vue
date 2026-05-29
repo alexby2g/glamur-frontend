@@ -590,6 +590,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { api } from 'boot/axios'
+import { guardarYAbrirPdf } from 'src/utils/pdfApp'
 
 defineOptions({
   name: 'CalendarioPage'
@@ -825,6 +826,27 @@ function getErrorMessage(error) {
   }
 
   return data?.message || data?.error || 'Ocurrió un error'
+}
+
+async function getBlobErrorMessage(error, fallback = 'No se pudo generar el extracto PDF') {
+  const blob = error?.response?.data
+
+  if (blob instanceof Blob) {
+    const texto = await blob.text()
+
+    if (!texto) {
+      return fallback
+    }
+
+    try {
+      const json = JSON.parse(texto)
+      return json?.message || json?.error || fallback
+    } catch {
+      return texto || fallback
+    }
+  }
+
+  return getErrorMessage(error) || fallback
 }
 
 async function load() {
@@ -1189,32 +1211,49 @@ async function descargarExtractoPDF() {
         anio: anio.value,
         mes: mesNumero.value
       },
-      responseType: 'blob'
+      responseType: 'blob',
+      headers: {
+        Accept: 'application/pdf'
+      }
     })
 
-    const blob = new Blob([response.data], {
-      type: 'application/pdf'
-    })
+    const contentType = String(response.headers?.['content-type'] || '').toLowerCase()
 
-    const url = window.URL.createObjectURL(blob)
+    const blob = response.data instanceof Blob
+      ? response.data
+      : new Blob([response.data], {
+        type: contentType || 'application/pdf'
+      })
 
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `extracto_glamur_${anio.value}_${String(mesNumero.value).padStart(2, '0')}.pdf`
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
+    if (contentType && !contentType.includes('application/pdf') && !contentType.includes('application/octet-stream')) {
+      const texto = await blob.text()
 
-    window.URL.revokeObjectURL(url)
+      let mensaje = 'No se pudo generar el extracto PDF.'
+
+      try {
+        const json = JSON.parse(texto)
+        mensaje = json?.message || json?.error || mensaje
+      } catch {
+        mensaje = texto || mensaje
+      }
+
+      throw new Error(mensaje)
+    }
+
+    const nombreArchivo = `extracto_aurea_${anio.value}_${String(mesNumero.value).padStart(2, '0')}.pdf`
+
+    await guardarYAbrirPdf(blob, nombreArchivo)
 
     $q.notify({
       type: 'positive',
-      message: 'Extracto PDF generado correctamente'
+      message: 'Extracto PDF generado y abierto correctamente'
     })
   } catch (error) {
+    const mensaje = error?.message || await getBlobErrorMessage(error, 'No se pudo generar el extracto PDF')
+
     $q.notify({
       type: 'negative',
-      message: getErrorMessage(error)
+      message: mensaje
     })
   } finally {
     descargandoPdf.value = false
