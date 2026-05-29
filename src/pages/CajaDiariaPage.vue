@@ -381,6 +381,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useQuasar } from 'quasar'
 import { api } from 'boot/axios'
+import { guardarYAbrirPdf } from 'src/utils/pdfApp'
 
 defineOptions({
   name: 'CajaDiariaPage'
@@ -796,25 +797,18 @@ async function descargarPdf() {
       type: 'application/pdf'
     })
 
-    const url = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
+    const nombreArchivo = `caja_diaria_aurea_${fecha.value}.pdf`
 
-    link.href = url
-    link.download = `caja_diaria_${fecha.value}.pdf`
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-
-    window.URL.revokeObjectURL(url)
+    await guardarYAbrirPdf(blob, nombreArchivo)
 
     $q.notify({
       type: 'positive',
-      message: 'PDF de caja diaria descargado'
+      message: 'PDF de caja diaria generado y abierto correctamente'
     })
   } catch (error) {
     $q.notify({
       type: 'negative',
-      message: getErrorMessage(error, 'No se pudo descargar el PDF')
+      message: getErrorMessage(error, 'No se pudo generar el PDF')
     })
   } finally {
     downloadingPdf.value = false

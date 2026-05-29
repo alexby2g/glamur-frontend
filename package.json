@@ -19,6 +19,8 @@
         "@capacitor/android": "^8.3.4",
         "@capacitor/cli": "^8.3.4",
         "@capacitor/core": "^8.3.4",
+        "@capacitor/file-viewer": "^2.0.1",
+        "@capacitor/filesystem": "^8.1.2",
         "@capacitor/local-notifications": "^8.2.0",
         "@quasar/extras": "^1.16.4",
         "axios": "^1.15.2",
