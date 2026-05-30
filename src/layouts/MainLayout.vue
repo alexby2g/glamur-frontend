@@ -145,7 +145,7 @@
           </q-menu>
         </q-btn>
 
-        <!-- USUARIO / CERRAR SESIÓN -->
+        <!-- USUARIO / PERFIL / CERRAR SESIÓN -->
         <q-btn-dropdown
           flat
           dense
@@ -157,8 +157,23 @@
           <template #label>
             <div class="row items-center no-wrap user-label">
 
-              <q-avatar size="36px" class="user-avatar">
-                <q-icon name="person" color="white" size="21px" />
+              <q-avatar
+                size="36px"
+                class="user-avatar"
+                :class="{ 'has-user-photo': tieneFotoPerfil }"
+              >
+                <img
+                  v-if="tieneFotoPerfil"
+                  :src="usuarioFotoPerfil"
+                  :alt="usuarioNombre"
+                />
+
+                <q-icon
+                  v-else
+                  name="person"
+                  color="white"
+                  size="21px"
+                />
               </q-avatar>
 
               <div class="user-info">
@@ -178,8 +193,22 @@
 
             <q-item>
               <q-item-section avatar>
-                <q-avatar class="menu-user-avatar">
-                  <q-icon name="person" color="white" />
+                <q-avatar
+                  size="48px"
+                  class="menu-user-avatar"
+                  :class="{ 'has-user-photo': tieneFotoPerfil }"
+                >
+                  <img
+                    v-if="tieneFotoPerfil"
+                    :src="usuarioFotoPerfil"
+                    :alt="usuarioNombre"
+                  />
+
+                  <q-icon
+                    v-else
+                    name="person"
+                    color="white"
+                  />
                 </q-avatar>
               </q-item-section>
 
@@ -191,8 +220,67 @@
                 <q-item-label caption>
                   {{ usuarioRolTexto }} · Sesión activa
                 </q-item-label>
+
+                <q-item-label caption class="profile-status">
+                  {{ tieneFotoPerfil ? 'Foto de perfil configurada' : 'Sin foto de perfil' }}
+                </q-item-label>
               </q-item-section>
             </q-item>
+
+            <q-separator />
+
+            <q-item
+              clickable
+              :disable="subiendoFotoPerfil"
+              @click="seleccionarArchivoFoto"
+            >
+              <q-item-section avatar>
+                <q-icon name="photo_camera" color="pink-7" />
+              </q-item-section>
+
+              <q-item-section>
+                <q-item-label class="text-weight-bold">
+                  Cambiar foto de perfil
+                </q-item-label>
+
+                <q-item-label caption>
+                  JPG, PNG o WEBP. Se comprimirá automáticamente.
+                </q-item-label>
+              </q-item-section>
+
+              <q-item-section side v-if="subiendoFotoPerfil">
+                <q-spinner color="pink" size="22px" />
+              </q-item-section>
+            </q-item>
+
+            <q-item
+              v-if="tieneFotoPerfil"
+              clickable
+              :disable="subiendoFotoPerfil"
+              @click="confirmarEliminarFotoPerfil"
+            >
+              <q-item-section avatar>
+                <q-icon name="delete" color="negative" />
+              </q-item-section>
+
+              <q-item-section>
+                <q-item-label class="text-negative text-weight-bold">
+                  Eliminar foto
+                </q-item-label>
+
+                <q-item-label caption>
+                  Volver al avatar por defecto.
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+
+            <input
+              ref="fotoPerfilInput"
+              type="file"
+              accept="image/png,image/jpeg,image/jpg,image/webp"
+              class="hidden-file-input"
+              @change="procesarFotoPerfil"
+            />
 
             <q-separator />
 
@@ -335,6 +423,8 @@ export default {
       usuarioNombre: 'Administrador',
       usuarioRol: 'admin',
       usuarioEmpleadoId: null,
+      usuarioFotoPerfil: '',
+      subiendoFotoPerfil: false,
 
       configuracion: {
         ...valoresBaseConfiguracion
@@ -462,6 +552,10 @@ export default {
       return 'Usuario'
     },
 
+    tieneFotoPerfil () {
+      return Boolean(this.usuarioFotoPerfil)
+    },
+
     menuFiltrado () {
       return this.menu.filter((item) => {
         if (!item.roles || item.roles.length === 0) {
@@ -543,6 +637,28 @@ export default {
 
       this.usuarioRol = this.normalizarRol(usuario?.rol || 'admin')
       this.usuarioEmpleadoId = usuario?.empleado_id || null
+      this.usuarioFotoPerfil = usuario?.foto_perfil || ''
+    },
+
+    actualizarUsuarioLocal (usuario = {}) {
+      const usuarioActual = this.obtenerUsuarioLocal()
+
+      const nuevoUsuario = {
+        ...usuarioActual,
+        ...usuario
+      }
+
+      localStorage.setItem('glamur_user', JSON.stringify(nuevoUsuario))
+      this.aplicarUsuario(nuevoUsuario)
+    },
+
+    obtenerUsuarioLocal () {
+      try {
+        const usuarioGuardado = localStorage.getItem('glamur_user')
+        return usuarioGuardado ? JSON.parse(usuarioGuardado) : {}
+      } catch {
+        return {}
+      }
     },
 
     redirigirSiRutaNoPermitida () {
@@ -617,7 +733,8 @@ export default {
         this.aplicarUsuario({
           nombre: 'Administrador',
           rol: 'admin',
-          empleado_id: null
+          empleado_id: null,
+          foto_perfil: ''
         })
 
         return
@@ -631,7 +748,8 @@ export default {
         this.aplicarUsuario({
           nombre: 'Administrador',
           rol: 'admin',
-          empleado_id: null
+          empleado_id: null,
+          foto_perfil: ''
         })
       }
     },
@@ -649,6 +767,210 @@ export default {
       } catch {
         // Si falla, usamos el usuario guardado en localStorage.
       }
+    },
+
+    seleccionarArchivoFoto () {
+      if (this.subiendoFotoPerfil) {
+        return
+      }
+
+      if (this.$refs.fotoPerfilInput) {
+        this.$refs.fotoPerfilInput.value = ''
+        this.$refs.fotoPerfilInput.click()
+      }
+    },
+
+    async procesarFotoPerfil (event) {
+      const archivo = event?.target?.files?.[0]
+
+      if (!archivo) {
+        return
+      }
+
+      const tiposPermitidos = [
+        'image/jpeg',
+        'image/jpg',
+        'image/png',
+        'image/webp'
+      ]
+
+      if (!tiposPermitidos.includes(archivo.type)) {
+        this.$q.notify({
+          type: 'negative',
+          message: 'Formato inválido. Usa una imagen JPG, PNG o WEBP.'
+        })
+
+        return
+      }
+
+      if (archivo.size > 8 * 1024 * 1024) {
+        this.$q.notify({
+          type: 'negative',
+          message: 'La imagen es muy pesada. Usa una foto menor a 8 MB.'
+        })
+
+        return
+      }
+
+      this.subiendoFotoPerfil = true
+
+      try {
+        const fotoBase64 = await this.comprimirImagenPerfil(archivo)
+
+        const { data } = await api.put('/perfil/foto', {
+          foto_perfil: fotoBase64
+        })
+
+        const usuario = data?.usuario || null
+
+        if (usuario) {
+          this.actualizarUsuarioLocal(usuario)
+        } else {
+          this.usuarioFotoPerfil = fotoBase64
+          this.actualizarUsuarioLocal({
+            foto_perfil: fotoBase64
+          })
+        }
+
+        this.$q.notify({
+          type: 'positive',
+          icon: 'photo_camera',
+          message: 'Foto de perfil actualizada correctamente'
+        })
+      } catch (error) {
+        this.$q.notify({
+          type: 'negative',
+          message: this.getErrorMessage(error, 'No se pudo actualizar la foto de perfil')
+        })
+      } finally {
+        this.subiendoFotoPerfil = false
+
+        if (event?.target) {
+          event.target.value = ''
+        }
+      }
+    },
+
+    comprimirImagenPerfil (archivo) {
+      return new Promise((resolve, reject) => {
+        const lector = new FileReader()
+
+        lector.onload = () => {
+          const imagen = new Image()
+
+          imagen.onload = () => {
+            try {
+              const maxDimension = 800
+              let width = imagen.width
+              let height = imagen.height
+
+              if (width > height && width > maxDimension) {
+                height = Math.round((height * maxDimension) / width)
+                width = maxDimension
+              } else if (height > maxDimension) {
+                width = Math.round((width * maxDimension) / height)
+                height = maxDimension
+              }
+
+              const canvas = document.createElement('canvas')
+              canvas.width = width
+              canvas.height = height
+
+              const ctx = canvas.getContext('2d')
+              ctx.fillStyle = '#ffffff'
+              ctx.fillRect(0, 0, width, height)
+              ctx.drawImage(imagen, 0, 0, width, height)
+
+              const calidades = [0.85, 0.75, 0.65, 0.55, 0.45]
+              let resultado = ''
+
+              for (const calidad of calidades) {
+                resultado = canvas.toDataURL('image/jpeg', calidad)
+
+                if (resultado.length <= 2800000) {
+                  resolve(resultado)
+                  return
+                }
+              }
+
+              reject(new Error('La imagen sigue siendo muy pesada. Usa una foto más pequeña.'))
+            } catch (error) {
+              reject(error)
+            }
+          }
+
+          imagen.onerror = () => {
+            reject(new Error('No se pudo leer la imagen seleccionada.'))
+          }
+
+          imagen.src = lector.result
+        }
+
+        lector.onerror = () => {
+          reject(new Error('No se pudo cargar el archivo seleccionado.'))
+        }
+
+        lector.readAsDataURL(archivo)
+      })
+    },
+
+    confirmarEliminarFotoPerfil () {
+      this.$q.dialog({
+        title: 'Eliminar foto de perfil',
+        message: '¿Deseas eliminar tu foto de perfil actual?',
+        persistent: true,
+        ok: {
+          label: 'Sí, eliminar',
+          color: 'negative',
+          unelevated: true
+        },
+        cancel: {
+          label: 'Cancelar',
+          color: 'grey-7',
+          flat: true
+        }
+      }).onOk(() => {
+        this.eliminarFotoPerfil()
+      })
+    },
+
+    async eliminarFotoPerfil () {
+      this.subiendoFotoPerfil = true
+
+      try {
+        const { data } = await api.delete('/perfil/foto')
+        const usuario = data?.usuario || null
+
+        if (usuario) {
+          this.actualizarUsuarioLocal(usuario)
+        } else {
+          this.actualizarUsuarioLocal({
+            foto_perfil: ''
+          })
+        }
+
+        this.$q.notify({
+          type: 'positive',
+          message: 'Foto de perfil eliminada correctamente'
+        })
+      } catch (error) {
+        this.$q.notify({
+          type: 'negative',
+          message: this.getErrorMessage(error, 'No se pudo eliminar la foto de perfil')
+        })
+      } finally {
+        this.subiendoFotoPerfil = false
+      }
+    },
+
+    getErrorMessage (error, fallback = 'Ocurrió un error') {
+      const data = error?.response?.data
+
+      if (data?.errors) {
+        return Object.values(data.errors).flat().join(' ')
+      }
+
+      return data?.message || data?.error || error?.message || fallback
     },
 
     async prepararNotificacionesCelular () {
@@ -985,6 +1307,19 @@ export default {
 .user-avatar {
   background: linear-gradient(135deg, #e91e63, #b8860b);
   box-shadow: 0 8px 20px rgba(233, 30, 99, 0.35);
+  overflow: hidden;
+}
+
+.user-avatar img,
+.menu-user-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.has-user-photo {
+  background: #ffffff !important;
+  border: 2px solid rgba(248, 215, 161, 0.75);
 }
 
 .user-info {
@@ -1008,13 +1343,23 @@ export default {
 }
 
 .user-menu {
-  min-width: 235px;
+  min-width: 285px;
   border-radius: 18px;
   overflow: hidden;
 }
 
 .menu-user-avatar {
   background: linear-gradient(135deg, #e91e63, #b8860b);
+  overflow: hidden;
+}
+
+.profile-status {
+  color: #c2185b;
+  font-weight: 700;
+}
+
+.hidden-file-input {
+  display: none;
 }
 
 .premium-drawer {
