@@ -14,7 +14,7 @@
         </div>
 
         <div class="glamur-subtitle q-mt-xs">
-          Administra el personal, especialidades, estado laboral y accesos al sistema.
+          Administra el personal, especialidades, estado laboral, accesos y comisiones.
         </div>
       </div>
 
@@ -31,7 +31,7 @@
     </section>
 
     <q-linear-progress
-      v-if="loading"
+      v-if="loading || loadingComisiones"
       indeterminate
       color="pink"
       class="q-mb-md"
@@ -111,6 +111,113 @@
         </q-card>
       </div>
     </div>
+
+    <!-- COMISIONES DEL MES -->
+    <q-card class="glamur-card q-mb-md">
+      <q-card-section class="row items-center justify-between q-gutter-sm">
+        <div>
+          <div class="glamur-section-title">
+            Comisiones del mes
+          </div>
+          <div class="glamur-section-subtitle">
+            Calcula automáticamente las comisiones según citas concluidas y pagos realizados.
+          </div>
+        </div>
+
+        <q-btn
+          icon="refresh"
+          label="Actualizar comisiones"
+          flat
+          color="pink-7"
+          no-caps
+          :loading="loadingComisiones"
+          @click="loadComisiones"
+        />
+      </q-card-section>
+
+      <q-separator />
+
+      <q-card-section>
+        <div class="row q-col-gutter-md q-mb-md">
+          <div class="col-12 col-sm-6 col-lg-3">
+            <div class="commission-box">
+              <div class="commission-label">Citas concluidas</div>
+              <div class="commission-value">{{ resumenComisiones.total_citas }}</div>
+            </div>
+          </div>
+
+          <div class="col-12 col-sm-6 col-lg-3">
+            <div class="commission-box">
+              <div class="commission-label">Total generado</div>
+              <div class="commission-value">Bs {{ money(resumenComisiones.total_generado) }}</div>
+            </div>
+          </div>
+
+          <div class="col-12 col-sm-6 col-lg-3">
+            <div class="commission-box">
+              <div class="commission-label">Total pagado</div>
+              <div class="commission-value">Bs {{ money(resumenComisiones.total_pagado) }}</div>
+            </div>
+          </div>
+
+          <div class="col-12 col-sm-6 col-lg-3">
+            <div class="commission-box commission-box-main">
+              <div class="commission-label">Comisiones a pagar</div>
+              <div class="commission-value">Bs {{ money(resumenComisiones.total_comisiones) }}</div>
+            </div>
+          </div>
+        </div>
+
+        <q-table
+          :rows="comisiones"
+          :columns="columnsComisiones"
+          row-key="empleado_id"
+          flat
+          bordered
+          class="glamur-table"
+          :loading="loadingComisiones"
+          :pagination="{ rowsPerPage: 5 }"
+          no-data-label="No hay comisiones calculadas este mes."
+        >
+          <template #body-cell-empleado="props">
+            <q-td :props="props">
+              <div class="employee-name">{{ props.row.nombre }}</div>
+              <div class="employee-subtitle">
+                {{ props.row.cargo || 'Sin cargo' }} · {{ props.row.especialidad || 'General' }}
+              </div>
+            </q-td>
+          </template>
+
+          <template #body-cell-comision_porcentaje="props">
+            <q-td :props="props">
+              <q-badge color="purple" rounded>
+                {{ money(props.row.comision_porcentaje) }}%
+              </q-badge>
+            </q-td>
+          </template>
+
+          <template #body-cell-total_generado="props">
+            <q-td :props="props">
+              Bs {{ money(props.row.total_generado) }}
+            </q-td>
+          </template>
+
+          <template #body-cell-total_pagado="props">
+            <q-td :props="props">
+              Bs {{ money(props.row.total_pagado) }}
+            </q-td>
+          </template>
+
+          <template #body-cell-comision_total="props">
+            <q-td :props="props">
+              <div class="money-text">
+                Bs {{ money(props.row.comision_total) }}
+              </div>
+            </q-td>
+          </template>
+        </q-table>
+      </q-card-section>
+    </q-card>
 
     <!-- FILTROS -->
     <q-card class="glamur-card q-mb-md">
@@ -317,25 +424,11 @@
           <template #body-cell-acciones="props">
             <q-td :props="props">
               <div class="row justify-end q-gutter-xs no-wrap">
-                <q-btn
-                  dense
-                  round
-                  flat
-                  icon="edit"
-                  color="primary"
-                  @click="abrirDialogo(props.row)"
-                >
+                <q-btn dense round flat icon="edit" color="primary" @click="abrirDialogo(props.row)">
                   <q-tooltip>Editar</q-tooltip>
                 </q-btn>
 
-                <q-btn
-                  dense
-                  round
-                  flat
-                  icon="delete"
-                  color="negative"
-                  @click="confirmarEliminar(props.row)"
-                >
+                <q-btn dense round flat icon="delete" color="negative" @click="confirmarEliminar(props.row)">
                   <q-tooltip>Eliminar</q-tooltip>
                 </q-btn>
               </div>
@@ -365,35 +458,18 @@
             </div>
           </div>
 
-          <q-btn
-            icon="close"
-            flat
-            round
-            dense
-            color="white"
-            @click="cerrarDialogo"
-          />
+          <q-btn icon="close" flat round dense color="white" @click="cerrarDialogo" />
         </q-card-section>
 
         <q-form @submit.prevent="guardarEmpleado">
           <q-card-section class="dialog-body">
             <div class="row q-col-gutter-md">
               <div class="col-12">
-                <div class="form-section-title">
-                  Datos del empleado
-                </div>
+                <div class="form-section-title">Datos del empleado</div>
               </div>
 
               <div class="col-12 col-md-6">
-                <q-input
-                  v-model.trim="form.nombre"
-                  label="Nombre completo *"
-                  outlined
-                  rounded
-                  dense
-                  bg-color="white"
-                  :rules="[val => !!val || 'El nombre es obligatorio']"
-                >
+                <q-input v-model.trim="form.nombre" label="Nombre completo *" outlined rounded dense bg-color="white" :rules="[val => !!val || 'El nombre es obligatorio']">
                   <template #prepend>
                     <q-icon name="person" color="pink" />
                   </template>
@@ -401,14 +477,7 @@
               </div>
 
               <div class="col-12 col-md-6">
-                <q-input
-                  v-model.trim="form.telefono"
-                  label="Teléfono"
-                  outlined
-                  rounded
-                  dense
-                  bg-color="white"
-                >
+                <q-input v-model.trim="form.telefono" label="Teléfono" outlined rounded dense bg-color="white">
                   <template #prepend>
                     <q-icon name="call" color="pink" />
                   </template>
@@ -416,14 +485,7 @@
               </div>
 
               <div class="col-12 col-md-6">
-                <q-input
-                  v-model.trim="form.ci"
-                  label="CI"
-                  outlined
-                  rounded
-                  dense
-                  bg-color="white"
-                >
+                <q-input v-model.trim="form.ci" label="CI" outlined rounded dense bg-color="white">
                   <template #prepend>
                     <q-icon name="badge" color="pink" />
                   </template>
@@ -431,15 +493,7 @@
               </div>
 
               <div class="col-12 col-md-6">
-                <q-input
-                  v-model.trim="form.email"
-                  label="Correo electrónico"
-                  type="email"
-                  outlined
-                  rounded
-                  dense
-                  bg-color="white"
-                >
+                <q-input v-model.trim="form.email" label="Correo electrónico" type="email" outlined rounded dense bg-color="white">
                   <template #prepend>
                     <q-icon name="email" color="pink" />
                   </template>
@@ -447,15 +501,7 @@
               </div>
 
               <div class="col-12 col-md-6">
-                <q-input
-                  v-model.trim="form.cargo"
-                  label="Cargo"
-                  placeholder="Ej: Estilista, recepcionista..."
-                  outlined
-                  rounded
-                  dense
-                  bg-color="white"
-                >
+                <q-input v-model.trim="form.cargo" label="Cargo" placeholder="Ej: Estilista, recepcionista..." outlined rounded dense bg-color="white">
                   <template #prepend>
                     <q-icon name="work" color="pink" />
                   </template>
@@ -463,15 +509,7 @@
               </div>
 
               <div class="col-12 col-md-6">
-                <q-input
-                  v-model.trim="form.especialidad"
-                  label="Especialidad"
-                  placeholder="Ej: Uñas, cejas, pestañas..."
-                  outlined
-                  rounded
-                  dense
-                  bg-color="white"
-                >
+                <q-input v-model.trim="form.especialidad" label="Especialidad" placeholder="Ej: Uñas, cejas, pestañas..." outlined rounded dense bg-color="white">
                   <template #prepend>
                     <q-icon name="spa" color="pink" />
                   </template>
@@ -479,18 +517,7 @@
               </div>
 
               <div class="col-12 col-md-4">
-                <q-input
-                  v-model.number="form.comision_porcentaje"
-                  label="Comisión %"
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="0.01"
-                  outlined
-                  rounded
-                  dense
-                  bg-color="white"
-                >
+                <q-input v-model.number="form.comision_porcentaje" label="Comisión %" type="number" min="0" max="100" step="0.01" outlined rounded dense bg-color="white">
                   <template #prepend>
                     <q-icon name="percent" color="pink" />
                   </template>
@@ -498,17 +525,7 @@
               </div>
 
               <div class="col-12 col-md-4">
-                <q-input
-                  v-model.number="form.salario_base"
-                  label="Salario base"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  outlined
-                  rounded
-                  dense
-                  bg-color="white"
-                >
+                <q-input v-model.number="form.salario_base" label="Salario base" type="number" min="0" step="0.01" outlined rounded dense bg-color="white">
                   <template #prepend>
                     <q-icon name="payments" color="pink" />
                   </template>
@@ -516,15 +533,7 @@
               </div>
 
               <div class="col-12 col-md-4">
-                <q-input
-                  v-model="form.fecha_ingreso"
-                  label="Fecha de ingreso"
-                  type="date"
-                  outlined
-                  rounded
-                  dense
-                  bg-color="white"
-                >
+                <q-input v-model="form.fecha_ingreso" label="Fecha de ingreso" type="date" outlined rounded dense bg-color="white">
                   <template #prepend>
                     <q-icon name="event" color="pink" />
                   </template>
@@ -532,14 +541,7 @@
               </div>
 
               <div class="col-12">
-                <q-input
-                  v-model.trim="form.direccion"
-                  label="Dirección"
-                  outlined
-                  rounded
-                  dense
-                  bg-color="white"
-                >
+                <q-input v-model.trim="form.direccion" label="Dirección" outlined rounded dense bg-color="white">
                   <template #prepend>
                     <q-icon name="location_on" color="pink" />
                   </template>
@@ -547,16 +549,7 @@
               </div>
 
               <div class="col-12">
-                <q-input
-                  v-model.trim="form.observaciones"
-                  label="Observaciones"
-                  type="textarea"
-                  outlined
-                  rounded
-                  dense
-                  bg-color="white"
-                  autogrow
-                >
+                <q-input v-model.trim="form.observaciones" label="Observaciones" type="textarea" outlined rounded dense bg-color="white" autogrow>
                   <template #prepend>
                     <q-icon name="notes" color="pink" />
                   </template>
@@ -564,13 +557,7 @@
               </div>
 
               <div class="col-12">
-                <q-toggle
-                  v-model="form.activo"
-                  color="pink"
-                  checked-icon="check"
-                  unchecked-icon="close"
-                  label="Empleado activo"
-                />
+                <q-toggle v-model="form.activo" color="pink" checked-icon="check" unchecked-icon="close" label="Empleado activo" />
               </div>
 
               <div class="col-12">
@@ -581,10 +568,7 @@
                 <div class="access-panel">
                   <div class="row items-start justify-between q-gutter-md">
                     <div>
-                      <div class="form-section-title">
-                        Acceso al sistema
-                      </div>
-
+                      <div class="form-section-title">Acceso al sistema</div>
                       <div class="form-section-subtitle">
                         Permite que este empleado inicie sesión con rol limitado.
                       </div>
@@ -599,10 +583,7 @@
                     />
                   </div>
 
-                  <div
-                    v-if="form.crear_usuario"
-                    class="row q-col-gutter-md q-mt-sm"
-                  >
+                  <div v-if="form.crear_usuario" class="row q-col-gutter-md q-mt-sm">
                     <div class="col-12 col-md-6">
                       <q-input
                         v-model.trim="form.usuario_login"
@@ -650,12 +631,7 @@
                     </div>
                   </div>
 
-                  <q-banner
-                    v-else
-                    dense
-                    rounded
-                    class="access-warning q-mt-sm"
-                  >
+                  <q-banner v-else dense rounded class="access-warning q-mt-sm">
                     <template #avatar>
                       <q-icon name="info" color="orange" />
                     </template>
@@ -671,13 +647,7 @@
           <q-separator />
 
           <q-card-actions align="right" class="q-pa-md">
-            <q-btn
-              label="Cancelar"
-              flat
-              color="grey-7"
-              no-caps
-              @click="cerrarDialogo"
-            />
+            <q-btn label="Cancelar" flat color="grey-7" no-caps @click="cerrarDialogo" />
 
             <q-btn
               :label="editando ? 'Guardar cambios' : 'Registrar empleado'"
@@ -709,17 +679,28 @@ const $q = useQuasar()
 
 const loading = ref(false)
 const saving = ref(false)
+const loadingComisiones = ref(false)
+
 const dialog = ref(false)
 const editando = ref(false)
 const empleadoEditandoId = ref(null)
 
 const empleados = ref([])
+const comisiones = ref([])
 
 const resumen = ref({
   total: 0,
   activos: 0,
   inactivos: 0,
   con_acceso: 0
+})
+
+const resumenComisiones = ref({
+  total_empleados: 0,
+  total_citas: 0,
+  total_generado: 0,
+  total_pagado: 0,
+  total_comisiones: 0
 })
 
 const filtros = ref({
@@ -731,70 +712,28 @@ const filtros = ref({
 const form = ref(formBase())
 
 const estadoOptions = [
-  {
-    label: 'Todos',
-    value: 'todos'
-  },
-  {
-    label: 'Activos',
-    value: 'activo'
-  },
-  {
-    label: 'Inactivos',
-    value: 'inactivo'
-  }
+  { label: 'Todos', value: 'todos' },
+  { label: 'Activos', value: 'activo' },
+  { label: 'Inactivos', value: 'inactivo' }
 ]
 
 const columns = [
-  {
-    name: 'nombre',
-    label: 'Empleado',
-    field: 'nombre',
-    align: 'left',
-    sortable: true
-  },
-  {
-    name: 'contacto',
-    label: 'Contacto',
-    field: 'telefono',
-    align: 'left',
-    sortable: false
-  },
-  {
-    name: 'especialidad',
-    label: 'Especialidad',
-    field: 'especialidad',
-    align: 'center',
-    sortable: true
-  },
-  {
-    name: 'comision_porcentaje',
-    label: 'Comisión',
-    field: 'comision_porcentaje',
-    align: 'right',
-    sortable: true
-  },
-  {
-    name: 'acceso',
-    label: 'Acceso',
-    field: 'acceso',
-    align: 'center',
-    sortable: false
-  },
-  {
-    name: 'activo',
-    label: 'Estado',
-    field: 'activo',
-    align: 'center',
-    sortable: true
-  },
-  {
-    name: 'acciones',
-    label: 'Acciones',
-    field: 'acciones',
-    align: 'right',
-    sortable: false
-  }
+  { name: 'nombre', label: 'Empleado', field: 'nombre', align: 'left', sortable: true },
+  { name: 'contacto', label: 'Contacto', field: 'telefono', align: 'left', sortable: false },
+  { name: 'especialidad', label: 'Especialidad', field: 'especialidad', align: 'center', sortable: true },
+  { name: 'comision_porcentaje', label: 'Comisión', field: 'comision_porcentaje', align: 'right', sortable: true },
+  { name: 'acceso', label: 'Acceso', field: 'acceso', align: 'center', sortable: false },
+  { name: 'activo', label: 'Estado', field: 'activo', align: 'center', sortable: true },
+  { name: 'acciones', label: 'Acciones', field: 'acciones', align: 'right', sortable: false }
+]
+
+const columnsComisiones = [
+  { name: 'empleado', label: 'Empleado', field: 'nombre', align: 'left', sortable: true },
+  { name: 'cantidad_citas', label: 'Citas', field: 'cantidad_citas', align: 'center', sortable: true },
+  { name: 'comision_porcentaje', label: '% Comisión', field: 'comision_porcentaje', align: 'center', sortable: true },
+  { name: 'total_generado', label: 'Generado', field: 'total_generado', align: 'right', sortable: true },
+  { name: 'total_pagado', label: 'Pagado', field: 'total_pagado', align: 'right', sortable: true },
+  { name: 'comision_total', label: 'Comisión a pagar', field: 'comision_total', align: 'right', sortable: true }
 ]
 
 const empleadosActivos = computed(() => {
@@ -857,7 +796,6 @@ function formBase() {
     fecha_ingreso: '',
     activo: true,
     observaciones: '',
-
     crear_usuario: false,
     cuenta_existente: false,
     usuario_login: '',
@@ -877,6 +815,19 @@ function normalizarEmpleado(empleado = {}) {
   }
 }
 
+function normalizarComision(item = {}) {
+  return {
+    ...item,
+    empleado_id: Number(item.empleado_id || 0),
+    activo: Boolean(item.activo),
+    comision_porcentaje: Number(item.comision_porcentaje || 0),
+    cantidad_citas: Number(item.cantidad_citas || 0),
+    total_generado: Number(item.total_generado || 0),
+    total_pagado: Number(item.total_pagado || 0),
+    comision_total: Number(item.comision_total || 0)
+  }
+}
+
 function normalizarPayload() {
   const payload = {
     nombre: form.value.nombre,
@@ -891,7 +842,6 @@ function normalizarPayload() {
     fecha_ingreso: form.value.fecha_ingreso || null,
     activo: Boolean(form.value.activo),
     observaciones: form.value.observaciones,
-
     crear_usuario: Boolean(form.value.crear_usuario),
     activo_usuario: Boolean(form.value.crear_usuario && form.value.activo_usuario)
   }
@@ -960,6 +910,33 @@ async function load() {
   }
 }
 
+async function loadComisiones() {
+  loadingComisiones.value = true
+
+  try {
+    const { data } = await api.get('/empleados/comisiones')
+
+    comisiones.value = Array.isArray(data?.comisiones)
+      ? data.comisiones.map(normalizarComision)
+      : []
+
+    resumenComisiones.value = {
+      total_empleados: Number(data?.resumen?.total_empleados || 0),
+      total_citas: Number(data?.resumen?.total_citas || 0),
+      total_generado: Number(data?.resumen?.total_generado || 0),
+      total_pagado: Number(data?.resumen?.total_pagado || 0),
+      total_comisiones: Number(data?.resumen?.total_comisiones || 0)
+    }
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: getErrorMessage(error, 'No se pudieron cargar las comisiones')
+    })
+  } finally {
+    loadingComisiones.value = false
+  }
+}
+
 function abrirDialogo(empleado = null) {
   if (empleado) {
     const normalizado = normalizarEmpleado(empleado)
@@ -1019,6 +996,7 @@ async function guardarEmpleado() {
 
     cerrarDialogo()
     await load()
+    await loadComisiones()
   } catch (error) {
     $q.notify({
       type: 'negative',
@@ -1054,6 +1032,7 @@ function confirmarEliminar(empleado) {
       })
 
       await load()
+      await loadComisiones()
     } catch (error) {
       $q.notify({
         type: 'negative',
@@ -1063,7 +1042,12 @@ function confirmarEliminar(empleado) {
   })
 }
 
-onMounted(load)
+onMounted(async () => {
+  await Promise.all([
+    load(),
+    loadComisiones()
+  ])
+})
 </script>
 
 <style scoped>
@@ -1097,6 +1081,31 @@ onMounted(load)
   color: #8a7f91;
   font-size: 12px;
   margin-top: 4px;
+}
+
+.commission-box {
+  padding: 16px;
+  border-radius: 18px;
+  background: #fff7fb;
+  border: 1px solid rgba(233, 30, 99, 0.16);
+  min-height: 92px;
+}
+
+.commission-box-main {
+  background: linear-gradient(135deg, #fff7fb, #ffe0ef);
+}
+
+.commission-label {
+  color: #7a6f80;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.commission-value {
+  color: #241329;
+  font-size: 22px;
+  font-weight: 950;
+  margin-top: 8px;
 }
 
 .empty-state {
