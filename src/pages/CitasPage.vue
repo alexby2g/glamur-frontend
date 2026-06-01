@@ -580,7 +580,27 @@
         <q-card-section class="dialog-body">
           <div class="form-stack">
 
+            <q-select
+              v-model="pago.metodo"
+              :options="metodosPago"
+              option-label="label"
+              option-value="value"
+              emit-value
+              map-options
+              label="Método de pago"
+              outlined
+              rounded
+              bg-color="white"
+              class="form-field"
+              @update:model-value="actualizarMetodoPago"
+            >
+              <template #prepend>
+                <q-icon name="account_balance_wallet" color="pink" />
+              </template>
+            </q-select>
+
             <q-input
+              v-if="pago.metodo !== 'mixto'"
               v-model.number="pago.monto"
               type="number"
               label="Monto Bs."
@@ -595,21 +615,67 @@
               </template>
             </q-input>
 
-            <q-select
-              v-model="pago.metodo"
-              :options="metodosPago"
-              option-label="label"
-              option-value="value"
-              emit-value
-              map-options
-              label="Método de pago"
-              outlined
-              rounded
-              bg-color="white"
-              class="form-field"
-            />
+            <div v-if="pago.metodo === 'mixto'" class="pago-mixto-box">
+              <div class="pago-mixto-title">
+                Pago mixto
+              </div>
 
-            <div v-if="pago.metodo === 'qr'" class="qr-box">
+              <div class="pago-mixto-subtitle">
+                Divide el pago en efectivo, QR o transferencia. El sistema sumará todo automáticamente.
+              </div>
+
+              <q-input
+                v-model.number="pago.monto_efectivo"
+                type="number"
+                label="Monto en efectivo Bs."
+                outlined
+                rounded
+                min="0"
+                bg-color="white"
+                class="form-field"
+              >
+                <template #prepend>
+                  <q-icon name="payments" color="green" />
+                </template>
+              </q-input>
+
+              <q-input
+                v-model.number="pago.monto_qr"
+                type="number"
+                label="Monto por QR Bs."
+                outlined
+                rounded
+                min="0"
+                bg-color="white"
+                class="form-field"
+              >
+                <template #prepend>
+                  <q-icon name="qr_code_2" color="pink" />
+                </template>
+              </q-input>
+
+              <q-input
+                v-model.number="pago.monto_transferencia"
+                type="number"
+                label="Monto por transferencia Bs."
+                outlined
+                rounded
+                min="0"
+                bg-color="white"
+                class="form-field"
+              >
+                <template #prepend>
+                  <q-icon name="account_balance" color="blue" />
+                </template>
+              </q-input>
+
+              <div class="pago-total-box">
+                <span>Total del pago</span>
+                <strong>Bs {{ money(totalPagoMixto) }}</strong>
+              </div>
+            </div>
+
+            <div v-if="pago.metodo === 'qr' || (pago.metodo === 'mixto' && Number(pago.monto_qr || 0) > 0)" class="qr-box">
               <q-img
                 src="~assets/qr.jpg"
                 class="qr-img"
@@ -798,7 +864,8 @@ const estados = [
 const metodosPago = [
   { label: 'Efectivo', value: 'efectivo' },
   { label: 'QR', value: 'qr' },
-  { label: 'Transferencia', value: 'transferencia' }
+  { label: 'Transferencia', value: 'transferencia' },
+  { label: 'Mixto: efectivo + QR', value: 'mixto' }
 ]
 
 const form = ref({
@@ -817,6 +884,9 @@ const form = ref({
 const pago = ref({
   cita_id: null,
   monto: 0,
+  monto_efectivo: 0,
+  monto_qr: 0,
+  monto_transferencia: 0,
   metodo: 'efectivo'
 })
 
@@ -908,6 +978,12 @@ const columnsHistorial = [
     align: 'left'
   }
 ]
+
+const totalPagoMixto = computed(() => {
+  return Number(pago.value.monto_efectivo || 0) +
+    Number(pago.value.monto_qr || 0) +
+    Number(pago.value.monto_transferencia || 0)
+})
 
 function money(value) {
   return Number(value || 0).toFixed(2)
@@ -1111,9 +1187,26 @@ function mostrarPago(estado) {
 }
 
 function mostrarMetodo(metodo) {
+  if (metodo === 'mixto') return 'Mixto'
   if (metodo === 'qr') return 'QR'
   if (metodo === 'transferencia') return 'Transferencia'
   return 'Efectivo'
+}
+
+function actualizarMetodoPago(metodo) {
+  const montoActual = Number(pago.value.monto || 0)
+
+  if (metodo === 'mixto') {
+    pago.value.monto_efectivo = montoActual
+    pago.value.monto_qr = 0
+    pago.value.monto_transferencia = 0
+    return
+  }
+
+  pago.value.monto = montoActual || Number(pago.value.monto_efectivo || 0) + Number(pago.value.monto_qr || 0) + Number(pago.value.monto_transferencia || 0)
+  pago.value.monto_efectivo = 0
+  pago.value.monto_qr = 0
+  pago.value.monto_transferencia = 0
 }
 
 async function load() {
@@ -1444,6 +1537,9 @@ function pagar(row) {
   pago.value = {
     cita_id: row.id,
     monto: Number(row.precio || 0),
+    monto_efectivo: 0,
+    monto_qr: 0,
+    monto_transferencia: 0,
     metodo: 'efectivo'
   }
 
@@ -1451,7 +1547,19 @@ function pagar(row) {
 }
 
 async function confirmarPago() {
-  if (!pago.value.cita_id || Number(pago.value.monto || 0) <= 0) {
+  if (!pago.value.cita_id) {
+    $q.notify({
+      type: 'warning',
+      message: 'No se encontró la cita para registrar el pago'
+    })
+
+    return
+  }
+
+  const esMixto = pago.value.metodo === 'mixto'
+  const montoTotal = esMixto ? totalPagoMixto.value : Number(pago.value.monto || 0)
+
+  if (montoTotal <= 0) {
     $q.notify({
       type: 'warning',
       message: 'El monto del pago debe ser mayor a 0'
@@ -1463,11 +1571,19 @@ async function confirmarPago() {
   savingPago.value = true
 
   try {
-    await api.post('/pagos', {
+    const payload = {
       cita_id: pago.value.cita_id,
-      monto: Number(pago.value.monto || 0),
-      metodo: pago.value.metodo
-    })
+      metodo: pago.value.metodo,
+      monto: montoTotal
+    }
+
+    if (esMixto) {
+      payload.monto_efectivo = Number(pago.value.monto_efectivo || 0)
+      payload.monto_qr = Number(pago.value.monto_qr || 0)
+      payload.monto_transferencia = Number(pago.value.monto_transferencia || 0)
+    }
+
+    await api.post('/pagos', payload)
 
     dialogPago.value = false
 
@@ -1841,6 +1957,45 @@ onMounted(async () => {
   width: 230px;
   max-width: 100%;
   border-radius: 14px;
+}
+
+.pago-mixto-box {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 20px;
+  background: #fff7fb;
+  border: 1px solid #f7c9dc;
+}
+
+.pago-mixto-title {
+  color: #8a1248;
+  font-size: 15px;
+  font-weight: 950;
+}
+
+.pago-mixto-subtitle {
+  color: #7a6f80;
+  font-size: 12px;
+  font-weight: 700;
+  margin-top: -6px;
+}
+
+.pago-total-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #e91e63, #9c27b0);
+  color: white;
+  font-weight: 900;
+}
+
+.pago-total-box strong {
+  font-size: 18px;
 }
 
 /* MOBILE / TABLET */
