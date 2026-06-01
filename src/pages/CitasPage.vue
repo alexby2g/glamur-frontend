@@ -116,6 +116,24 @@
         </q-td>
       </template>
 
+      <!-- FECHA -->
+      <template #body-cell-fecha="props">
+        <q-td :props="props">
+          <div class="text-weight-bold text-dark">
+            {{ formatDate(props.row.fecha) }}
+          </div>
+        </q-td>
+      </template>
+
+      <!-- HORA -->
+      <template #body-cell-hora="props">
+        <q-td :props="props">
+          <div class="text-weight-bold text-dark">
+            {{ formatHora(props.row.hora) }}
+          </div>
+        </q-td>
+      </template>
+
       <!-- ESTADO -->
       <template #body-cell-estado="props">
         <q-td :props="props" class="text-center">
@@ -685,6 +703,12 @@
                 </q-badge>
               </q-td>
             </template>
+
+            <template #body-cell-fecha_pago="props">
+              <q-td :props="props">
+                {{ formatDateTime(props.row.fecha_pago) }}
+              </q-td>
+            </template>
           </q-table>
         </q-card-section>
 
@@ -880,13 +904,62 @@ const columnsHistorial = [
   {
     name: 'fecha_pago',
     label: 'Fecha pago',
-    field: row => row.fecha_pago || 'Sin fecha',
+    field: row => formatDateTime(row.fecha_pago),
     align: 'left'
   }
 ]
 
 function money(value) {
   return Number(value || 0).toFixed(2)
+}
+
+function fechaParaInput(fecha) {
+  if (!fecha) return ''
+
+  const texto = String(fecha)
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(texto)) {
+    return texto
+  }
+
+  if (texto.includes('T')) {
+    return texto.slice(0, 10)
+  }
+
+  return texto.slice(0, 10)
+}
+
+function formatDate(fecha) {
+  const limpia = fechaParaInput(fecha)
+
+  if (!limpia) return '-'
+
+  const [year, month, day] = limpia.split('-')
+
+  if (!year || !month || !day) return limpia
+
+  return `${day}/${month}/${year}`
+}
+
+function formatDateTime(fecha) {
+  if (!fecha) return 'Sin fecha'
+
+  const soloFecha = formatDate(fecha)
+  const texto = String(fecha)
+
+  if (!texto.includes('T')) {
+    return soloFecha
+  }
+
+  const hora = texto.split('T')[1]?.slice(0, 5)
+
+  return hora ? `${soloFecha} ${hora}` : soloFecha
+}
+
+function formatHora(hora) {
+  if (!hora) return '-'
+
+  return String(hora).slice(0, 5)
 }
 
 function fechaLocal(date = new Date()) {
@@ -926,8 +999,8 @@ const citasFiltradas = computed(() => {
       cita.empleado?.especialidad,
       cita.servicio,
       cita.precio,
-      cita.fecha,
-      cita.hora,
+      formatDate(cita.fecha),
+      formatHora(cita.hora),
       cita.estado,
       mostrarEstado(cita.estado),
       cita.estado_pago,
@@ -1243,7 +1316,7 @@ function edit(row) {
     combo: row.servicio || servicioTemporal.combo || '',
     detalle: servicioTemporal.detalle || '',
     precio: Number(row.precio || servicioTemporal.precio || 0),
-    fecha: row.fecha || hoy(),
+    fecha: fechaParaInput(row.fecha) || hoy(),
     hora: row.hora ? String(row.hora).slice(0, 5) : '',
     estado: row.estado || 'pendiente'
   }
