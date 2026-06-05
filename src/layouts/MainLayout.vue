@@ -398,6 +398,7 @@
 import { api } from 'boot/axios'
 import { Capacitor } from '@capacitor/core'
 import { LocalNotifications } from '@capacitor/local-notifications'
+import { App as CapacitorApp } from '@capacitor/app'
 import logoBase from 'assets/logo-glamur.png'
 
 const valoresBaseConfiguracion = {
@@ -419,6 +420,8 @@ export default {
   data () {
     return {
       drawer: false,
+      backButtonListener: null,
+      ultimoIntentoSalir: 0,
 
       usuarioNombre: 'Administrador',
       usuarioRol: 'admin',
@@ -602,6 +605,7 @@ export default {
     this.cargarUsuarioDesdeServidor()
     this.prepararNotificacionesCelular()
     this.cargarNotificaciones()
+    this.configurarBotonAtrasAndroid()
 
     window.addEventListener('aurea-configuracion-actualizada', this.recibirConfiguracionActualizada)
 
@@ -615,10 +619,90 @@ export default {
       clearInterval(this.intervaloNotificaciones)
     }
 
+    if (this.backButtonListener) {
+      this.backButtonListener.remove()
+      this.backButtonListener = null
+    }
+
     window.removeEventListener('aurea-configuracion-actualizada', this.recibirConfiguracionActualizada)
   },
 
   methods: {
+    rutaPrincipalSegunRol () {
+      return this.usuarioEsEmpleado ? '/mis-citas' : '/dashboard'
+    },
+
+    estaEnRutaPrincipal () {
+      return this.$route.path === this.rutaPrincipalSegunRol()
+    },
+
+    async configurarBotonAtrasAndroid () {
+      if (!Capacitor.isNativePlatform()) {
+        return
+      }
+
+      try {
+        if (this.backButtonListener) {
+          await this.backButtonListener.remove()
+          this.backButtonListener = null
+        }
+
+        this.backButtonListener = await CapacitorApp.addListener('backButton', () => {
+          this.manejarBotonAtrasAndroid()
+        })
+      } catch (error) {
+        console.log('No se pudo configurar el botón atrás:', error)
+      }
+    },
+
+    manejarBotonAtrasAndroid () {
+      const rutaActual = this.$route.path
+      const rutaPrincipal = this.rutaPrincipalSegunRol()
+
+      if (this.drawer && this.$q.screen.lt.md) {
+        this.drawer = false
+        return
+      }
+
+      if (rutaActual === '/login') {
+        CapacitorApp.exitApp()
+        return
+      }
+
+      if (rutaActual !== rutaPrincipal) {
+        this.$router.replace(rutaPrincipal)
+
+        this.$q.notify({
+          type: 'info',
+          icon: 'home',
+          message: this.usuarioEsEmpleado
+            ? 'Volviste a Mis citas'
+            : 'Volviste al Dashboard',
+          position: 'bottom',
+          timeout: 1200
+        })
+
+        return
+      }
+
+      const ahora = Date.now()
+
+      if (ahora - this.ultimoIntentoSalir < 2200) {
+        CapacitorApp.exitApp()
+        return
+      }
+
+      this.ultimoIntentoSalir = ahora
+
+      this.$q.notify({
+        type: 'warning',
+        icon: 'touch_app',
+        message: 'Presiona atrás otra vez para salir de AUREA Beauty',
+        position: 'bottom',
+        timeout: 2000
+      })
+    },
+
     normalizarRol (rol) {
       const rolLimpio = String(rol || '').toLowerCase().trim()
 
