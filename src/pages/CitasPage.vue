@@ -55,9 +55,130 @@
       </div>
     </q-card>
 
+    <!-- LISTA MÓVIL ORDENADA POR HORA -->
+    <div class="citas-mobile-list">
+      <q-card
+        v-for="cita in citasFiltradas"
+        :key="cita.id"
+        class="cita-mobile-card"
+        flat
+        bordered
+      >
+        <div class="cita-mobile-top">
+          <div>
+            <div class="cita-mobile-cliente">
+              {{ cita.cliente?.nombre || 'Sin cliente' }}
+            </div>
+            <div class="cita-mobile-telefono">
+              {{ cita.cliente?.telefono || 'Sin teléfono' }}
+            </div>
+          </div>
+
+          <div class="cita-mobile-hora">
+            {{ formatHora(cita.hora) }}
+          </div>
+        </div>
+
+        <div class="cita-mobile-fecha">
+          <q-icon name="event" />
+          {{ formatDate(cita.fecha) }}
+        </div>
+
+        <div class="cita-mobile-servicio">
+          {{ cita.servicio || 'Sin servicio' }}
+        </div>
+
+        <div class="cita-mobile-empleado">
+          <q-icon name="person" />
+          {{ empleadoNombre(cita) }}
+        </div>
+
+        <div class="cita-mobile-info-row">
+          <div class="text-green-8 text-weight-bold">
+            Bs {{ money(cita.precio) }}
+          </div>
+
+          <q-badge
+            rounded
+            class="estado-badge"
+            :color="colorEstado(cita.estado)"
+          >
+            {{ mostrarEstado(cita.estado) }}
+          </q-badge>
+
+          <q-badge
+            rounded
+            class="estado-badge"
+            :color="cita.estado_pago === 'pagado' ? 'green' : 'red'"
+          >
+            {{ mostrarPago(cita.estado_pago) }}
+          </q-badge>
+        </div>
+
+        <div class="cita-mobile-actions">
+          <q-btn
+            round
+            unelevated
+            size="sm"
+            color="primary"
+            icon="edit"
+            @click="edit(cita)"
+          />
+
+          <q-btn
+            v-if="cita.estado !== 'concluida'"
+            round
+            unelevated
+            size="sm"
+            color="positive"
+            icon="check"
+            @click="finalizar(cita.id)"
+          />
+
+          <q-btn
+            v-if="cita.estado_pago !== 'pagado'"
+            round
+            unelevated
+            size="sm"
+            color="blue"
+            icon="payments"
+            @click="pagar(cita)"
+          />
+
+          <q-btn
+            round
+            unelevated
+            size="sm"
+            color="purple"
+            icon="history"
+            @click="verHistorial(cita.id)"
+          />
+
+          <q-btn
+            round
+            unelevated
+            size="sm"
+            color="negative"
+            icon="delete"
+            @click="remove(cita.id)"
+          />
+        </div>
+      </q-card>
+
+      <q-card
+        v-if="citasFiltradas.length === 0 && !loading"
+        class="cita-mobile-card empty-mobile"
+        flat
+        bordered
+      >
+        {{ busqueda ? 'No se encontraron citas con esa búsqueda' : 'No hay citas registradas' }}
+      </q-card>
+    </div>
+
     <!-- TABLA -->
     <q-table
-      class="tabla-glamur"
+      class="tabla-glamur tabla-desktop"
+
       :rows="citasFiltradas"
       :columns="columns"
       row-key="id"
@@ -1057,14 +1178,52 @@ function normalizar(valor) {
     .replace(/[\u0300-\u036f]/g, '')
 }
 
+function valorFechaOrden(fecha) {
+  const limpia = fechaParaInput(fecha)
+
+  if (!limpia) {
+    return '9999-12-31'
+  }
+
+  return limpia
+}
+
+function valorHoraOrden(hora) {
+  if (!hora) {
+    return '99:99'
+  }
+
+  return String(hora).slice(0, 5)
+}
+
+function ordenarCitasPorHora(lista = []) {
+  return [...lista].sort((a, b) => {
+    const fechaA = valorFechaOrden(a.fecha)
+    const fechaB = valorFechaOrden(b.fecha)
+
+    if (fechaA !== fechaB) {
+      return fechaA.localeCompare(fechaB)
+    }
+
+    const horaA = valorHoraOrden(a.hora)
+    const horaB = valorHoraOrden(b.hora)
+
+    if (horaA !== horaB) {
+      return horaA.localeCompare(horaB)
+    }
+
+    return Number(a.id || 0) - Number(b.id || 0)
+  })
+}
+
 const citasFiltradas = computed(() => {
   const texto = normalizar(busqueda.value)
 
   if (!texto) {
-    return citas.value
+    return ordenarCitasPorHora(citas.value)
   }
 
-  return citas.value.filter(cita => {
+  const resultado = citas.value.filter(cita => {
     const datos = [
       cita.id,
       cita.cliente?.nombre,
@@ -1085,6 +1244,8 @@ const citasFiltradas = computed(() => {
 
     return datos.some(dato => normalizar(dato).includes(texto))
   })
+
+  return ordenarCitasPorHora(resultado)
 })
 
 function responseToArray(data) {
@@ -1214,7 +1375,7 @@ async function load() {
 
   try {
     const { data } = await api.get('/citas')
-    citas.value = responseToArray(data)
+    citas.value = ordenarCitasPorHora(responseToArray(data))
   } catch (error) {
     $q.notify({
       type: 'negative',
@@ -1808,6 +1969,105 @@ onMounted(async () => {
   flex-wrap: wrap;
 }
 
+/* LISTA MÓVIL DE CITAS */
+
+.citas-mobile-list {
+  display: none;
+}
+
+.cita-mobile-card {
+  border-radius: 22px;
+  padding: 14px;
+  margin-bottom: 12px;
+  background: white;
+  border: 1px solid #f3d6e5;
+  box-shadow: 0 10px 28px rgba(156, 39, 176, 0.10);
+}
+
+.cita-mobile-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.cita-mobile-cliente {
+  color: #c2185b;
+  font-size: 15px;
+  font-weight: 950;
+  line-height: 1.2;
+}
+
+.cita-mobile-telefono {
+  color: #7a6f80;
+  font-size: 12px;
+  font-weight: 700;
+  margin-top: 3px;
+}
+
+.cita-mobile-hora {
+  min-width: 74px;
+  padding: 9px 12px;
+  border-radius: 16px;
+  text-align: center;
+  color: white;
+  font-size: 20px;
+  font-weight: 950;
+  background: linear-gradient(135deg, #e91e63, #9c27b0);
+  box-shadow: 0 8px 18px rgba(233, 30, 99, 0.22);
+}
+
+.cita-mobile-fecha {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 10px;
+  color: #6a536d;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.cita-mobile-servicio {
+  color: #241329;
+  font-size: 14px;
+  font-weight: 950;
+  margin-top: 10px;
+}
+
+.cita-mobile-empleado {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #7a6f80;
+  font-size: 12px;
+  font-weight: 750;
+  margin-top: 5px;
+}
+
+.cita-mobile-info-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.cita-mobile-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #f3d6e5;
+}
+
+.empty-mobile {
+  text-align: center;
+  color: #7a6f80;
+  font-weight: 850;
+}
+
 /* FORMULARIO */
 
 .form-stack {
@@ -2132,6 +2392,14 @@ onMounted(async () => {
 }
 
 @media (max-width: 700px) {
+  .tabla-desktop {
+    display: none;
+  }
+
+  .citas-mobile-list {
+    display: block;
+  }
+
   .buscador-row {
     flex-direction: column;
     align-items: stretch;
