@@ -55,6 +55,39 @@
       </div>
     </q-card>
 
+    <!-- FILTROS DE CITAS -->
+    <q-card class="filtros-citas-card q-mb-md" flat bordered>
+      <div class="filtros-citas-header">
+        <div>
+          <div class="filtros-citas-title">
+            Ver citas
+          </div>
+          <div class="filtros-citas-subtitle">
+            Organiza las reservas por hoy, próximas fechas o anteriores.
+          </div>
+        </div>
+
+        <q-badge class="filtro-activo-badge" rounded>
+          {{ nombreFiltroActivo }}
+        </q-badge>
+      </div>
+
+      <div class="filtros-citas-grid">
+        <button
+          v-for="filtro in filtrosCitas"
+          :key="filtro.value"
+          type="button"
+          class="filtro-cita-btn"
+          :class="{ active: filtroCitasActivo === filtro.value }"
+          @click="filtroCitasActivo = filtro.value"
+        >
+          <q-icon :name="filtro.icon" />
+          <span>{{ filtro.label }}</span>
+          <small>{{ contarCitasPorFiltro(filtro.value) }}</small>
+        </button>
+      </div>
+    </q-card>
+
     <!-- LISTA MÓVIL PRIORIZADA: HOY / PRÓXIMAS / ANTERIORES -->
     <div class="citas-mobile-list">
       <template
@@ -956,6 +989,7 @@ const router = useRouter()
 
 const citas = ref([])
 const busqueda = ref('')
+const filtroCitasActivo = ref('hoy')
 const clientes = ref([])
 const clientesFiltrados = ref([])
 const empleados = ref([])
@@ -963,6 +997,29 @@ const empleadosFiltrados = ref([])
 const servicios = ref([])
 const serviciosFiltrados = ref([])
 const categoriaSeleccionada = ref('cejas')
+
+const filtrosCitas = [
+  {
+    label: 'Hoy',
+    value: 'hoy',
+    icon: 'today'
+  },
+  {
+    label: 'Próximas',
+    value: 'proximas',
+    icon: 'event_available'
+  },
+  {
+    label: 'Anteriores',
+    value: 'anteriores',
+    icon: 'history'
+  },
+  {
+    label: 'Todas',
+    value: 'todas',
+    icon: 'view_list'
+  }
+]
 
 const categoriasServicios = [
   {
@@ -1308,7 +1365,7 @@ function agruparCitasPorPrioridad(lista = []) {
   ]
 }
 
-const citasFiltradas = computed(() => {
+const citasBaseFiltradas = computed(() => {
   const texto = normalizar(busqueda.value)
 
   if (!texto) {
@@ -1339,6 +1396,26 @@ const citasFiltradas = computed(() => {
 
   return ordenarCitasPorPrioridad(resultado)
 })
+
+const citasFiltradas = computed(() => {
+  if (filtroCitasActivo.value === 'todas') {
+    return citasBaseFiltradas.value
+  }
+
+  return citasBaseFiltradas.value.filter(cita => grupoFechaCita(cita.fecha) === filtroCitasActivo.value)
+})
+
+const nombreFiltroActivo = computed(() => {
+  return filtrosCitas.find(filtro => filtro.value === filtroCitasActivo.value)?.label || 'Hoy'
+})
+
+function contarCitasPorFiltro(filtro) {
+  if (filtro === 'todas') {
+    return citasBaseFiltradas.value.length
+  }
+
+  return citasBaseFiltradas.value.filter(cita => grupoFechaCita(cita.fecha) === filtro).length
+}
 
 const gruposCitasFiltradas = computed(() => {
   return agruparCitasPorPrioridad(citasFiltradas.value)
@@ -1997,6 +2074,91 @@ onMounted(async () => {
   white-space: nowrap;
 }
 
+/* FILTROS DE CITAS */
+
+.filtros-citas-card {
+  border-radius: 22px;
+  padding: 14px;
+  background: #ffffff;
+  box-shadow: 0 10px 28px rgba(156, 39, 176, 0.10);
+  border: 1px solid #f3d6e5;
+}
+
+.filtros-citas-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.filtros-citas-title {
+  color: #8a1248;
+  font-size: 16px;
+  font-weight: 950;
+}
+
+.filtros-citas-subtitle {
+  color: #7a6f80;
+  font-size: 12px;
+  font-weight: 750;
+  margin-top: 2px;
+}
+
+.filtro-activo-badge {
+  background: linear-gradient(135deg, #e91e63, #9c27b0);
+  color: white;
+  font-weight: 950;
+  padding: 8px 12px;
+}
+
+.filtros-citas-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.filtro-cita-btn {
+  border: 1px solid #efc4d8;
+  background: #fff7fb;
+  color: #8a1248;
+  border-radius: 18px;
+  padding: 12px 10px;
+  min-height: 82px;
+  cursor: pointer;
+  font-weight: 900;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  transition: all 0.2s ease;
+}
+
+.filtro-cita-btn .q-icon {
+  font-size: 26px;
+}
+
+.filtro-cita-btn span {
+  font-size: 13px;
+  line-height: 1.1;
+}
+
+.filtro-cita-btn small {
+  font-size: 12px;
+  opacity: 0.82;
+  font-weight: 950;
+}
+
+.filtro-cita-btn:hover,
+.filtro-cita-btn.active {
+  color: white;
+  background: linear-gradient(135deg, #e91e63, #9c27b0);
+  border-color: transparent;
+  box-shadow: 0 12px 28px rgba(233, 30, 99, 0.22);
+  transform: translateY(-1px);
+}
+
 /* BOTONES */
 
 .btn-glamur-white {
@@ -2545,6 +2707,23 @@ onMounted(async () => {
 }
 
 @media (max-width: 700px) {
+  .filtros-citas-header {
+    align-items: flex-start;
+  }
+
+  .filtros-citas-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .filtro-cita-btn {
+    min-height: 74px;
+    padding: 10px 8px;
+  }
+
+  .filtro-cita-btn .q-icon {
+    font-size: 24px;
+  }
+
   .tabla-desktop {
     display: none;
   }
