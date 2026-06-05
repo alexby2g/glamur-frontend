@@ -55,115 +55,140 @@
       </div>
     </q-card>
 
-    <!-- LISTA MÓVIL ORDENADA POR HORA -->
+    <!-- LISTA MÓVIL PRIORIZADA: HOY / PRÓXIMAS / ANTERIORES -->
     <div class="citas-mobile-list">
-      <q-card
-        v-for="cita in citasFiltradas"
-        :key="cita.id"
-        class="cita-mobile-card"
-        flat
-        bordered
+      <template
+        v-for="grupo in gruposCitasFiltradas"
+        :key="grupo.key"
       >
-        <div class="cita-mobile-top">
+        <div
+          v-if="grupo.items.length > 0"
+          class="cita-mobile-section"
+          :class="`section-${grupo.key}`"
+        >
           <div>
-            <div class="cita-mobile-cliente">
-              {{ cita.cliente?.nombre || 'Sin cliente' }}
+            <div class="cita-mobile-section-title">
+              {{ grupo.titulo }}
             </div>
-            <div class="cita-mobile-telefono">
-              {{ cita.cliente?.telefono || 'Sin teléfono' }}
+            <div class="cita-mobile-section-subtitle">
+              {{ grupo.descripcion }}
             </div>
           </div>
 
-          <div class="cita-mobile-hora">
-            {{ formatHora(cita.hora) }}
-          </div>
-        </div>
-
-        <div class="cita-mobile-fecha">
-          <q-icon name="event" />
-          {{ formatDate(cita.fecha) }}
-        </div>
-
-        <div class="cita-mobile-servicio">
-          {{ cita.servicio || 'Sin servicio' }}
-        </div>
-
-        <div class="cita-mobile-empleado">
-          <q-icon name="person" />
-          {{ empleadoNombre(cita) }}
-        </div>
-
-        <div class="cita-mobile-info-row">
-          <div class="text-green-8 text-weight-bold">
-            Bs {{ money(cita.precio) }}
-          </div>
-
-          <q-badge
-            rounded
-            class="estado-badge"
-            :color="colorEstado(cita.estado)"
-          >
-            {{ mostrarEstado(cita.estado) }}
-          </q-badge>
-
-          <q-badge
-            rounded
-            class="estado-badge"
-            :color="cita.estado_pago === 'pagado' ? 'green' : 'red'"
-          >
-            {{ mostrarPago(cita.estado_pago) }}
+          <q-badge rounded class="cita-mobile-section-badge">
+            {{ grupo.items.length }}
           </q-badge>
         </div>
 
-        <div class="cita-mobile-actions">
-          <q-btn
-            round
-            unelevated
-            size="sm"
-            color="primary"
-            icon="edit"
-            @click="edit(cita)"
-          />
+        <q-card
+          v-for="cita in grupo.items"
+          :key="`${grupo.key}-${cita.id}`"
+          class="cita-mobile-card"
+          :class="`cita-${grupo.key}`"
+          flat
+          bordered
+        >
+          <div class="cita-mobile-top">
+            <div>
+              <div class="cita-mobile-cliente">
+                {{ cita.cliente?.nombre || 'Sin cliente' }}
+              </div>
+              <div class="cita-mobile-telefono">
+                {{ cita.cliente?.telefono || 'Sin teléfono' }}
+              </div>
+            </div>
 
-          <q-btn
-            v-if="cita.estado !== 'concluida'"
-            round
-            unelevated
-            size="sm"
-            color="positive"
-            icon="check"
-            @click="finalizar(cita.id)"
-          />
+            <div class="cita-mobile-hora">
+              {{ formatHora(cita.hora) }}
+            </div>
+          </div>
 
-          <q-btn
-            v-if="cita.estado_pago !== 'pagado'"
-            round
-            unelevated
-            size="sm"
-            color="blue"
-            icon="payments"
-            @click="pagar(cita)"
-          />
+          <div class="cita-mobile-fecha">
+            <q-icon name="event" />
+            {{ etiquetaFechaCita(cita.fecha) }} · {{ formatDate(cita.fecha) }}
+          </div>
 
-          <q-btn
-            round
-            unelevated
-            size="sm"
-            color="purple"
-            icon="history"
-            @click="verHistorial(cita.id)"
-          />
+          <div class="cita-mobile-servicio">
+            {{ cita.servicio || 'Sin servicio' }}
+          </div>
 
-          <q-btn
-            round
-            unelevated
-            size="sm"
-            color="negative"
-            icon="delete"
-            @click="remove(cita.id)"
-          />
-        </div>
-      </q-card>
+          <div class="cita-mobile-empleado">
+            <q-icon name="person" />
+            {{ empleadoNombre(cita) }}
+          </div>
+
+          <div class="cita-mobile-info-row">
+            <div class="text-green-8 text-weight-bold">
+              Bs {{ money(cita.precio) }}
+            </div>
+
+            <q-badge
+              rounded
+              class="estado-badge"
+              :color="colorEstado(cita.estado)"
+            >
+              {{ mostrarEstado(cita.estado) }}
+            </q-badge>
+
+            <q-badge
+              rounded
+              class="estado-badge"
+              :color="cita.estado_pago === 'pagado' ? 'green' : 'red'"
+            >
+              {{ mostrarPago(cita.estado_pago) }}
+            </q-badge>
+          </div>
+
+          <div class="cita-mobile-actions">
+            <q-btn
+              round
+              unelevated
+              size="sm"
+              color="primary"
+              icon="edit"
+              @click="edit(cita)"
+            />
+
+            <q-btn
+              v-if="cita.estado !== 'concluida'"
+              round
+              unelevated
+              size="sm"
+              color="positive"
+              icon="check"
+              @click="finalizar(cita.id)"
+            />
+
+            <q-btn
+              v-if="cita.estado_pago !== 'pagado'"
+              round
+              unelevated
+              size="sm"
+              color="blue"
+              icon="payments"
+              @click="pagar(cita)"
+            />
+
+            <q-btn
+              round
+              unelevated
+              size="sm"
+              color="purple"
+              icon="history"
+              @click="verHistorial(cita.id)"
+            />
+
+            <q-btn
+              round
+              unelevated
+              size="sm"
+              color="negative"
+              icon="delete"
+              @click="remove(cita.id)"
+            />
+          </div>
+        </q-card>
+      </template>
 
       <q-card
         v-if="citasFiltradas.length === 0 && !loading"
@@ -1196,12 +1221,54 @@ function valorHoraOrden(hora) {
   return String(hora).slice(0, 5)
 }
 
-function ordenarCitasPorHora(lista = []) {
+function prioridadFecha(fecha) {
+  const fechaCita = valorFechaOrden(fecha)
+  const fechaHoy = hoy()
+
+  if (fechaCita === fechaHoy) {
+    return 0
+  }
+
+  if (fechaCita > fechaHoy) {
+    return 1
+  }
+
+  return 2
+}
+
+function grupoFechaCita(fecha) {
+  const prioridad = prioridadFecha(fecha)
+
+  if (prioridad === 0) return 'hoy'
+  if (prioridad === 1) return 'proximas'
+  return 'anteriores'
+}
+
+function etiquetaFechaCita(fecha) {
+  const grupo = grupoFechaCita(fecha)
+
+  if (grupo === 'hoy') return 'Hoy'
+  if (grupo === 'proximas') return 'Próxima'
+  return 'Anterior'
+}
+
+function ordenarCitasPorPrioridad(lista = []) {
   return [...lista].sort((a, b) => {
+    const prioridadA = prioridadFecha(a.fecha)
+    const prioridadB = prioridadFecha(b.fecha)
+
+    if (prioridadA !== prioridadB) {
+      return prioridadA - prioridadB
+    }
+
     const fechaA = valorFechaOrden(a.fecha)
     const fechaB = valorFechaOrden(b.fecha)
 
     if (fechaA !== fechaB) {
+      if (prioridadA === 2) {
+        return fechaB.localeCompare(fechaA)
+      }
+
       return fechaA.localeCompare(fechaB)
     }
 
@@ -1216,11 +1283,36 @@ function ordenarCitasPorHora(lista = []) {
   })
 }
 
+function agruparCitasPorPrioridad(lista = []) {
+  const ordenadas = ordenarCitasPorPrioridad(lista)
+
+  return [
+    {
+      key: 'hoy',
+      titulo: 'Citas de hoy',
+      descripcion: 'Prioridad principal del día, ordenadas por hora.',
+      items: ordenadas.filter(cita => grupoFechaCita(cita.fecha) === 'hoy')
+    },
+    {
+      key: 'proximas',
+      titulo: 'Próximas citas',
+      descripcion: 'Fechas futuras, ordenadas por fecha y hora.',
+      items: ordenadas.filter(cita => grupoFechaCita(cita.fecha) === 'proximas')
+    },
+    {
+      key: 'anteriores',
+      titulo: 'Citas anteriores',
+      descripcion: 'Registros pasados que quedan al final.',
+      items: ordenadas.filter(cita => grupoFechaCita(cita.fecha) === 'anteriores')
+    }
+  ]
+}
+
 const citasFiltradas = computed(() => {
   const texto = normalizar(busqueda.value)
 
   if (!texto) {
-    return ordenarCitasPorHora(citas.value)
+    return ordenarCitasPorPrioridad(citas.value)
   }
 
   const resultado = citas.value.filter(cita => {
@@ -1245,7 +1337,11 @@ const citasFiltradas = computed(() => {
     return datos.some(dato => normalizar(dato).includes(texto))
   })
 
-  return ordenarCitasPorHora(resultado)
+  return ordenarCitasPorPrioridad(resultado)
+})
+
+const gruposCitasFiltradas = computed(() => {
+  return agruparCitasPorPrioridad(citasFiltradas.value)
 })
 
 function responseToArray(data) {
@@ -1375,7 +1471,7 @@ async function load() {
 
   try {
     const { data } = await api.get('/citas')
-    citas.value = ordenarCitasPorHora(responseToArray(data))
+    citas.value = ordenarCitasPorPrioridad(responseToArray(data))
   } catch (error) {
     $q.notify({
       type: 'negative',
@@ -1973,6 +2069,63 @@ onMounted(async () => {
 
 .citas-mobile-list {
   display: none;
+}
+
+.cita-mobile-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0 10px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #fff7fb, #f3e5f5);
+  border: 1px solid #f3d6e5;
+}
+
+.cita-mobile-section-title {
+  color: #8a1248;
+  font-size: 15px;
+  font-weight: 950;
+}
+
+.cita-mobile-section-subtitle {
+  color: #7a6f80;
+  font-size: 11px;
+  font-weight: 750;
+  margin-top: 2px;
+}
+
+.cita-mobile-section-badge {
+  background: linear-gradient(135deg, #e91e63, #9c27b0);
+  color: white;
+  font-weight: 950;
+  padding: 8px 12px;
+}
+
+.section-hoy {
+  background: linear-gradient(135deg, #fff1f7, #ffe3ef);
+}
+
+.section-proximas {
+  background: linear-gradient(135deg, #f7f2ff, #efe3ff);
+}
+
+.section-anteriores {
+  background: linear-gradient(135deg, #f7f7f7, #eeeeee);
+}
+
+.cita-hoy {
+  border-left: 5px solid #e91e63;
+}
+
+.cita-proximas {
+  border-left: 5px solid #9c27b0;
+}
+
+.cita-anteriores {
+  border-left: 5px solid #9e9e9e;
+  opacity: 0.92;
 }
 
 .cita-mobile-card {
