@@ -655,9 +655,58 @@ export default {
       }
     },
 
+    cerrarVentanaEmergenteGlobal () {
+      const selectoresVentanas = [
+        '.q-dialog__inner',
+        '.q-menu',
+        '.q-position-engine',
+        '.q-dialog',
+        '.q-popup-proxy'
+      ]
+
+      const ventanaAbierta = selectoresVentanas.some((selector) => {
+        return Boolean(document.querySelector(selector))
+      })
+
+      if (!ventanaAbierta) {
+        return false
+      }
+
+      document.dispatchEvent(new KeyboardEvent('keyup', {
+        key: 'Escape',
+        code: 'Escape',
+        keyCode: 27,
+        which: 27,
+        bubbles: true,
+        cancelable: true
+      }))
+
+      window.dispatchEvent(new KeyboardEvent('keyup', {
+        key: 'Escape',
+        code: 'Escape',
+        keyCode: 27,
+        which: 27,
+        bubbles: true,
+        cancelable: true
+      }))
+
+      return true
+    },
+
     manejarBotonAtrasAndroid () {
       const rutaActual = this.$route.path
       const rutaPrincipal = this.rutaPrincipalSegunRol()
+
+      /*
+       * Orden correcto del botón atrás en Android:
+       * 1. Si hay una ventana emergente, menú o popup abierto, se cierra primero.
+       * 2. Si el drawer está abierto en celular, se cierra.
+       * 3. Si está en otro módulo, vuelve a Dashboard o Mis citas.
+       * 4. Si ya está en la ruta principal, doble atrás para salir.
+       */
+      if (this.cerrarVentanaEmergenteGlobal()) {
+        return
+      }
 
       if (this.drawer && this.$q.screen.lt.md) {
         this.drawer = false
