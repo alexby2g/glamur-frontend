@@ -561,16 +561,18 @@
               </div>
             </div>
 
-            <!-- SERVICIO / COMBO -->
+            <!-- SERVICIOS / COMBOS MÚLTIPLES -->
             <q-select
               v-model="form.servicioOption"
               :options="serviciosFiltrados"
               option-label="combo"
               option-value="id"
-              label="Servicio o combo *"
+              label="Servicios o combos *"
               outlined
               rounded
               clearable
+              multiple
+              use-chips
               use-input
               input-debounce="0"
               class="form-field service-select"
@@ -616,17 +618,63 @@
               </template>
 
               <template #selected-item="scope">
-                <div class="selected-service-text">
+                <q-chip
+                  removable
+                  dense
+                  color="pink-1"
+                  text-color="pink-9"
+                  class="selected-service-chip"
+                  @remove="scope.removeAtIndex(scope.index)"
+                >
                   {{ scope.opt.combo }}
-                </div>
+                </q-chip>
               </template>
             </q-select>
+
+            <!-- RESUMEN MULTI SERVICIOS / COMBOS -->
+            <div v-if="serviciosSeleccionados.length > 0" class="multi-servicios-box">
+              <div class="multi-servicios-header">
+                <div>
+                  <div class="multi-servicios-title">
+                    Servicios seleccionados
+                  </div>
+                  <div class="multi-servicios-subtitle">
+                    Puedes combinar varios servicios o combos en una sola cita.
+                  </div>
+                </div>
+
+                <q-badge rounded class="multi-servicios-total">
+                  Total Bs {{ money(form.precio) }}
+                </q-badge>
+              </div>
+
+              <div class="multi-servicios-list">
+                <div
+                  v-for="servicio in serviciosSeleccionados"
+                  :key="servicioKey(servicio)"
+                  class="multi-servicio-item"
+                >
+                  <div>
+                    <div class="multi-servicio-name">
+                      {{ servicio.combo }}
+                    </div>
+                    <div class="multi-servicio-detail">
+                      {{ servicio.servicio }} · {{ servicio.detalle || 'Sin detalle' }}
+                    </div>
+                  </div>
+
+                  <div class="multi-servicio-price">
+                    Bs {{ money(servicio.precio) }}
+                  </div>
+                </div>
+              </div>
+            </div>
 
             <!-- DETALLE DEL SERVICIO -->
             <q-input
               v-if="form.detalle"
               v-model="form.detalle"
-              label="Detalle del servicio"
+              label="Detalle de servicios"
               outlined
               rounded
               readonly
@@ -642,12 +690,13 @@
             <q-input
               v-model.number="form.precio"
               type="number"
-              label="Precio Bs. *"
+              label="Precio total Bs. *"
               outlined
               rounded
               min="0"
               bg-color="white"
               class="form-field"
+              readonly
             >
               <template #prepend>
                 <q-icon name="payments" color="green" />
@@ -683,6 +732,84 @@
                   <q-icon name="schedule" color="pink" />
                 </template>
               </q-input>
+            </div>
+
+            <!-- MULTI CITAS -->
+            <div v-if="!form.id" class="multi-citas-box">
+              <div class="multi-citas-header">
+                <div>
+                  <div class="multi-citas-title">
+                    Multi citas
+                  </div>
+                  <div class="multi-citas-subtitle">
+                    Registra la misma selección de servicios en varios horarios.
+                  </div>
+                </div>
+
+                <q-toggle
+                  v-model="form.multiCitas"
+                  color="pink"
+                  label="Activar"
+                  left-label
+                />
+              </div>
+
+              <div v-if="form.multiCitas" class="multi-citas-content">
+                <div class="multi-citas-help">
+                  La primera fecha y hora de arriba será la cita principal. Agrega otras fechas si la clienta desea reservar más turnos.
+                </div>
+
+                <div
+                  v-for="(item, index) in form.citasMultiples"
+                  :key="index"
+                  class="multi-cita-row"
+                >
+                  <q-input
+                    v-model="item.fecha"
+                    type="date"
+                    label="Fecha adicional"
+                    outlined
+                    rounded
+                    bg-color="white"
+                    class="form-field"
+                  >
+                    <template #prepend>
+                      <q-icon name="event_repeat" color="pink" />
+                    </template>
+                  </q-input>
+
+                  <q-input
+                    v-model="item.hora"
+                    type="time"
+                    label="Hora adicional"
+                    outlined
+                    rounded
+                    bg-color="white"
+                    class="form-field"
+                  >
+                    <template #prepend>
+                      <q-icon name="schedule" color="pink" />
+                    </template>
+                  </q-input>
+
+                  <q-btn
+                    round
+                    unelevated
+                    color="negative"
+                    icon="delete"
+                    class="multi-cita-delete"
+                    @click="quitarCitaMultiple(index)"
+                  />
+                </div>
+
+                <q-btn
+                  class="btn-add-multi-cita"
+                  icon="add"
+                  label="Agregar otra fecha"
+                  unelevated
+                  @click="agregarCitaMultiple"
+                />
+              </div>
             </div>
 
             <!-- ESTADO -->
@@ -1075,13 +1202,15 @@ const form = ref({
   id: null,
   cliente_id: null,
   empleado_id: null,
-  servicioOption: null,
+  servicioOption: [],
   combo: '',
   detalle: '',
   precio: 0,
   fecha: '',
   hora: '',
-  estado: 'pendiente'
+  estado: 'pendiente',
+  multiCitas: false,
+  citasMultiples: []
 })
 
 const pago = ref({
@@ -1186,6 +1315,14 @@ const totalPagoMixto = computed(() => {
   return Number(pago.value.monto_efectivo || 0) +
     Number(pago.value.monto_qr || 0) +
     Number(pago.value.monto_transferencia || 0)
+})
+
+const serviciosSeleccionados = computed(() => {
+  const seleccion = Array.isArray(form.value.servicioOption)
+    ? form.value.servicioOption
+    : (form.value.servicioOption ? [form.value.servicioOption] : [])
+
+  return seleccion.filter(Boolean)
 })
 
 function money(value) {
@@ -1499,7 +1636,6 @@ function actualizarServiciosFiltrados() {
 
 function seleccionarCategoria(key) {
   categoriaSeleccionada.value = key
-  limpiarServicio()
   actualizarServiciosFiltrados()
 }
 
@@ -1666,23 +1802,52 @@ function filtrarServicios(valor, update) {
   })
 }
 
-function seleccionarServicio(servicio) {
-  if (!servicio) {
-    limpiarServicio()
-    return
+function servicioKey(servicio) {
+  return servicio?.id || `${servicio?.combo || ''}-${servicio?.precio || 0}`
+}
+
+function actualizarResumenServicios() {
+  const seleccion = serviciosSeleccionados.value
+
+  form.value.combo = seleccion
+    .map(servicio => servicio.combo || servicio.nombre || '')
+    .filter(Boolean)
+    .join(' + ')
+
+  form.value.detalle = seleccion
+    .map(servicio => {
+      const nombre = servicio.combo || servicio.nombre || 'Servicio'
+      const detalle = servicio.detalle || servicio.descripcion || servicio.servicio || ''
+      const precio = money(servicio.precio || 0)
+
+      return `${nombre} - ${detalle} (Bs ${precio})`
+    })
+    .join(' | ')
+
+  form.value.precio = seleccion.reduce((total, servicio) => {
+    return total + Number(servicio.precio || 0)
+  }, 0)
+}
+
+function seleccionarServicio(serviciosSeleccionadosNuevos) {
+  const seleccion = Array.isArray(serviciosSeleccionadosNuevos)
+    ? serviciosSeleccionadosNuevos.filter(Boolean)
+    : (serviciosSeleccionadosNuevos ? [serviciosSeleccionadosNuevos] : [])
+
+  form.value.servicioOption = seleccion
+
+  const ultimoServicio = seleccion[seleccion.length - 1]
+
+  if (ultimoServicio) {
+    categoriaSeleccionada.value = categoriaDeServicio(ultimoServicio.servicio)
+    actualizarServiciosFiltrados()
   }
 
-  categoriaSeleccionada.value = categoriaDeServicio(servicio.servicio)
-  actualizarServiciosFiltrados()
-
-  form.value.servicioOption = servicio
-  form.value.combo = servicio.combo || ''
-  form.value.detalle = servicio.detalle || ''
-  form.value.precio = Number(servicio.precio || 0)
+  actualizarResumenServicios()
 }
 
 function limpiarServicio() {
-  form.value.servicioOption = null
+  form.value.servicioOption = []
   form.value.combo = ''
   form.value.detalle = ''
   form.value.precio = 0
@@ -1696,13 +1861,15 @@ function openDialog(fechaSeleccionada = null) {
     id: null,
     cliente_id: null,
     empleado_id: null,
-    servicioOption: null,
+    servicioOption: [],
     combo: '',
     detalle: '',
     precio: 0,
     fecha: fechaSeleccionada || String(route.query.fecha || '') || hoy(),
     hora: '',
-    estado: 'pendiente'
+    estado: 'pendiente',
+    multiCitas: false,
+    citasMultiples: []
   }
 
   empleadosFiltrados.value = empleados.value
@@ -1711,20 +1878,37 @@ function openDialog(fechaSeleccionada = null) {
   dialog.value = true
 }
 
-function edit(row) {
-  const servicioEncontrado = servicios.value.find(item => {
-    return normalizar(item.combo) === normalizar(row.servicio)
-  })
+function obtenerServiciosDesdeTexto(textoServicio, precio = 0) {
+  const partes = String(textoServicio || '')
+    .split('+')
+    .map(item => item.trim())
+    .filter(Boolean)
 
-  const servicioTemporal = servicioEncontrado || {
-    id: null,
-    servicio: 'Servicio guardado',
-    combo: row.servicio || '',
-    detalle: '',
-    precio: Number(row.precio || 0),
-    activo: true
+  const encontrados = partes
+    .map(parte => servicios.value.find(servicio => normalizar(servicio.combo) === normalizar(parte)))
+    .filter(Boolean)
+
+  if (encontrados.length > 0) {
+    return encontrados
   }
 
+  if (textoServicio) {
+    return [{
+      id: null,
+      servicio: 'Servicio guardado',
+      combo: textoServicio,
+      detalle: '',
+      precio: Number(precio || 0),
+      activo: true
+    }]
+  }
+
+  return []
+}
+
+function edit(row) {
+  const serviciosEditados = obtenerServiciosDesdeTexto(row.servicio, row.precio)
+  const primerServicio = serviciosEditados[0] || null
   const empleadoId = row.empleado_id || row.empleado?.id || null
 
   if (row.empleado && empleadoId && !empleados.value.some(empleado => Number(empleado.id) === Number(empleadoId))) {
@@ -1732,26 +1916,57 @@ function edit(row) {
     empleadosFiltrados.value = empleados.value
   }
 
-  categoriaSeleccionada.value = categoriaDeServicio(servicioTemporal.servicio)
+  categoriaSeleccionada.value = primerServicio ? categoriaDeServicio(primerServicio.servicio) : 'cejas'
   actualizarServiciosFiltrados()
 
   form.value = {
     id: row.id,
     cliente_id: row.cliente_id,
     empleado_id: empleadoId,
-    servicioOption: servicioTemporal,
-    combo: row.servicio || servicioTemporal.combo || '',
-    detalle: servicioTemporal.detalle || '',
-    precio: Number(row.precio || servicioTemporal.precio || 0),
+    servicioOption: serviciosEditados,
+    combo: row.servicio || '',
+    detalle: serviciosEditados.map(servicio => servicio.detalle).filter(Boolean).join(' | '),
+    precio: Number(row.precio || 0),
     fecha: fechaParaInput(row.fecha) || hoy(),
     hora: row.hora ? String(row.hora).slice(0, 5) : '',
-    estado: row.estado || 'pendiente'
+    estado: row.estado || 'pendiente',
+    multiCitas: false,
+    citasMultiples: []
+  }
+
+  if (serviciosEditados.length > 0) {
+    actualizarResumenServicios()
+    form.value.precio = Number(row.precio || form.value.precio || 0)
   }
 
   empleadosFiltrados.value = empleados.value
   clientesFiltrados.value = clientes.value
 
   dialog.value = true
+}
+
+function agregarCitaMultiple() {
+  form.value.citasMultiples.push({
+    fecha: form.value.fecha || hoy(),
+    hora: ''
+  })
+}
+
+function quitarCitaMultiple(index) {
+  form.value.citasMultiples.splice(index, 1)
+}
+
+function citasMultiplesValidas() {
+  if (!form.value.multiCitas) {
+    return []
+  }
+
+  return form.value.citasMultiples
+    .map(item => ({
+      fecha: fechaParaInput(item.fecha),
+      hora: item.hora ? String(item.hora).slice(0, 5) : ''
+    }))
+    .filter(item => item.fecha && item.hora)
 }
 
 async function save() {
@@ -1764,10 +1979,10 @@ async function save() {
     return
   }
 
-  if (!form.value.combo) {
+  if (serviciosSeleccionados.value.length === 0 || !form.value.combo) {
     $q.notify({
       type: 'warning',
-      message: 'Selecciona un servicio o combo'
+      message: 'Selecciona uno o más servicios o combos'
     })
 
     return
@@ -1794,7 +2009,7 @@ async function save() {
   saving.value = true
 
   try {
-    const payload = {
+    const payloadBase = {
       cliente_id: form.value.cliente_id,
       empleado_id: form.value.empleado_id || null,
       servicio: form.value.combo,
@@ -1805,18 +2020,33 @@ async function save() {
     }
 
     if (form.value.id) {
-      await api.put(`/citas/${form.value.id}`, payload)
+      await api.put(`/citas/${form.value.id}`, payloadBase)
 
       $q.notify({
         type: 'positive',
         message: 'Cita actualizada correctamente'
       })
     } else {
-      await api.post('/citas', payload)
+      const citasExtra = citasMultiplesValidas()
+      const citasParaCrear = [payloadBase]
+
+      citasExtra.forEach(item => {
+        citasParaCrear.push({
+          ...payloadBase,
+          fecha: item.fecha,
+          hora: item.hora
+        })
+      })
+
+      for (const payload of citasParaCrear) {
+        await api.post('/citas', payload)
+      }
 
       $q.notify({
         type: 'positive',
-        message: 'Cita registrada correctamente'
+        message: citasParaCrear.length > 1
+          ? `${citasParaCrear.length} citas registradas correctamente`
+          : 'Cita registrada correctamente'
       })
     }
 
@@ -2383,6 +2613,118 @@ onMounted(async () => {
   font-weight: 850;
 }
 
+/* MULTI SERVICIOS Y MULTI CITAS */
+
+.selected-service-chip {
+  margin: 3px;
+  font-weight: 800;
+}
+
+.multi-servicios-box,
+.multi-citas-box {
+  border-radius: 22px;
+  padding: 14px;
+  background: #fff7fb;
+  border: 1px solid #f7c9dc;
+}
+
+.multi-servicios-header,
+.multi-citas-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.multi-servicios-title,
+.multi-citas-title {
+  color: #8a1248;
+  font-size: 15px;
+  font-weight: 950;
+}
+
+.multi-servicios-subtitle,
+.multi-citas-subtitle,
+.multi-citas-help {
+  color: #7a6f80;
+  font-size: 12px;
+  font-weight: 750;
+  margin-top: 2px;
+}
+
+.multi-servicios-total {
+  background: linear-gradient(135deg, #e91e63, #9c27b0);
+  color: white;
+  font-weight: 950;
+  padding: 8px 12px;
+  white-space: nowrap;
+}
+
+.multi-servicios-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.multi-servicio-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  border-radius: 16px;
+  padding: 10px 12px;
+  background: white;
+  border: 1px solid #f3d6e5;
+}
+
+.multi-servicio-name {
+  color: #241329;
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.multi-servicio-detail {
+  color: #7a6f80;
+  font-size: 11px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.multi-servicio-price {
+  color: #2e7d32;
+  font-size: 13px;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.multi-citas-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.multi-cita-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.multi-cita-delete {
+  width: 42px;
+  height: 42px;
+}
+
+.btn-add-multi-cita {
+  align-self: flex-start;
+  background: #ffffff;
+  color: #c2185b;
+  border-radius: 16px;
+  font-weight: 900;
+  border: 1px solid #f3d6e5;
+}
+
 /* FORMULARIO */
 
 .form-stack {
@@ -2741,6 +3083,25 @@ onMounted(async () => {
     width: 100%;
     justify-content: center;
     text-align: center;
+  }
+
+  .multi-servicios-header,
+  .multi-citas-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .multi-cita-row {
+    grid-template-columns: 1fr;
+  }
+
+  .multi-cita-delete {
+    width: 100%;
+    border-radius: 16px;
+  }
+
+  .btn-add-multi-cita {
+    width: 100%;
   }
 
   .service-category-grid {
