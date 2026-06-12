@@ -819,9 +819,6 @@ function servicioFila(row = {}) {
   return row.servicio || row.cita?.servicio || row.pago?.cita?.servicio || 'Servicio no registrado'
 }
 
-function horaFila(row = {}) {
-  return row.hora_pago || row.hora || row.cita?.hora || ''
-}
 
 function normalizarFilaCaja(row = {}) {
   return {
