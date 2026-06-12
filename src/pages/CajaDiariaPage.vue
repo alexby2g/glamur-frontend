@@ -264,7 +264,7 @@
           <template #body-cell-metodo="props">
             <q-td :props="props">
               <q-badge color="purple" rounded>
-                {{ props.row.metodo || 'Sin método' }}
+                {{ metodoTexto(props.row.metodo) }}
               </q-badge>
             </q-td>
           </template>
@@ -511,6 +511,7 @@ const metodosLista = computed(() => {
     method('efectivo', 'Efectivo', 'payments', 'bg-green-7'),
     method('qr', 'QR', 'qr_code_2', 'bg-pink-7'),
     method('transferencia', 'Transferencia', 'account_balance', 'bg-blue-7'),
+    method('mixto', 'Mixto', 'join_inner', 'bg-deep-purple-7'),
     method('tarjeta', 'Tarjeta', 'credit_card', 'bg-purple-7'),
     method('otros', 'Otros', 'more_horiz', 'bg-grey-7')
   ]
@@ -561,7 +562,7 @@ const pagosColumns = [
   {
     name: 'hora_pago',
     label: 'Hora',
-    field: 'hora_pago',
+    field: (row) => formatTime(row.hora_pago),
     align: 'left',
     sortable: true
   },
@@ -733,6 +734,15 @@ function estadoPagoColor(estado) {
   return estado === 'pagado' ? 'positive' : 'warning'
 }
 
+function metodoTexto(metodo) {
+  if (metodo === 'qr') return 'QR'
+  if (metodo === 'mixto') return 'Mixto'
+  if (metodo === 'transferencia') return 'Transferencia'
+  if (metodo === 'efectivo') return 'Efectivo'
+  if (metodo === 'tarjeta') return 'Tarjeta'
+
+  return metodo || 'Sin método'
+}
 
 function limpiarTextoCliente(valor) {
   if (valor === null || valor === undefined) {
@@ -827,7 +837,7 @@ function normalizarFilaCaja(row = {}) {
     telefono: telefonoCliente(row),
     servicio: servicioFila(row),
     hora: row.hora || row.cita?.hora || row.hora_pago || '',
-    hora_pago: row.hora_pago || row.hora || row.created_at || '',
+    hora_pago: formatTime(row.hora_pago || row.hora || row.created_at || ''),
     metodo: row.metodo || row.metodo_pago || 'Sin método',
     monto: Number(row.monto || row.precio || 0),
     precio: Number(row.precio || row.monto || 0),
