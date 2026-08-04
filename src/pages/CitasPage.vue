@@ -1969,6 +1969,32 @@ function citasMultiplesValidas() {
     .filter(item => item.fecha && item.hora)
 }
 
+function claveTrabajador(empleadoId) {
+  return empleadoId ? String(empleadoId) : 'sin-asignar'
+}
+
+function horarioOcupado(fecha, hora, empleadoId, citaIgnoradaId = null) {
+  const fechaNormalizada = fechaParaInput(fecha)
+  const horaNormalizada = String(hora || '').slice(0, 5)
+  const trabajador = claveTrabajador(empleadoId)
+
+  return citas.value.some(cita => {
+    if (citaIgnoradaId && Number(cita.id) === Number(citaIgnoradaId)) return false
+    if (cita.estado === 'cancelada') return false
+
+    return fechaParaInput(cita.fecha) === fechaNormalizada &&
+      formatHora(cita.hora) === horaNormalizada &&
+      claveTrabajador(cita.empleado_id || cita.empleado?.id) === trabajador
+  })
+}
+
+function nombreTrabajadorSeleccionado() {
+  if (!form.value.empleado_id) return 'Sin empleado asignado'
+
+  return empleados.value.find(item => Number(item.id) === Number(form.value.empleado_id))?.nombre ||
+    'El trabajador seleccionado'
+}
+
 async function save() {
   if (!form.value.cliente_id) {
     $q.notify({
@@ -2001,6 +2027,34 @@ async function save() {
     $q.notify({
       type: 'warning',
       message: 'El precio debe ser mayor a 0'
+    })
+
+    return
+  }
+
+  const horariosSolicitados = [
+    {
+      fecha: fechaParaInput(form.value.fecha),
+      hora: String(form.value.hora).slice(0, 5)
+    },
+    ...citasMultiplesValidas()
+  ]
+
+  const clavesHorarios = horariosSolicitados.map(item => `${item.fecha}|${item.hora}|${claveTrabajador(form.value.empleado_id)}`)
+  const hayRepetidosEnFormulario = new Set(clavesHorarios).size !== clavesHorarios.length
+  const hayHorarioOcupado = horariosSolicitados.some(item => {
+    return horarioOcupado(
+      item.fecha,
+      item.hora,
+      form.value.empleado_id,
+      form.value.id
+    )
+  })
+
+  if (hayRepetidosEnFormulario || hayHorarioOcupado) {
+    $q.notify({
+      type: 'warning',
+      message: `${nombreTrabajadorSeleccionado()} ya tiene una cita en uno de los horarios seleccionados. Elige otra hora u otro trabajador.`
     })
 
     return
