@@ -148,6 +148,16 @@ const routes = [
       },
 
       {
+        path: 'auditoria',
+        name: 'auditoria',
+        component: () => import('pages/AuditoriaPage.vue'),
+        meta: {
+          requiresAuth: true,
+          roles: ['admin']
+        }
+      },
+
+      {
         path: 'configuracion',
         name: 'configuracion',
         component: () => import('pages/ConfiguracionPage.vue'),
