@@ -108,6 +108,57 @@
       </q-card-section>
     </q-card>
 
+    <!-- APERTURA Y CIERRE FORMAL -->
+    <q-card class="glamur-card q-mb-md cash-control-card">
+      <q-card-section class="row items-center justify-between q-gutter-md">
+        <div>
+          <div class="glamur-section-title">Apertura y cierre de caja</div>
+          <div class="glamur-section-subtitle">
+            {{ estadoCajaTexto }}
+          </div>
+          <div v-if="caja?.usuario_apertura" class="text-caption text-grey-7 q-mt-xs">
+            Abierta por {{ nombreUsuario(caja.usuario_apertura) }}
+            <span v-if="caja?.cerrada_at"> · Cerrada por {{ nombreUsuario(caja.usuario_cierre) }}</span>
+          </div>
+        </div>
+
+        <div class="row q-gutter-sm">
+          <q-badge :color="caja?.estado === 'cerrada' ? 'grey-7' : caja ? 'positive' : 'orange-7'" rounded class="q-pa-sm">
+            {{ caja?.estado === 'cerrada' ? 'Cerrada' : caja ? 'Abierta' : 'Sin abrir' }}
+          </q-badge>
+          <q-btn
+            v-if="!caja"
+            label="Abrir caja"
+            icon="lock_open"
+            color="positive"
+            unelevated
+            no-caps
+            @click="abrirDialogoApertura"
+          />
+          <q-btn
+            v-else-if="caja.estado === 'abierta'"
+            label="Cerrar caja"
+            icon="lock"
+            color="pink-7"
+            unelevated
+            no-caps
+            @click="abrirDialogoCierre"
+          />
+        </div>
+      </q-card-section>
+
+      <q-separator />
+
+      <q-card-section>
+        <div class="row q-col-gutter-md">
+          <div class="col-6 col-md-3"><div class="cash-box"><small>Fondo inicial</small><strong>{{ currency(caja?.fondo_inicial) }}</strong></div></div>
+          <div class="col-6 col-md-3"><div class="cash-box"><small>Efectivo cobrado</small><strong>{{ currency(totalesCaja.total_efectivo) }}</strong></div></div>
+          <div class="col-6 col-md-3"><div class="cash-box"><small>Efectivo esperado</small><strong>{{ currency(efectivoEsperado) }}</strong></div></div>
+          <div class="col-6 col-md-3"><div class="cash-box"><small>Diferencia</small><strong :class="claseDiferencia">{{ caja?.estado === 'cerrada' ? currency(caja.diferencia) : 'Pendiente' }}</strong></div></div>
+        </div>
+      </q-card-section>
+    </q-card>
+
     <!-- MÉTRICAS PRINCIPALES -->
     <div class="row q-col-gutter-md">
       <div
@@ -374,6 +425,51 @@
       </q-card-section>
     </q-card>
 
+    <q-card class="glamur-card q-mt-md">
+      <q-card-section class="row items-center justify-between">
+        <div>
+          <div class="glamur-section-title">Historial de cierres</div>
+          <div class="glamur-section-subtitle">Últimos cierres guardados y sus diferencias.</div>
+        </div>
+        <q-btn flat round icon="refresh" color="pink-7" :loading="loadingHistorial" @click="cargarHistorial" />
+      </q-card-section>
+      <q-separator />
+      <q-table
+        :rows="historialCajas"
+        :columns="historialColumns"
+        row-key="id"
+        flat
+        :loading="loadingHistorial"
+        no-data-label="Todavía no existen cierres de caja"
+        :pagination="{ rowsPerPage: 5 }"
+      >
+        <template #body-cell-estado="props"><q-td :props="props"><q-badge :color="props.row.estado === 'cerrada' ? 'grey-7' : 'positive'">{{ props.row.estado }}</q-badge></q-td></template>
+        <template #body-cell-diferencia="props"><q-td :props="props"><strong :class="Number(props.row.diferencia) < 0 ? 'text-negative' : Number(props.row.diferencia) > 0 ? 'text-warning' : 'text-positive'">{{ currency(props.row.diferencia) }}</strong></q-td></template>
+      </q-table>
+    </q-card>
+
+    <q-dialog v-model="dialogoCaja" persistent>
+      <q-card style="width: 520px; max-width: 92vw" class="glamur-card">
+        <q-card-section>
+          <div class="text-h6 text-weight-bold">{{ modoCaja === 'abrir' ? 'Abrir caja' : 'Cerrar caja' }}</div>
+          <div class="text-caption text-grey-7">{{ fechaTexto || fecha }}</div>
+        </q-card-section>
+        <q-card-section class="q-gutter-md">
+          <q-input v-if="modoCaja === 'abrir'" v-model.number="formCaja.fondo_inicial" type="number" min="0" step="0.01" outlined label="Fondo inicial" prefix="Bs" />
+          <template v-else>
+            <q-banner rounded class="bg-pink-1 text-pink-9">Efectivo esperado: <strong>{{ currency(efectivoEsperado) }}</strong></q-banner>
+            <q-input v-model.number="formCaja.efectivo_contado" type="number" min="0" step="0.01" outlined label="Efectivo contado" prefix="Bs" autofocus />
+            <div class="text-caption">Diferencia estimada: <strong :class="claseDiferenciaFormulario">{{ currency(diferenciaFormulario) }}</strong></div>
+          </template>
+          <q-input v-model.trim="formCaja.observacion" type="textarea" autogrow outlined label="Observación (opcional)" maxlength="1000" counter />
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat label="Cancelar" v-close-popup />
+          <q-btn :label="modoCaja === 'abrir' ? 'Confirmar apertura' : 'Confirmar cierre'" :color="modoCaja === 'abrir' ? 'positive' : 'pink-7'" unelevated :loading="savingCaja" @click="guardarCaja" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
   </q-page>
 </template>
 
@@ -393,6 +489,14 @@ const loading = ref(false)
 const downloadingPdf = ref(false)
 const buscarPagos = ref('')
 const buscarCitas = ref('')
+const caja = ref(null)
+const totalesCaja = ref({ total_efectivo: 0, total_qr: 0, total_transferencia: 0, total_otros: 0, total_cobrado: 0 })
+const historialCajas = ref([])
+const loadingHistorial = ref(false)
+const dialogoCaja = ref(false)
+const savingCaja = ref(false)
+const modoCaja = ref('abrir')
+const formCaja = ref({ fondo_inicial: 0, efectivo_contado: 0, observacion: '' })
 
 const fecha = ref(todayInput())
 
@@ -438,6 +542,25 @@ const marcaPrincipal = computed(() => {
 const moneda = computed(() => {
   return configuracion.value.moneda || 'Bs'
 })
+
+const efectivoEsperado = computed(() => Number(caja.value?.fondo_inicial || 0) + Number(totalesCaja.value.total_efectivo || 0))
+const diferenciaFormulario = computed(() => Number(formCaja.value.efectivo_contado || 0) - efectivoEsperado.value)
+const claseDiferencia = computed(() => Number(caja.value?.diferencia || 0) < 0 ? 'text-negative' : Number(caja.value?.diferencia || 0) > 0 ? 'text-warning' : 'text-positive')
+const claseDiferenciaFormulario = computed(() => diferenciaFormulario.value < 0 ? 'text-negative' : diferenciaFormulario.value > 0 ? 'text-warning' : 'text-positive')
+const estadoCajaTexto = computed(() => {
+  if (!caja.value) return 'Abre la caja para iniciar el control formal de esta fecha.'
+  if (caja.value.estado === 'cerrada') return `Cierre guardado con ${currency(caja.value.efectivo_contado)} en efectivo contado.`
+  return 'Caja abierta. Los pagos nuevos se suman automáticamente hasta el cierre.'
+})
+
+const historialColumns = [
+  { name: 'fecha', label: 'Fecha', field: 'fecha', align: 'left', sortable: true },
+  { name: 'estado', label: 'Estado', field: 'estado', align: 'center' },
+  { name: 'total_cobrado', label: 'Total cobrado', field: row => currency(row.total_cobrado), align: 'right' },
+  { name: 'efectivo_contado', label: 'Efectivo contado', field: row => currency(row.efectivo_contado), align: 'right' },
+  { name: 'diferencia', label: 'Diferencia', field: 'diferencia', align: 'right' },
+  { name: 'responsable', label: 'Responsable', field: row => nombreUsuario(row.usuario_cierre || row.usuario_apertura), align: 'left' }
+]
 
 const metricCards = computed(() => [
   card(
@@ -856,6 +979,59 @@ function getErrorMessage(error, fallback = 'Ocurrió un error') {
   return data?.message || data?.error || fallback
 }
 
+function nombreUsuario(usuario) {
+  return usuario?.nombre || usuario?.usuario || 'Usuario no disponible'
+}
+
+function abrirDialogoApertura() {
+  modoCaja.value = 'abrir'
+  formCaja.value = { fondo_inicial: 0, efectivo_contado: 0, observacion: '' }
+  dialogoCaja.value = true
+}
+
+function abrirDialogoCierre() {
+  modoCaja.value = 'cerrar'
+  formCaja.value = { fondo_inicial: Number(caja.value?.fondo_inicial || 0), efectivo_contado: efectivoEsperado.value, observacion: caja.value?.observacion || '' }
+  dialogoCaja.value = true
+}
+
+async function cargarEstadoCaja() {
+  const { data } = await api.get('/caja/estado', { params: { fecha: fecha.value } })
+  caja.value = data.caja || null
+  totalesCaja.value = { ...totalesCaja.value, ...(data.totales_actuales || {}) }
+}
+
+async function cargarHistorial() {
+  loadingHistorial.value = true
+  try {
+    const { data } = await api.get('/caja/historial', { params: { per_page: 20 } })
+    historialCajas.value = Array.isArray(data?.data) ? data.data : []
+  } finally {
+    loadingHistorial.value = false
+  }
+}
+
+async function guardarCaja() {
+  if (modoCaja.value === 'abrir' && Number(formCaja.value.fondo_inicial) < 0) return
+  if (modoCaja.value === 'cerrar' && Number(formCaja.value.efectivo_contado) < 0) return
+
+  savingCaja.value = true
+  try {
+    const endpoint = modoCaja.value === 'abrir' ? '/caja/abrir' : '/caja/cerrar'
+    const payload = modoCaja.value === 'abrir'
+      ? { fecha: fecha.value, fondo_inicial: Number(formCaja.value.fondo_inicial || 0), observacion: formCaja.value.observacion || null }
+      : { fecha: fecha.value, efectivo_contado: Number(formCaja.value.efectivo_contado || 0), observacion: formCaja.value.observacion || null }
+    const { data } = await api.post(endpoint, payload)
+    dialogoCaja.value = false
+    $q.notify({ type: 'positive', message: data.message })
+    await Promise.all([load(), cargarHistorial()])
+  } catch (error) {
+    $q.notify({ type: 'negative', message: getErrorMessage(error, 'No se pudo guardar la caja') })
+  } finally {
+    savingCaja.value = false
+  }
+}
+
 function normalizeResponse(data = {}) {
   configuracion.value = {
     ...configuracion.value,
@@ -890,6 +1066,7 @@ async function load() {
     })
 
     normalizeResponse(data)
+    await cargarEstadoCaja()
   } catch (error) {
     $q.notify({
       type: 'negative',
@@ -938,7 +1115,7 @@ function irHoy() {
   load()
 }
 
-onMounted(load)
+onMounted(() => Promise.all([load(), cargarHistorial()]))
 </script>
 
 <style scoped>
@@ -1054,6 +1231,23 @@ onMounted(load)
   color: #ef6c00;
   font-weight: 950;
 }
+
+.cash-control-card {
+  border-left: 5px solid #e91e63;
+}
+
+.cash-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px;
+  border-radius: 16px;
+  background: #fff7fb;
+  border: 1px solid rgba(233, 30, 99, 0.12);
+}
+
+.cash-box small { color: #7a6f80; font-weight: 800; }
+.cash-box strong { font-size: 17px; }
 
 @media (max-width: 700px) {
   .hero-actions {
