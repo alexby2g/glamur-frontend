@@ -518,6 +518,13 @@ export default {
         },
 
         {
+          label: 'Auditoría',
+          icon: 'manage_search',
+          to: '/auditoria',
+          roles: ['admin']
+        },
+
+        {
           label: 'Historial Clientes',
           icon: 'manage_search',
           to: '/historial-clientes',
